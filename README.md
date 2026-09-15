@@ -1,14 +1,12 @@
-# Simple Placeholder Page
+# Sports Hub Welcome
 
-Buat 1 halaman kosong saja bertuliskan "placeholder". Jangan tambahkan styling, komponen, atau fitur apa pun selain itu.
+tambahkan home screen sebelum masuk menu ini, seperti gambar ini . buatkan home screen dengan tema olahraga padel, badminton, tenis meja, tenis. buatkan home screen yg baru.
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://singular-page.lovable.app
-
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/43d02891-d5db-47c5-afa4-37fb0086049c).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/4dfea0ad-2bd8-4626-8db6-f72c1cfb4254).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.

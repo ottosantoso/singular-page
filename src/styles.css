@@ -142,3 +142,159 @@
     color: var(--color-foreground);
   }
 }
+
+/* ===== OTTOPLAY ARENA — tema lapangan olahraga (terang) ===== */
+@theme inline {
+  --color-arena-lime: var(--arena-lime);
+  --color-arena-dim: var(--arena-dim);
+  --color-arena-ink: var(--arena-ink);
+  --font-display: "Chakra Petch", sans-serif;
+}
+
+:root {
+  --arena-lime: oklch(0.62 0.19 143);
+  --arena-ink: oklch(0.26 0.05 250);
+  --arena-dim: oklch(0.52 0.03 250);
+  --arena-court: oklch(0.93 0.09 155);
+}
+
+@utility arena-home {
+  background:
+    radial-gradient(ellipse 700px 460px at 8% -10%, oklch(0.9 0.14 150 / 0.75), transparent 62%),
+    radial-gradient(ellipse 760px 520px at 102% 4%, oklch(0.92 0.12 210 / 0.7), transparent 62%),
+    radial-gradient(ellipse 820px 560px at 50% 116%, oklch(0.95 0.11 95 / 0.7), transparent 62%),
+    oklch(0.985 0.012 150);
+  background-repeat: no-repeat;
+  color: var(--arena-ink);
+  font-family: "Inter", sans-serif;
+}
+
+/* Garis lapangan tipis sebagai tekstur latar */
+@utility court-lines {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, oklch(0.26 0.05 250 / 0.06) 2px, transparent 2px),
+      linear-gradient(to bottom, oklch(0.26 0.05 250 / 0.06) 2px, transparent 2px);
+    background-size: 120px 120px;
+    mask-image: radial-gradient(ellipse at 50% 40%, black, transparent 78%);
+  }
+}
+
+@utility arena-card {
+  display: block;
+  border-radius: 22px;
+  border: 1px solid oklch(0.26 0.05 250 / 0.08);
+  background: oklch(1 0 0 / 0.82);
+  backdrop-filter: blur(8px);
+  padding: 1.25rem;
+  box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55);
+  transition: all 0.2s ease;
+  &:hover {
+    border-color: oklch(0.62 0.19 143 / 0.55);
+    transform: translateY(-3px);
+    box-shadow: 0 20px 40px -20px oklch(0.62 0.19 143 / 0.6);
+  }
+}
+
+@utility btn-arena {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, oklch(0.72 0.2 140), oklch(0.62 0.19 143));
+  color: oklch(0.99 0 0);
+  font-family: "Chakra Petch", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1.05rem 2.6rem;
+  font-size: 1.05rem;
+  box-shadow: 0 16px 34px -14px oklch(0.62 0.19 143 / 0.8);
+  transition: all 0.2s ease;
+  &:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 22px 44px -14px oklch(0.62 0.19 143 / 0.9);
+  }
+  &:active {
+    transform: translateY(-1px) scale(0.99);
+  }
+}
+
+@utility text-arena-heading {
+  font-family: "Chakra Petch", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 1.15rem;
+  color: var(--arena-ink);
+}
+
+@utility arena-card-static {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  border-radius: 22px;
+  border: 1px solid oklch(0.26 0.05 250 / 0.08);
+  background: oklch(1 0 0 / 0.85);
+  padding: 1.25rem;
+  box-shadow: 0 14px 30px -24px oklch(0.26 0.05 250 / 0.6);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  &:hover {
+    transform: translateY(-4px);
+    border-color: var(--sport-accent, oklch(0.62 0.19 143 / 0.5));
+    box-shadow: 0 22px 40px -22px var(--sport-accent, oklch(0.62 0.19 143 / 0.8));
+  }
+}
+
+@utility sport-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 32% 28%, oklch(1 0 0 / 0.9), transparent 60%),
+    var(--sport-soft, oklch(0.93 0.09 155));
+  border: 1px solid var(--sport-accent, oklch(0.62 0.19 143 / 0.45));
+  box-shadow: inset 0 -6px 14px -8px oklch(0.26 0.05 250 / 0.4);
+  transition: transform 0.25s ease;
+  .arena-card-static:hover & {
+    transform: scale(1.08) rotate(-5deg);
+  }
+}
+
+@utility arena-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+  & th {
+    font-family: "Chakra Petch", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.72rem;
+    color: var(--arena-dim);
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+  }
+  & td {
+    padding: 0.7rem 0.75rem;
+    border-top: 1px solid oklch(0.26 0.05 250 / 0.08);
+  }
+}
+
+@keyframes arena-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(6deg); }
+}
+
+@utility float-slow {
+  animation: arena-float 6s ease-in-out infinite;
+}
+
