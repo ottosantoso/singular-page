@@ -122,7 +122,11 @@ function Klasemen() {
       let latestAt = -1;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (!key || !key.startsWith("ottoKlasemenCode_") || key.endsWith("_at")) continue;
+        if (!key || key.endsWith("_at")) continue;
+        // Kode arena & kode klasemen sekarang disatukan (prefix kocokArenaCode_).
+        // Tetap cek prefix lama (ottoKlasemenCode_) juga buat kode-kode lama yang
+        // sempat kesimpen sebelum unifikasi ini, biar tidak mendadak hilang.
+        if (!key.startsWith("kocokArenaCode_") && !key.startsWith("ottoKlasemenCode_")) continue;
         const value = localStorage.getItem(key);
         if (!value) continue;
         const at = Number(localStorage.getItem(key + "_at") ?? 0);
@@ -207,8 +211,8 @@ function Klasemen() {
             const c = input.trim().toUpperCase();
             setCode(c);
             if (c) {
-              localStorage.setItem("ottoKlasemenCode_manual", c);
-              localStorage.setItem("ottoKlasemenCode_manual_at", String(Date.now()));
+              localStorage.setItem("kocokArenaCode_manual", c);
+              localStorage.setItem("kocokArenaCode_manual_at", String(Date.now()));
             }
           }}
         >
