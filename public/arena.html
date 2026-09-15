@@ -1142,7 +1142,6 @@
     }
   } catch (e){ ottoDb = null; }
 
-  function klasemenKey(sport){ return 'ottoKlasemenCode_' + (sport || selectedSport || 'padel'); }
   function roomKey(suffix, sport){ return 'kocok' + suffix + '_' + (sport || selectedSport || 'padel'); }
 
   // --- Autosave lokal (fallback buat yang nggak connect Kode Arena+PIN) ---
@@ -1197,8 +1196,11 @@
   }
 
   function newKlasemenCode(sport){
-    const key = klasemenKey(sport);
-    const c = 'LK' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    // Kode klasemen SEKARANG disamakan dengan "Kode Arena" (roomKey) — satu kode
+    // dipakai buat Sinkron Cloud & buat /klasemen, /detail-pemain, biar tidak ada
+    // lagi 2 kode berbeda (dulu: "Kode Arena" 6-char vs "Kode Klasemen" LK-format).
+    const key = roomKey('ArenaCode', sport);
+    const c = genSessionCode();
     try {
       localStorage.setItem(key, c);
       localStorage.setItem(key + '_at', String(Date.now()));
@@ -1207,14 +1209,14 @@
   }
 
   function clearKlasemenCode(sport){
-    const key = klasemenKey(sport);
+    const key = roomKey('ArenaCode', sport);
     try { localStorage.removeItem(key); localStorage.removeItem(key + '_at'); } catch (e) {}
   }
 
   function ottoKlasemenCode(sport){
     if (arenaCode) return arenaCode;
     let c = null;
-    try { c = localStorage.getItem(klasemenKey(sport)); } catch (e) {}
+    try { c = localStorage.getItem(roomKey('ArenaCode', sport)); } catch (e) {}
     if (!c) c = newKlasemenCode(sport);
     return c;
   }
@@ -1788,6 +1790,7 @@
   const undoStacks = {};   // idx -> ['A','B',...]
   const detailSel = {};    // idx -> { team:'A'|'B', player:string }
   const logOpen = {};      // idx -> bool
+  const quickTagPending = {}; // idx -> 'A'|'B' — nunggu host mau tag siapa yang cetak (opsional, mode Cepat)
 
   function escHtml(s){
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1840,7 +1843,17 @@
         <button type="button" class="mode-btn" data-plus="A" style="padding:16px 10px;font-size:13px;">+1 Tim A</button>
         <button type="button" class="mode-btn" data-plus="B" style="padding:16px 10px;font-size:13px;">+1 Tim B</button>
         <button type="button" class="mode-btn" data-undo="1" style="flex:0 0 100%;">Undo</button>
-      </div>` : ''}
+      </div>
+      ${quickTagPending[idx] ? `
+      <div style="margin-top:10px;padding:10px;border-radius:10px;background:var(--glass-strong);">
+        <div style="font-size:11px;color:var(--line-dim);margin-bottom:6px;">Siapa yang cetak poin itu? (opsional)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${(m['team' + quickTagPending[idx]] || []).map((p, pi) => `
+            <button type="button" class="mode-btn" data-quicktag-player="${pi}" style="flex:1 1 42%;padding:10px 8px;font-size:12.5px;">${escHtml(p)}</button>
+          `).join('')}
+          <button type="button" class="mode-btn" data-quicktag-skip="1" style="flex:1 1 42%;padding:10px 8px;font-size:12.5px;color:var(--line-dim);">Lewati</button>
+        </div>
+      </div>` : ''}` : ''}
       ${mode === 'detail' ? `
       <div class="detail-score" style="margin-top:12px;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -1880,19 +1893,51 @@
         const team = btn.dataset.plus;
         const cur = team === 'A' ? state.current[idx].scoreA : state.current[idx].scoreB;
         setCourtScore(idx, team, (Number(cur) || 0) + 1);
-        (undoStacks[idx] = undoStacks[idx] || []).push(team);
+        (undoStacks[idx] = undoStacks[idx] || []).push({ team, taggedEventIndex: null });
+        quickTagPending[idx] = team;
         rerenderCourtCard(idx);
       });
     });
+
+    card.querySelectorAll('[data-quicktag-player]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const team = quickTagPending[idx];
+        if (!team) return;
+        const player = (m['team' + team] || [])[parseInt(btn.dataset.quicktagPlayer, 10)];
+        if (player){
+          if (!Array.isArray(state.current[idx].events)) state.current[idx].events = [];
+          state.current[idx].events.push({ player, team, action: 'point', ts: Date.now() });
+          const stack = undoStacks[idx] || [];
+          const top = stack[stack.length - 1];
+          if (top && top.team === team) top.taggedEventIndex = state.current[idx].events.length - 1;
+          saveSessionToCloud();
+        }
+        quickTagPending[idx] = null;
+        rerenderCourtCard(idx);
+      });
+    });
+
+    const quickTagSkipBtn = card.querySelector('[data-quicktag-skip]');
+    if (quickTagSkipBtn){
+      quickTagSkipBtn.addEventListener('click', () => {
+        quickTagPending[idx] = null;
+        rerenderCourtCard(idx);
+      });
+    }
 
     const undoBtn = card.querySelector('[data-undo]');
     if (undoBtn){
       undoBtn.addEventListener('click', () => {
         const stack = undoStacks[idx] || [];
-        const team = stack.pop();
-        if (!team) return;
+        const entry = stack.pop();
+        if (!entry) return;
+        const team = entry.team;
         const cur = team === 'A' ? state.current[idx].scoreA : state.current[idx].scoreB;
         setCourtScore(idx, team, (Number(cur) || 0) - 1);
+        if (entry.taggedEventIndex != null && Array.isArray(state.current[idx].events)){
+          state.current[idx].events.splice(entry.taggedEventIndex, 1);
+        }
+        if (quickTagPending[idx] === team) quickTagPending[idx] = null;
         rerenderCourtCard(idx);
       });
     }
