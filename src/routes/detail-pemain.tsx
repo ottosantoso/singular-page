@@ -360,7 +360,8 @@ function DetailPemain() {
       let latestAt = -1;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (!key || !key.startsWith("ottoKlasemenCode_") || key.endsWith("_at")) continue;
+        if (!key || key.endsWith("_at")) continue;
+        if (!key.startsWith("kocokArenaCode_") && !key.startsWith("ottoKlasemenCode_")) continue;
         const value = localStorage.getItem(key);
         if (!value) continue;
         const at = Number(localStorage.getItem(key + "_at") ?? 0);
