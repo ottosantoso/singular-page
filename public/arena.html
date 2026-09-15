@@ -8,44 +8,45 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg-1: #0d0620;
-    --bg-2: #06040f;
-    --glass: rgba(255,255,255,0.045);
-    --glass-strong: rgba(255,255,255,0.07);
-    --line: #f1edf8;
-    --line-dim: #a79fc2;
-    --lime: #baff29;
-    --magenta: #ff3d81;
-    --cyan: #22d3ee;
-    --gold: #ffd166;
-    --silver: #c9d3e0;
-    --bronze: #e2975a;
-    --radius: 18px;
-    --font-display: 'Chakra Petch', sans-serif;
-    --font-body: 'Inter', sans-serif;
-  }
-  *{ box-sizing: border-box; }
-  html, body{ margin:0; padding:0; background: var(--bg-2); color: var(--line); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
-  body{
-    background:
-      radial-gradient(ellipse 620px 420px at 6% -8%, rgba(186,255,41,0.16), transparent 60%),
-      radial-gradient(ellipse 700px 500px at 104% 10%, rgba(34,211,238,0.16), transparent 60%),
-      radial-gradient(ellipse 800px 600px at 50% 115%, rgba(255,61,129,0.14), transparent 60%),
-      var(--bg-2);
-    background-repeat: no-repeat;
-    min-height: 100vh;
-  }
-  .wrap{ max-width: 1180px; margin: 0 auto; padding: 30px 20px 70px; }
+   :root{
+     --bg-1: #f7fafc;
+     --bg-2: #f7fafc;
+     --glass: #ffffff;
+     --glass-strong: #f1f5f9;
+     --line: #172033;
+     --line-dim: #64748b;
+     --lime: #baff29;
+     --green: #5d8c0a;
+     --magenta: #ff3d81;
+     --cyan: #0ea5b7;
+     --gold: #b07d00;
+     --silver: #64748b;
+     --bronze: #9a5b2a;
+     --radius: 18px;
+     --font-display: 'Chakra Petch', sans-serif;
+     --font-body: 'Inter', sans-serif;
+   }
+   *{ box-sizing: border-box; }
+   html, body{ margin:0; padding:0; background: var(--bg-2); color: var(--line); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+   body{
+     background:
+       radial-gradient(ellipse 620px 420px at 6% -8%, rgba(186,255,41,0.22), transparent 60%),
+       radial-gradient(ellipse 700px 500px at 104% 10%, rgba(40,169,224,0.14), transparent 60%),
+       radial-gradient(ellipse 800px 600px at 50% 115%, rgba(255,91,110,0.10), transparent 60%),
+       var(--bg-2);
+     background-repeat: no-repeat;
+     min-height: 100vh;
+   }
+   .wrap{ max-width: 1180px; margin: 0 auto; padding: 30px 20px 70px; }
 
-  header{ display:flex; align-items:center; justify-content:space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 24px; margin-bottom: 30px; border-bottom: 1px solid rgba(241,237,248,0.09); }
-  .brand{ display:flex; align-items:center; gap: 16px; flex-wrap: wrap; }
-  .brand-banner-sm{ display:block; height: 56px; width: auto; max-width: 260px; object-fit: contain; filter: drop-shadow(0 0 14px rgba(186,255,41,0.25)); }
-  .sport-chip{ font-family: var(--font-display); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--lime); background: rgba(186,255,41,0.12); border: 1px solid rgba(186,255,41,0.35); border-radius: 999px; padding: 6px 14px; }
-  .back-btn{ font-family: var(--font-display); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--line-dim); background: rgba(255,255,255,0.04); border: 1px solid rgba(241,237,248,0.14); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
-  .back-btn:hover{ background: rgba(255,255,255,0.09); color: var(--line); }
-  .round-badge{ display:flex; align-items:center; gap:9px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: var(--bg-2); background: var(--lime); border-radius: 999px; padding: 10px 20px; white-space: nowrap; box-shadow: 0 0 22px rgba(186,255,41,0.4); }
-  .live-dot{ width:8px; height:8px; border-radius:50%; background: var(--bg-2); animation: pulse 1.6s ease-in-out infinite; }
+   header{ display:flex; align-items:center; justify-content:space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 24px; margin-bottom: 30px; border-bottom: 1px solid rgba(23,32,51,0.08); }
+   .brand{ display:flex; align-items:center; gap: 16px; flex-wrap: wrap; }
+   .brand-banner-sm{ display:block; height: 56px; width: auto; max-width: 260px; object-fit: contain; }
+   .sport-chip{ font-family: var(--font-display); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--green); background: rgba(186,255,41,0.20); border: 1px solid rgba(186,255,41,0.45); border-radius: 999px; padding: 6px 14px; }
+   .back-btn{ font-family: var(--font-display); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--line-dim); background: #fff; border: 1px solid rgba(23,32,51,0.1); border-radius: 999px; padding: 9px 16px; cursor: pointer; box-shadow: 0 4px 14px rgba(32,62,91,0.06); }
+   .back-btn:hover{ background: #f1f5f9; color: var(--line); }
+   .round-badge{ display:flex; align-items:center; gap:9px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: #172033; background: var(--lime); border-radius: 999px; padding: 10px 20px; white-space: nowrap; box-shadow: 0 6px 22px rgba(186,255,41,0.35); }
+   .live-dot{ width:8px; height:8px; border-radius:50%; background: #172033; animation: pulse 1.6s ease-in-out infinite; }
 
   body.welcome-active{ background:#f7fafc; color:#172033; }
   body.welcome-active .wrap{ max-width:none; padding:0; }
