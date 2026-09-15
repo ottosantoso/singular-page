@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DetailPemainRouteImport } from './routes/detail-pemain'
 import { Route as KlasemenRouteImport } from './routes/klasemen'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DetailPemainRoute = DetailPemainRouteImport.update({
+  id: '/detail-pemain',
+  path: '/detail-pemain',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KlasemenRoute = KlasemenRouteImport.update({
@@ -25,27 +31,31 @@ const KlasemenRoute = KlasemenRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/detail-pemain': typeof DetailPemainRoute
   '/klasemen': typeof KlasemenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/detail-pemain': typeof DetailPemainRoute
   '/klasemen': typeof KlasemenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/detail-pemain': typeof DetailPemainRoute
   '/klasemen': typeof KlasemenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/klasemen'
+  fullPaths: '/' | '/detail-pemain' | '/klasemen'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/klasemen'
-  id: '__root__' | '/' | '/klasemen'
+  to: '/' | '/detail-pemain' | '/klasemen'
+  id: '__root__' | '/' | '/detail-pemain' | '/klasemen'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DetailPemainRoute: typeof DetailPemainRoute
   KlasemenRoute: typeof KlasemenRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/detail-pemain': {
+      id: '/detail-pemain'
+      path: '/detail-pemain'
+      fullPath: '/detail-pemain'
+      preLoaderRoute: typeof DetailPemainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/klasemen': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DetailPemainRoute: DetailPemainRoute,
   KlasemenRoute: KlasemenRoute,
 }
 export const routeTree = rootRouteImport
