@@ -8,44 +8,57 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg-1: #0d0620;
-    --bg-2: #06040f;
-    --glass: rgba(255,255,255,0.045);
-    --glass-strong: rgba(255,255,255,0.07);
-    --line: #f1edf8;
-    --line-dim: #a79fc2;
-    --lime: #baff29;
-    --magenta: #ff3d81;
-    --cyan: #22d3ee;
-    --gold: #ffd166;
-    --silver: #c9d3e0;
-    --bronze: #e2975a;
-    --radius: 18px;
-    --font-display: 'Chakra Petch', sans-serif;
-    --font-body: 'Inter', sans-serif;
-  }
-  *{ box-sizing: border-box; }
-  html, body{ margin:0; padding:0; background: var(--bg-2); color: var(--line); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
-  body{
-    background:
-      radial-gradient(ellipse 620px 420px at 6% -8%, rgba(186,255,41,0.16), transparent 60%),
-      radial-gradient(ellipse 700px 500px at 104% 10%, rgba(34,211,238,0.16), transparent 60%),
-      radial-gradient(ellipse 800px 600px at 50% 115%, rgba(255,61,129,0.14), transparent 60%),
-      var(--bg-2);
-    background-repeat: no-repeat;
-    min-height: 100vh;
-  }
-  .wrap{ max-width: 1180px; margin: 0 auto; padding: 30px 20px 70px; }
+   :root{
+     --bg-1: oklch(0.985 0.012 150);
+     --bg-2: oklch(0.985 0.012 150);
+     --glass: oklch(1 0 0 / 0.85);
+     --glass-strong: oklch(1 0 0 / 0.82);
+     --line: oklch(0.26 0.05 250);
+     --line-dim: oklch(0.52 0.03 250);
+     --lime: oklch(0.62 0.19 143);
+     --green: oklch(0.62 0.19 143);
+     --magenta: #ff3d81;
+     --cyan: #0ea5b7;
+     --gold: #b07d00;
+     --silver: #64748b;
+     --bronze: #9a5b2a;
+     --radius: 22px;
+     --font-display: 'Chakra Petch', sans-serif;
+     --font-body: 'Inter', sans-serif;
+   }
+   *{ box-sizing: border-box; }
+   html, body{ margin:0; padding:0; background: var(--bg-2); color: var(--line); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+   body{
+     background:
+       radial-gradient(ellipse 700px 460px at 8% -10%, oklch(0.9 0.14 150 / 0.75), transparent 62%),
+       radial-gradient(ellipse 760px 520px at 102% 4%, oklch(0.92 0.12 210 / 0.7), transparent 62%),
+       radial-gradient(ellipse 820px 560px at 50% 116%, oklch(0.95 0.11 95 / 0.7), transparent 62%),
+       var(--bg-2);
+     background-repeat: no-repeat;
+     min-height: 100vh;
+   }
+   body:not(.welcome-active)::before{
+     content:"";
+     position:fixed;
+     inset:0;
+     pointer-events:none;
+     background-image:
+       linear-gradient(to right, oklch(0.26 0.05 250 / 0.06) 2px, transparent 2px),
+       linear-gradient(to bottom, oklch(0.26 0.05 250 / 0.06) 2px, transparent 2px);
+     background-size:120px 120px;
+     -webkit-mask-image:radial-gradient(ellipse at 50% 40%, black, transparent 78%);
+     mask-image:radial-gradient(ellipse at 50% 40%, black, transparent 78%);
+   }
+    .wrap{ position:relative; max-width: 1180px; margin: 0 auto; padding: 30px 20px 70px; }
 
-  header{ display:flex; align-items:center; justify-content:space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 24px; margin-bottom: 30px; border-bottom: 1px solid rgba(241,237,248,0.09); }
-  .brand{ display:flex; align-items:center; gap: 16px; flex-wrap: wrap; }
-  .brand-banner-sm{ display:block; height: 56px; width: auto; max-width: 260px; object-fit: contain; filter: drop-shadow(0 0 14px rgba(186,255,41,0.25)); }
-  .sport-chip{ font-family: var(--font-display); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--lime); background: rgba(186,255,41,0.12); border: 1px solid rgba(186,255,41,0.35); border-radius: 999px; padding: 6px 14px; }
-  .back-btn{ font-family: var(--font-display); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--line-dim); background: rgba(255,255,255,0.04); border: 1px solid rgba(241,237,248,0.14); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
-  .back-btn:hover{ background: rgba(255,255,255,0.09); color: var(--line); }
-  .round-badge{ display:flex; align-items:center; gap:9px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: var(--bg-2); background: var(--lime); border-radius: 999px; padding: 10px 20px; white-space: nowrap; box-shadow: 0 0 22px rgba(186,255,41,0.4); }
-  .live-dot{ width:8px; height:8px; border-radius:50%; background: var(--bg-2); animation: pulse 1.6s ease-in-out infinite; }
+   header{ display:flex; align-items:center; justify-content:space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 24px; margin-bottom: 30px; border-bottom: 1px solid rgba(23,32,51,0.08); }
+    .brand{ display:flex; align-items:center; gap: 16px; flex-wrap: wrap; padding:10px 14px; border:1px solid oklch(0.62 0.19 143 / 0.42); border-radius:22px; background:linear-gradient(135deg,oklch(0.13 0.025 250),oklch(0.27 0.13 143)); box-shadow:0 24px 60px -30px rgba(20,40,30,0.6); }
+    .brand-banner-sm{ display:block; height: 56px; width: auto; max-width: 260px; object-fit: contain; border-radius:10px; }
+    .sport-chip{ font-family: var(--font-display); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: oklch(0.9 0.2 140); background: transparent; border: 1px solid oklch(0.72 0.2 140); border-radius: 999px; padding: 6px 14px; }
+    .back-btn{ font-family: var(--font-display); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--line-dim); background: var(--glass-strong); border: 1px solid oklch(0.26 0.05 250 / 0.15); border-radius: 999px; padding: 9px 16px; cursor: pointer; box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
+   .back-btn:hover{ background: #f1f5f9; color: var(--line); }
+    .round-badge{ display:flex; align-items:center; gap:9px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: var(--green); background: var(--glass-strong); border:1px solid oklch(0.62 0.19 143 / 0.55); border-radius: 999px; padding: 10px 20px; white-space: nowrap; box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
+    .live-dot{ width:8px; height:8px; border-radius:50%; background: var(--lime); animation: pulse 1.6s ease-in-out infinite; }
 
   body.welcome-active{ background:#f7fafc; color:#172033; }
   body.welcome-active .wrap{ max-width:none; padding:0; }
@@ -125,23 +138,23 @@
   .layout{ display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
   @media (max-width: 880px){ .layout{ grid-template-columns: 1fr; } }
 
-  .card{ background: var(--glass); backdrop-filter: blur(14px); border: 1px solid rgba(241,237,248,0.09); border-radius: var(--radius); padding: 20px; }
+  .card{ background: var(--glass); border: 1px solid oklch(0.26 0.05 250 / 0.08); border-radius: var(--radius); padding: 20px; box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
   .card + .card{ margin-top: 18px; }
   .card h2{ font-family: var(--font-display); font-size: 13px; margin: 0 0 14px; color: var(--line-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
   label{ display:block; font-size: 13px; color: var(--line-dim); margin-bottom: 6px; }
-  textarea, input[type=number], input[type=text], input[type=password]{ width: 100%; background: rgba(0,0,0,0.25); border: 1px solid rgba(241,237,248,0.14); border-radius: 10px; color: var(--line); font-family: var(--font-body); font-size: 14.5px; padding: 10px 12px; resize: vertical; }
+  textarea, select, input[type=number], input[type=text], input[type=password]{ width: 100%; background: rgba(248,250,252,0.9); border: 1px solid rgba(23,32,51,0.12); border-radius: 10px; color: var(--line); font-family: var(--font-body); font-size: 14.5px; padding: 10px 12px; resize: vertical; }
   textarea{ min-height: 170px; line-height: 1.65; }
-  textarea:focus, input:focus{ outline: 2px solid var(--lime); outline-offset: 1px; }
+  textarea:focus, select:focus, input:focus{ outline: 2px solid var(--green); outline-offset: 1px; }
 
   /* --- Sinkron cloud UI --- */
-  #syncCard{ position: relative; overflow: hidden; border-color: rgba(186,255,41,0.18); background:
-      radial-gradient(120% 140% at 100% 0%, rgba(186,255,41,0.10), transparent 60%), var(--glass); }
+  #syncCard{ position: relative; overflow: hidden; border-color: rgba(186,255,41,0.35); background:
+      radial-gradient(120% 140% at 100% 0%, rgba(186,255,41,0.12), transparent 60%), #fff; }
   #syncCard .sync-fields{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 520px){ #syncCard .sync-fields{ grid-template-columns: 1fr; } }
   #syncCard label{ font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--line-dim); font-weight: 600; }
   #syncCard input[type=text], #syncCard input[type=password]{
-    background: rgba(0,0,0,0.42);
-    border: 1px solid rgba(241,237,248,0.16);
+    background: rgba(248,250,252,1);
+    border: 1px solid rgba(23,32,51,0.14);
     border-radius: 12px;
     padding: 13px 14px;
     font-family: var(--font-display);
@@ -151,10 +164,10 @@
     text-transform: uppercase;
     transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
   }
-  #syncCard input[type=text]::placeholder, #syncCard input[type=password]::placeholder{ letter-spacing: 0.08em; font-weight: 500; color: rgba(241,237,248,0.30); text-transform: none; }
+  #syncCard input[type=text]::placeholder, #syncCard input[type=password]::placeholder{ letter-spacing: 0.08em; font-weight: 500; color: rgba(23,32,51,0.30); text-transform: none; }
   #syncCard input[type=text]:focus, #syncCard input[type=password]:focus{
     outline: none;
-    border-color: var(--lime);
+    border-color: var(--green);
     background: rgba(186,255,41,0.06);
     box-shadow: 0 0 0 3px rgba(186,255,41,0.16), 0 0 22px rgba(186,255,41,0.15);
   }
@@ -167,12 +180,12 @@
   .hint{ font-size: 12.5px; color: var(--line-dim); margin-top: 6px; }
   .status{ font-size: 13px; margin-top: 10px; color: var(--gold); min-height: 16px; }
 
-  button{ font-family: var(--font-display); font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.02em; border: none; border-radius: 10px; padding: 13px 16px; cursor: pointer; width: 100%; transition: transform .08s ease, opacity .15s ease, box-shadow .15s ease; }
+  button{ font-family: var(--font-display); font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.02em; border: none; border-radius: 999px; padding: 13px 16px; cursor: pointer; width: 100%; transition: transform .08s ease, opacity .15s ease, box-shadow .15s ease; }
   button:active{ transform: scale(0.98); }
-  .btn-primary{ background: var(--lime); color: #0d1a00; box-shadow: 0 0 0 rgba(186,255,41,0); }
-  .btn-primary:hover{ box-shadow: 0 0 24px rgba(186,255,41,0.45); }
-  .btn-secondary{ background: var(--glass-strong); color: var(--line); border: 1px solid rgba(241,237,248,0.16); margin-top: 10px; }
-  .btn-secondary:hover{ background: rgba(255,255,255,0.11); }
+  .btn-primary{ background: linear-gradient(135deg, oklch(0.72 0.2 140), oklch(0.62 0.19 143)); color: oklch(0.99 0 0); box-shadow: 0 16px 34px -14px oklch(0.62 0.19 143 / 0.8); }
+  .btn-primary:hover{ transform:translateY(-3px) scale(1.02); box-shadow: 0 22px 44px -14px oklch(0.62 0.19 143 / 0.9); }
+  .btn-secondary{ display:flex; align-items:center; justify-content:center; width:100%; padding:13px 16px; border-radius:999px; background: var(--glass-strong); color: var(--line); border: 1px solid oklch(0.26 0.05 250 / 0.15); margin-top: 10px; font-family:var(--font-display); font-size:14px; font-weight:700; text-transform:uppercase; text-decoration:none; }
+  .btn-secondary:hover{ background: rgba(226,232,240,0.9); }
   .btn-outline-danger{ background: transparent; color: var(--magenta); border: 1px solid rgba(255,61,129,0.4); margin-top: 10px; }
   .btn-outline-danger:hover{ background: rgba(255,61,129,0.08); }
   .btn-primary:disabled{ opacity: 0.4; cursor: not-allowed; }
@@ -180,18 +193,18 @@
   .btn-row button{ margin-top: 0; }
 
   .empty-state{ text-align: center; padding: 70px 20px; color: var(--line-dim); font-size: 14.5px; }
-  .empty-state .ball-dot{ width: 36px; height: 36px; border-radius: 50%; background: var(--lime); margin: 0 auto 18px; box-shadow: 0 0 26px rgba(186,255,41,0.5); }
+  .empty-state .ball-dot{ width: 36px; height: 36px; border-radius: 50%; background: var(--green); margin: 0 auto 18px; box-shadow: 0 0 26px rgba(186,255,41,0.5); }
 
   .section-label{ display:flex; align-items:center; gap:8px; font-family: var(--font-display); font-size: 12.5px; font-weight: 700; color: var(--line-dim); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 14px; }
-  .section-label .live-dot{ background: var(--lime); box-shadow: 0 0 8px rgba(186,255,41,0.8); }
+  .section-label .live-dot{ background: var(--green); box-shadow: 0 0 8px rgba(186,255,41,0.8); }
   .section-label.next-label{ margin-top: 28px; opacity: 0.75; }
 
   .courts-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
-  .court-card{ background: var(--glass); backdrop-filter: blur(10px); border: 1px solid rgba(241,237,248,0.09); border-radius: var(--radius); overflow: hidden; opacity: 0; transform: translateY(8px); animation: cardIn .45s ease forwards; }
+  .court-card{ background: var(--glass); border: 1px solid oklch(0.26 0.05 250 / 0.08); border-radius: var(--radius); overflow: hidden; opacity: 0; transform: translateY(8px); animation: cardIn .45s ease forwards; box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
   @keyframes cardIn{ to{ opacity: 1; transform: translateY(0); } }
-  .court-card.preview{ background: transparent; border-style: dashed; border-color: rgba(241,237,248,0.16); }
-  .court-head{ display:flex; justify-content:space-between; align-items:center; padding: 11px 16px; background: rgba(255,255,255,0.05); font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--line-dim); text-transform: uppercase; letter-spacing: 0.04em; }
-  .court-card.preview .court-head{ background: transparent; border-bottom: 1px dashed rgba(241,237,248,0.13); }
+  .court-card.preview{ background: transparent; border-style: dashed; border-color: rgba(23,32,51,0.14); }
+  .court-head{ display:flex; justify-content:space-between; align-items:center; padding: 11px 16px; background: rgba(241,245,249,0.8); font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--line-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .court-card.preview .court-head{ background: transparent; border-bottom: 1px dashed rgba(23,32,51,0.12); }
   .team-row{ display:flex; align-items:center; gap: 12px; padding: 15px 16px; border-left: 3px solid transparent; }
   .team-row.a{ border-left-color: var(--magenta); }
   .team-row.b{ border-left-color: var(--cyan); }
@@ -204,34 +217,34 @@
   .score-value .pencil{ font-size:11px; opacity:.65; }
 
   .vs-divider{ display:flex; align-items:center; gap: 8px; padding: 0 16px; color: var(--line-dim); font-size: 10.5px; font-family: var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; }
-  .vs-divider::before, .vs-divider::after{ content:''; flex:1; height:1px; background: rgba(241,237,248,0.1); }
-  .vs-divider .dot{ width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
+  .vs-divider::before, .vs-divider::after{ content:''; flex:1; height:1px; background: rgba(23,32,51,0.09); }
+  .vs-divider .dot{ width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 
-  .sitout-strip{ margin-top: 20px; padding-top: 16px; border-top: 1px dashed rgba(241,237,248,0.14); font-size: 13px; color: var(--line-dim); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .sitout-strip{ margin-top: 20px; padding-top: 16px; border-top: 1px dashed rgba(23,32,51,0.12); font-size: 13px; color: var(--line-dim); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .chip{ background: var(--glass-strong); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; }
 
   table{ width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  th{ text-align:left; font-family: var(--font-display); font-size: 10.5px; color: var(--line-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 8px; border-bottom: 1px solid rgba(241,237,248,0.09); }
-  td{ padding: 8px 8px; border-bottom: 1px solid rgba(241,237,248,0.05); }
-  td.rank{ font-family: var(--font-display); color: var(--lime); font-weight: 700; width: 24px; }
+  th{ text-align:left; font-family: var(--font-display); font-size: 10.5px; color: var(--line-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 8px; border-bottom: 1px solid rgba(23,32,51,0.08); }
+  td{ padding: 8px 8px; border-bottom: 1px solid rgba(23,32,51,0.05); }
+  td.rank{ font-family: var(--font-display); color: var(--green); font-weight: 700; width: 24px; }
   td.pts{ text-align:right; font-family: var(--font-display); font-weight: 700; }
   .empty-lb{ color: var(--line-dim); font-size: 13px; padding: 6px 8px; }
 
   .action-stack{ margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
 
   .player-manage-list{ display:flex; flex-direction:column; gap:6px; max-height: 230px; overflow-y:auto; padding-right: 2px; }
-  .player-row{ display:flex; align-items:center; gap:8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(241,237,248,0.08); border-radius: 10px; padding: 7px 10px; font-size: 13px; }
+  .player-row{ display:flex; align-items:center; gap:8px; background: rgba(241,245,249,0.6); border: 1px solid rgba(23,32,51,0.07); border-radius: 10px; padding: 7px 10px; font-size: 13px; }
   .player-row.paused{ opacity: 0.85; border-style: dashed; }
   .player-row-name{ flex:1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .player-row-meta{ color: var(--line-dim); font-size: 11px; white-space: nowrap; }
   .resume-input{ width: 50px; text-align:center; padding: 6px 4px; font-size: 13px; flex-shrink: 0; }
-  .btn-tiny{ width:auto; padding: 6px 10px; font-size: 10.5px; background: var(--glass-strong); color: var(--line); border: 1px solid rgba(241,237,248,0.16); border-radius: 8px; text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-weight: 600; flex-shrink:0; }
-  .btn-tiny:hover{ background: rgba(255,255,255,0.11); }
+  .btn-tiny{ width:auto; padding: 6px 10px; font-size: 10.5px; background: var(--glass-strong); color: var(--line); border: 1px solid rgba(23,32,51,0.14); border-radius: 8px; text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-weight: 600; flex-shrink:0; }
+  .btn-tiny:hover{ background: rgba(226,232,240,0.9); }
   .btn-tiny.btn-pause{ color: var(--gold); border-color: rgba(255,209,102,0.35); }
-  .btn-tiny.btn-resume{ color: var(--lime); border-color: rgba(186,255,41,0.35); }
+  .btn-tiny.btn-resume{ color: var(--green); border-color: rgba(186,255,41,0.35); }
 
-  .add-player-form{ background: linear-gradient(160deg, rgba(186,255,41,0.05), rgba(255,255,255,0.02)); border: 1px solid rgba(241,237,248,0.09); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
-  .add-player-title{ display:flex; align-items:center; gap:8px; font-family: var(--font-display); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--lime); margin-bottom: 14px; }
+  .add-player-form{ background: linear-gradient(160deg, rgba(186,255,41,0.05), rgba(241,245,249,0.5)); border: 1px solid rgba(23,32,51,0.08); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
+  .add-player-title{ display:flex; align-items:center; gap:8px; font-family: var(--font-display); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--green); margin-bottom: 14px; }
   .add-player-icon{ display:flex; align-items:center; justify-content:center; width: 20px; height: 20px; border-radius: 50%; background: rgba(186,255,41,0.16); font-size: 13px; line-height:1; flex-shrink:0; }
   .add-player-row{ display:flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
   .add-player-field{ flex: 1; min-width: 0; }
@@ -240,9 +253,9 @@
   .add-player-field input{ width: 100%; }
 
   .mode-toggle{ display:flex; gap: 8px; margin-bottom: 4px; }
-  .mode-btn{ flex: 1; padding: 10px 8px; border-radius: 10px; border: 1px solid rgba(241,237,248,0.14); background: rgba(255,255,255,0.03); color: var(--line-dim); font-family: var(--font-display); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; font-weight: 700; }
-  .mode-btn:hover{ background: rgba(255,255,255,0.07); }
-  .mode-btn.active{ background: rgba(186,255,41,0.14); border-color: rgba(186,255,41,0.4); color: var(--lime); }
+  .mode-btn{ flex: 1; padding: 10px 8px; border-radius: 10px; border: 1px solid rgba(23,32,51,0.12); background: rgba(241,245,249,0.6); color: var(--line-dim); font-family: var(--font-display); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; font-weight: 700; }
+  .mode-btn:hover{ background: rgba(226,232,240,0.7); }
+  .mode-btn.active{ background: rgba(186,255,41,0.14); border-color: rgba(186,255,41,0.4); color: var(--green); }
   .add-player-form input[type=number]{ -moz-appearance: textfield; }
   .add-player-form input[type=number]::-webkit-outer-spin-button,
   .add-player-form input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
@@ -250,37 +263,37 @@
   .add-player-form .btn-primary{ margin-top: 2px; }
   .add-player-form .status{ margin-top: 8px; }
 
-  .timer-bar{ display:flex; align-items:baseline; flex-wrap:wrap; gap: 10px; background: rgba(0,0,0,0.22); border: 1px solid rgba(241,237,248,0.1); border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; }
+  .timer-bar{ display:flex; align-items:baseline; flex-wrap:wrap; gap: 10px; background: rgba(248,250,252,0.9); border: 1px solid rgba(23,32,51,0.09); border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; }
   .timer-label{ font-family: var(--font-display); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--line-dim); }
   .timer-clock{ font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: 0.02em; color: var(--cyan); font-variant-numeric: tabular-nums; transition: color .2s ease; }
   .timer-clock.over-time{ color: var(--magenta); }
   .timer-target{ font-size: 12.5px; color: var(--line-dim); }
   .timer-prev{ font-size: 12.5px; color: var(--line-dim); }
-  .timer-alert{ display:flex; align-items:center; gap: 8px; background: rgba(255,61,129,0.14); border: 1px solid rgba(255,61,129,0.4); color: #ffd7e6; border-radius: 10px; padding: 11px 14px; margin-bottom: 16px; font-size: 13.5px; font-weight: 600; animation: alertPulse 1.2s ease-in-out infinite; }
+  .timer-alert{ display:flex; align-items:center; gap: 8px; background: rgba(255,61,129,0.10); border: 1px solid rgba(255,61,129,0.4); color: #9d174d; border-radius: 10px; padding: 11px 14px; margin-bottom: 16px; font-size: 13.5px; font-weight: 600; animation: alertPulse 1.2s ease-in-out infinite; }
   @keyframes alertPulse{ 0%,100%{ box-shadow: 0 0 0 rgba(255,61,129,0); } 50%{ box-shadow: 0 0 18px rgba(255,61,129,0.45); } }
 
-  .sync-code-box{ display:flex; align-items:center; justify-content:space-between; gap:10px; background: rgba(0,0,0,0.25); border: 1px solid rgba(241,237,248,0.12); border-radius: 10px; padding: 10px 12px; }
+  .sync-code-box{ display:flex; align-items:center; justify-content:space-between; gap:10px; background: rgba(248,250,252,0.9); border: 1px solid rgba(23,32,51,0.10); border-radius: 10px; padding: 10px 12px; }
   .sync-label{ display:block; font-size: 10.5px; color: var(--line-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
-  .sync-code{ font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--lime); letter-spacing: 0.06em; }
+  .sync-code{ font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--green); letter-spacing: 0.06em; }
   #syncCard .btn-row{ margin-top: 4px; }
   #copyInfoBtn{ margin-top: 10px; }
 
-  .history-item{ border: 1px solid rgba(241,237,248,0.08); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
-  .history-summary{ width: 100%; text-align:left; background: rgba(255,255,255,0.03); border:none; border-radius:0; padding: 10px 12px; display:flex; flex-direction:column; gap:2px; cursor:pointer; font-family: var(--font-body); text-transform:none; letter-spacing:0; }
-  .history-summary:hover{ background: rgba(255,255,255,0.07); }
+  .history-item{ border: 1px solid rgba(23,32,51,0.07); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+  .history-summary{ width: 100%; text-align:left; background: rgba(241,245,249,0.6); border:none; border-radius:0; padding: 10px 12px; display:flex; flex-direction:column; gap:2px; cursor:pointer; font-family: var(--font-body); text-transform:none; letter-spacing:0; }
+  .history-summary:hover{ background: rgba(226,232,240,0.7); }
   .history-date{ font-size: 11px; color: var(--line-dim); }
   .history-champ{ font-size: 13.5px; font-weight:700; }
   .history-meta{ font-size: 11.5px; color: var(--line-dim); }
   .history-detail{ padding: 0 12px 14px; }
 
   #matchHistoryList{ max-height: 360px; overflow-y: auto; padding-right: 2px; }
-  .match-row{ border: 1px solid rgba(241,237,248,0.08); border-radius: 10px; padding: 9px 11px; margin-bottom: 7px; background: rgba(255,255,255,0.03); }
+  .match-row{ border: 1px solid rgba(23,32,51,0.07); border-radius: 10px; padding: 9px 11px; margin-bottom: 7px; background: rgba(241,245,249,0.6); }
   .match-row-meta{ font-size: 10.5px; color: var(--line-dim); margin-bottom: 5px; }
   .match-row-teams{ display:flex; align-items:center; justify-content:space-between; gap: 8px; font-size: 12.5px; }
   .match-row-teams span:first-child, .match-row-teams span:last-child{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .match-row-teams span:last-child{ text-align: right; }
-  .match-row-score{ flex-shrink: 0; font-family: var(--font-display); font-weight: 700; color: var(--line); background: rgba(0,0,0,0.25); border-radius: 8px; padding: 2px 8px; }
-  .match-winner{ color: var(--lime); font-weight: 700; }
+  .match-row-score{ flex-shrink: 0; font-family: var(--font-display); font-weight: 700; color: var(--line); background: rgba(248,250,252,0.9); border-radius: 8px; padding: 2px 8px; }
+  .match-winner{ color: var(--green); font-weight: 700; }
 
   /* final results */
   .final-header{ text-align:center; padding: 10px 0 26px; }
@@ -288,7 +301,7 @@
   .final-header h2{ font-family: var(--font-display); font-size: clamp(22px, 4vw, 30px); text-transform: uppercase; margin: 0 0 6px; letter-spacing: 0.02em; }
   .final-header p{ color: var(--line-dim); margin: 0; font-size: 14px; }
 
-  .champion-card{ background: linear-gradient(135deg, rgba(255,209,102,0.14), rgba(255,255,255,0.04)); border: 1px solid rgba(255,209,102,0.5); border-radius: var(--radius); padding: 26px; text-align:center; margin-bottom: 18px; box-shadow: 0 0 40px rgba(255,209,102,0.15); }
+  .champion-card{ background: linear-gradient(135deg, rgba(255,209,102,0.14), rgba(241,245,249,0.7)); border: 1px solid rgba(255,209,102,0.5); border-radius: var(--radius); padding: 26px; text-align:center; margin-bottom: 18px; box-shadow: 0 0 40px rgba(255,209,102,0.15); }
   .champion-card .medal{ font-size: 32px; }
   .champion-card .name{ font-family: var(--font-display); font-size: clamp(24px, 5vw, 34px); font-weight: 700; margin: 6px 0 2px; text-transform: uppercase; }
   .champion-card .meta{ color: var(--line-dim); font-size: 13.5px; }
@@ -297,7 +310,7 @@
 
   .runner-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
   @media (max-width: 500px){ .runner-row{ grid-template-columns: 1fr; } }
-  .runner-card{ border-radius: var(--radius); padding: 18px; text-align:center; border: 1px solid rgba(241,237,248,0.1); background: var(--glass); }
+  .runner-card{ border-radius: var(--radius); padding: 18px; text-align:center; border: 1px solid oklch(0.26 0.05 250 / 0.08); background: var(--glass); box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
   .runner-card.silver{ border-color: rgba(201,211,224,0.4); }
   .runner-card.bronze{ border-color: rgba(226,151,90,0.4); }
   .runner-card .medal{ font-size: 24px; }
@@ -306,8 +319,8 @@
   .runner-card.silver .points{ color: var(--silver); }
   .runner-card.bronze .points{ color: var(--bronze); }
 
-  footer{ margin-top: 44px; text-align: center; font-size: 12.5px; color: rgba(241,237,248,0.4); line-height: 1.7; }
-  footer .foot-brand{ color: var(--lime); font-family: var(--font-display); letter-spacing: 0.04em; }
+  footer{ margin-top: 44px; text-align: center; font-size: 12.5px; color: rgba(23,32,51,0.4); line-height: 1.7; }
+  footer .foot-brand{ color: var(--green); font-family: var(--font-display); letter-spacing: 0.04em; }
 </style>
 </head>
 <body class="welcome-active">
@@ -325,24 +338,24 @@
           <p class="welcome-copy">Pilih cabang olahraga favoritmu, masukkan para pejuang, lalu biarkan Otto mengatur pertandingan.</p>
         </div>
         <div class="welcome-logo-wrap">
-          <img class="welcome-banner" src="/__l5e/assets-v1/dfa03d3e-0d03-4986-8956-c897e66b4931/otto-play-arena-banner.png" alt="Otto Play Arena">
+          <img class="welcome-banner" src="/__l5e/assets-v1/e6a4dcaf-af23-4b34-bc2a-e98be81d1b1b/otto-play-arena-banner.png" alt="Otto Play Arena">
         </div>
       </div>
       <div class="menu-grid">
       <button type="button" class="menu-card" data-sport="padel">
-        <span class="menu-icon"><img src="/__l5e/assets-v1/aa35b69f-48e2-46f3-bd3f-810586f25c88/padel.png" alt="" loading="lazy"></span>
+        <span class="menu-icon"><img src="/__l5e/assets-v1/f2dfac12-7301-4cbd-a714-abc9c864f2c8/padel.png" alt="" loading="lazy"></span>
         <span class="menu-copy"><span class="menu-label">Padel</span><span class="menu-sub">4 pemain / lapangan</span></span>
       </button>
       <button type="button" class="menu-card" data-sport="badminton">
-        <span class="menu-icon"><img src="/__l5e/assets-v1/b445adb6-8686-4868-b530-9c0baef3e330/badminton.png" alt="" loading="lazy"></span>
+        <span class="menu-icon"><img src="/__l5e/assets-v1/3a4484e6-ebcd-48fc-87c8-c805f0038667/badminton.png" alt="" loading="lazy"></span>
         <span class="menu-copy"><span class="menu-label">Badminton</span><span class="menu-sub">Ganda &amp; rotasi adil</span></span>
       </button>
       <button type="button" class="menu-card" data-sport="tennis">
-        <span class="menu-icon"><img src="/__l5e/assets-v1/4dde9ddf-da79-43be-8a0f-4384eb5e96c9/tennis.png" alt="" loading="lazy"></span>
+        <span class="menu-icon"><img src="/__l5e/assets-v1/7c1c6b62-14f5-4601-8155-e7d38da0bc8e/tennis.png" alt="" loading="lazy"></span>
         <span class="menu-copy"><span class="menu-label">Tenis</span><span class="menu-sub">Rotasi partner otomatis</span></span>
       </button>
       <button type="button" class="menu-card" data-sport="tenismeja">
-        <span class="menu-icon"><img src="/__l5e/assets-v1/4a07d0b8-2c61-41d7-9b79-e42a48cc3b0b/pingpong.png" alt="" loading="lazy"></span>
+        <span class="menu-icon"><img src="/__l5e/assets-v1/ebe1b372-7329-4063-849d-0ddb148b5f62/pingpong.png" alt="" loading="lazy"></span>
         <span class="menu-copy"><span class="menu-label">Tenis Meja</span><span class="menu-sub">Ronde cepat, skor instan</span></span>
       </button>
       <button type="button" class="menu-card menu-card-history" id="openHistoryMenuBtn">
@@ -358,7 +371,7 @@
   <header>
     <button type="button" class="back-btn" id="backFromArenaBtn">← Beranda</button>
     <div class="brand">
-      <img class="brand-banner-sm" src="/__l5e/assets-v1/dfa03d3e-0d03-4986-8956-c897e66b4931/otto-play-arena-banner.png" alt="Otto Play Arena">
+      <img class="brand-banner-sm" src="/__l5e/assets-v1/e6a4dcaf-af23-4b34-bc2a-e98be81d1b1b/otto-play-arena-banner.png" alt="Otto Play Arena">
       <span class="sport-chip" id="arenaSportChip">Padel</span>
     </div>
     <div class="round-badge" id="roundBadge"><span class="live-dot" style="display:none;"></span>belum mulai</div>
@@ -385,7 +398,7 @@
         </div>
         <div class="hint">Bagikan Kode + PIN ini ke panitia lain biar bisa dibuka dari device masing-masing, dan riwayat turnamen sebelumnya cuma bisa dilihat kalau tau keduanya.</div>
         <button class="btn-secondary" id="copyInfoBtn" style="display:none;">Salin Kode &amp; PIN</button>
-        <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">Buka Klasemen Online</a>
+        <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener">Buka Klasemen Online</a>
         <div class="status" id="syncStatus"></div>
 
       </div>
@@ -400,9 +413,26 @@
           </div>
           <div class="hint" id="modeHint">Tiap ronde partner diacak ulang (rotasi individu).</div>
         </div>
+        <div class="add-player-form">
+          <div class="add-player-row">
+            <div class="add-player-field">
+              <label for="playerNameInput">Nama</label>
+              <input type="text" id="playerNameInput" placeholder="cth. Andi" autocomplete="off">
+            </div>
+            <div class="add-player-field">
+              <label for="playerGenderInput">Jenis Kelamin</label>
+              <select id="playerGenderInput">
+                <option value="male">Laki-Laki</option>
+                <option value="female">Perempuan</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" class="btn-primary" id="registerPlayerBtn">+ Tambah</button>
+          <div class="status" id="playerEntryStatus"></div>
+        </div>
         <div class="field">
-          <label for="playersInput" id="playersLabel">Daftar pejuang (satu nama per baris)</label>
-          <textarea id="playersInput" placeholder="Andi, Budi, Wati&#10;atau satu nama per baris"></textarea>
+          <label id="playersLabel">Daftar Pemain Terdaftar</label>
+          <div id="registeredPlayersList" class="player-manage-list"><div class="empty-lb">Belum ada pemain.</div></div>
         </div>
         <div class="field">
           <label for="courtsInput">Jumlah lapangan</label>
@@ -516,7 +546,7 @@
     <header>
       <button type="button" class="back-btn" id="backFromHistoryBtn">← Beranda</button>
       <div class="brand">
-        <img class="brand-banner-sm" src="/__l5e/assets-v1/dfa03d3e-0d03-4986-8956-c897e66b4931/otto-play-arena-banner.png" alt="Otto Play Arena">
+        <img class="brand-banner-sm" src="/__l5e/assets-v1/e6a4dcaf-af23-4b34-bc2a-e98be81d1b1b/otto-play-arena-banner.png" alt="Otto Play Arena">
       </div>
     </header>
 
@@ -786,7 +816,8 @@
       current: null, next: null, currentSitOut: [], nextSitOut: [],
       paused: [],
       roundDurationMin: (durMin && durMin > 0) ? durMin : null,
-      roundStartTime: null, roundAlertFired: false, roundHistory: []
+      roundStartTime: null, roundAlertFired: false, roundHistory: [],
+      matchHistory: []
     };
 
     if (!arenaCode) { newKlasemenCode(selectedSport); refreshKlasemenLink(); }
@@ -1008,6 +1039,7 @@
       if (!state.mode) state.mode = 'individual';
       if (!state.pairs) state.pairs = [];
       if (!state.pairMembers) state.pairMembers = {};
+      if (!state.matchHistory) state.matchHistory = [];
       Object.keys(state.leaderboard || {}).forEach(name => {
         if (typeof state.leaderboard[name].wins !== 'number') state.leaderboard[name].wins = 0;
       });
@@ -1197,7 +1229,7 @@
 
   function newKlasemenCode(sport){
     const key = klasemenKey(sport);
-    const c = 'LK' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    const c = genSessionCode();
     try {
       localStorage.setItem(key, c);
       localStorage.setItem(key + '_at', String(Date.now()));
@@ -1240,6 +1272,12 @@
 
       const players = (state.players || []).map(n => ({ arena_code: code, name: n }));
       if (players.length) await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
+
+      // Hapus dulu data ronde ini yang lama (kalau ada — misal ini penyimpanan ulang
+      // setelah diedit), baru insert versi terbaru. Biar aman dipanggil berkali-kali
+      // buat ronde yang sama tanpa bikin data dobel.
+      await ottoDb.from('arena_matches').delete().eq('arena_code', code).eq('round', round);
+      await ottoDb.from('arena_player_stats').delete().eq('arena_code', code).eq('round', round);
 
       const rows = matches.map((m, i) => ({
         arena_code: code,
@@ -1625,9 +1663,30 @@
   });
 
   finishBtn.addEventListener('click', async () => {
-    commitScores(state.current);
-    logMatchesToCloud(state.round, state.current);
-    persistRoundToDb(state.round, state.current);
+    const roundUntouched = state.current.every(m => (m.scoreA || 0) === 0 && (m.scoreB || 0) === 0);
+    const roundInProgress = !roundUntouched; // ada skor yang sudah diisi tapi belum tentu ronde ini "selesai" beneran
+
+    if (roundUntouched){
+      const ok = window.confirm(
+        'Ronde ' + state.round + ' belum diisi skornya sama sekali. Kalau lanjut, ronde ini TIDAK akan ' +
+        'disimpan ke laporan/klasemen — turnamen akan dianggap selesai di ronde ' + (state.round - 1) + '. ' +
+        'Klik OK buat selesaikan turnamen (ronde ini dilewati), atau Cancel buat balik isi skornya dulu.'
+      );
+      if (!ok) return; // batal, balik ke layar isi skor — nggak ada yang kesimpen
+    } else if (roundInProgress){
+      const ok = window.confirm(
+        'Ronde ' + state.round + ' masih berjalan. Skor yang sudah diisi sekarang akan disimpan sebagai ' +
+        'skor FINAL ronde ini. Kalau ronde ini sebenarnya belum selesai dimainkan, klik Cancel dulu dan ' +
+        'lanjutkan mainnya. Klik OK kalau memang mau selesaikan turnamen sekarang.'
+      );
+      if (!ok) return; // batal, balik ke layar isi skor
+    }
+
+    if (!roundUntouched){
+      commitScores(state.current);
+      logMatchesToCloud(state.round, state.current);
+      persistRoundToDb(state.round, state.current);
+    }
     if (state.roundStartTime){
       state.roundHistory.push({ round: state.round, ms: Date.now() - state.roundStartTime });
     }
@@ -1665,15 +1724,35 @@
     saveSessionToCloud();
   }
 
-  function commitScores(matches){
-    matches.forEach(m => {
-      const sa = parseInt(m.scoreA, 10) || 0;
-      const sb = parseInt(m.scoreB, 10) || 0;
-      const aWins = sa > sb;
-      const bWins = sb > sa;
-      m.teamA.forEach(p => { state.leaderboard[p].points += sa; state.leaderboard[p].games += 1; if (aWins) state.leaderboard[p].wins += 1; });
-      m.teamB.forEach(p => { state.leaderboard[p].points += sb; state.leaderboard[p].games += 1; if (bWins) state.leaderboard[p].wins += 1; });
+  function recomputeLeaderboard(){
+    const lb = {};
+    (state.players || []).forEach(p => { lb[p] = { points: 0, games: 0, wins: 0 }; });
+    (state.matchHistory || []).forEach(entry => {
+      (entry.matches || []).forEach(m => {
+        const sa = parseInt(m.scoreA, 10) || 0;
+        const sb = parseInt(m.scoreB, 10) || 0;
+        const aWins = sa > sb;
+        const bWins = sb > sa;
+        (m.teamA || []).forEach(p => {
+          if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0 };
+          lb[p].points += sa; lb[p].games += 1; if (aWins) lb[p].wins += 1;
+        });
+        (m.teamB || []).forEach(p => {
+          if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0 };
+          lb[p].points += sb; lb[p].games += 1; if (bWins) lb[p].wins += 1;
+        });
+      });
     });
+    state.leaderboard = lb;
+  }
+
+  function commitScores(matches){
+    if (!state.matchHistory) state.matchHistory = [];
+    const existingIdx = state.matchHistory.findIndex(e => e.round === state.round);
+    const snapshot = { round: state.round, matches: JSON.parse(JSON.stringify(matches)) };
+    if (existingIdx >= 0) state.matchHistory[existingIdx] = snapshot;
+    else state.matchHistory.push(snapshot);
+    recomputeLeaderboard();
   }
 
   function chooseSitOuts(players, need){
@@ -1861,7 +1940,7 @@
         ${logOpen[idx] ? `
         <div style="margin-top:8px;max-height:150px;overflow:auto;font-size:11px;color:var(--line-dim);">
           ${events.length ? events.slice().reverse().map(ev => `
-            <div style="padding:4px 0;border-top:1px solid rgba(241,237,248,0.08);">${escHtml(ev.player)} — ${ACTION_LABEL[ev.action] || ev.action}</div>
+            <div style="padding:4px 0;border-top:1px solid rgba(23,32,51,0.07);">${escHtml(ev.player)} — ${ACTION_LABEL[ev.action] || ev.action}</div>
           `).join('') : '<div style="padding:4px 0;">Belum ada catatan.</div>'}
         </div>` : ''}
       </div>` : ''}
@@ -2034,7 +2113,7 @@
     if (!rows.length){ leaderboardEl.innerHTML = '<div class="empty-lb">Belum ada data.</div>'; return; }
     let html = '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">menang</th><th style="text-align:right">poin</th></tr></thead><tbody>';
     rows.forEach((r, i) => {
-      html += `<tr><td class="rank">${i + 1}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--lime)">${r.wins || 0}</td><td class="pts">${r.points}</td></tr>`;
+      html += `<tr><td class="rank">${i + 1}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td class="pts">${r.points}</td></tr>`;
     });
     html += '</tbody></table>';
     leaderboardEl.innerHTML = html;
@@ -2087,7 +2166,7 @@
     if (rest.length){
       html += '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">menang</th><th style="text-align:right">kalah</th><th style="text-align:right">win rate</th><th style="text-align:right">poin</th></tr></thead><tbody>';
       rest.forEach((r, i) => {
-        html += `<tr><td class="rank">${i + 4}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--lime)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${lossOf(r)}</td><td style="text-align:right;color:var(--line-dim)">${winRateOf(r)}%</td><td class="pts">${r.points}</td></tr>`;
+        html += `<tr><td class="rank">${i + 4}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${lossOf(r)}</td><td style="text-align:right;color:var(--line-dim)">${winRateOf(r)}%</td><td class="pts">${r.points}</td></tr>`;
       });
       html += '</tbody></table>';
     }
@@ -2095,12 +2174,78 @@
     const linkBtnStyle = "display:block;text-align:center;text-decoration:none;box-sizing:border-box;font-family:var(--font-display);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:0.02em;border-radius:10px;padding:13px 16px;";
     html += `<a class="btn-secondary" href="/klasemen?kode=${encodeURIComponent(ottoKlasemenCode(selectedSport))}" target="_blank" rel="noopener" style="${linkBtnStyle}margin-top:14px;">Lihat Statistik Lengkap →</a>`;
     html += `<a class="btn-secondary" href="/detail-pemain?kode=${encodeURIComponent(ottoKlasemenCode(selectedSport))}" target="_blank" rel="noopener" style="${linkBtnStyle}margin-top:10px;">Report Detail Pemain →</a>`;
+
+    if (state.matchHistory && state.matchHistory.length){
+      html += '<div style="margin-top:20px;"><h3 style="font-family:var(--font-display);font-size:15px;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:8px;">Riwayat Ronde (bisa diedit kalau ada salah input)</h3>';
+      state.matchHistory.slice().sort((a, b) => a.round - b.round).forEach(entry => {
+        html += `
+          <div class="round-history-item" style="border:1px solid var(--line-dim,#3b4a63);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <strong>Ronde ${entry.round}</strong>
+              <button class="btn-secondary btn-edit-round" data-round="${entry.round}" style="padding:6px 12px;font-size:12px;">Edit</button>
+            </div>
+            <div class="round-view" data-round-view="${entry.round}" style="margin-top:6px;font-size:12px;color:var(--line-dim);">
+              ${entry.matches.map(m => `${(m.teamA || []).join(' & ')} <b>${m.scoreA}</b> : <b>${m.scoreB}</b> ${(m.teamB || []).join(' & ')}`).join('<br>')}
+            </div>
+            <div class="round-edit-form" data-round-form="${entry.round}" style="display:none;margin-top:8px;"></div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+
     html += '<button class="btn-primary" id="restartBtn" style="margin-top:14px;">Mulai Turnamen Baru</button>';
 
     finalArea.innerHTML = html;
     document.getElementById('restartBtn').addEventListener('click', resetSession);
 
+    finalArea.querySelectorAll('.btn-edit-round').forEach(btn => {
+      btn.addEventListener('click', () => openRoundEditor(parseInt(btn.dataset.round, 10)));
+    });
+
     renderLeaderboard();
+  }
+
+  function openRoundEditor(round){
+    const entry = (state.matchHistory || []).find(e => e.round === round);
+    const formEl = finalArea.querySelector('[data-round-form="' + round + '"]');
+    const viewEl = finalArea.querySelector('[data-round-view="' + round + '"]');
+    if (!entry || !formEl) return;
+
+    formEl.innerHTML = entry.matches.map((m, i) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="flex:1;font-size:12px;">${(m.teamA || []).join(' & ')}</span>
+        <input type="number" min="0" class="score-input edit-score-a" data-idx="${i}" value="${m.scoreA}">
+        <span style="font-size:11px;color:var(--line-dim);">vs</span>
+        <input type="number" min="0" class="score-input edit-score-b" data-idx="${i}" value="${m.scoreB}">
+        <span style="flex:1;font-size:12px;">${(m.teamB || []).join(' & ')}</span>
+      </div>
+    `).join('') + `
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn-primary btn-save-round" style="padding:8px 14px;font-size:12px;">Simpan Perubahan</button>
+        <button class="btn-secondary btn-cancel-round" style="padding:8px 14px;font-size:12px;">Batal</button>
+      </div>
+    `;
+    formEl.style.display = 'block';
+    viewEl.style.display = 'none';
+
+    formEl.querySelector('.btn-cancel-round').addEventListener('click', () => {
+      formEl.style.display = 'none';
+      viewEl.style.display = 'block';
+    });
+
+    formEl.querySelector('.btn-save-round').addEventListener('click', async () => {
+      const scoreAInputs = formEl.querySelectorAll('.edit-score-a');
+      const scoreBInputs = formEl.querySelectorAll('.edit-score-b');
+      entry.matches.forEach((m, i) => {
+        m.scoreA = Math.max(0, parseInt(scoreAInputs[i].value, 10) || 0);
+        m.scoreB = Math.max(0, parseInt(scoreBInputs[i].value, 10) || 0);
+      });
+      recomputeLeaderboard();
+      saveSessionToCloud();
+      await persistRoundToDb(round, entry.matches);
+      renderFinal();
+    });
   }
 })();
 </script>
