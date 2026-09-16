@@ -9,20 +9,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
    :root{
-     --bg-1: #f7fafc;
-     --bg-2: #f7fafc;
-     --glass: #ffffff;
-     --glass-strong: #f1f5f9;
-     --line: #172033;
-     --line-dim: #64748b;
-     --lime: #baff29;
-     --green: #5d8c0a;
+     --bg-1: oklch(0.985 0.012 150);
+     --bg-2: oklch(0.985 0.012 150);
+     --glass: oklch(1 0 0 / 0.85);
+     --glass-strong: oklch(1 0 0 / 0.82);
+     --line: oklch(0.26 0.05 250);
+     --line-dim: oklch(0.52 0.03 250);
+     --lime: oklch(0.62 0.19 143);
+     --green: oklch(0.62 0.19 143);
      --magenta: #ff3d81;
      --cyan: #0ea5b7;
      --gold: #b07d00;
      --silver: #64748b;
      --bronze: #9a5b2a;
-     --radius: 18px;
+     --radius: 22px;
      --font-display: 'Chakra Petch', sans-serif;
      --font-body: 'Inter', sans-serif;
    }
@@ -30,23 +30,35 @@
    html, body{ margin:0; padding:0; background: var(--bg-2); color: var(--line); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
    body{
      background:
-       radial-gradient(ellipse 620px 420px at 6% -8%, rgba(186,255,41,0.22), transparent 60%),
-       radial-gradient(ellipse 700px 500px at 104% 10%, rgba(40,169,224,0.14), transparent 60%),
-       radial-gradient(ellipse 800px 600px at 50% 115%, rgba(255,91,110,0.10), transparent 60%),
+       radial-gradient(ellipse 700px 460px at 8% -10%, oklch(0.9 0.14 150 / 0.75), transparent 62%),
+       radial-gradient(ellipse 760px 520px at 102% 4%, oklch(0.92 0.12 210 / 0.7), transparent 62%),
+       radial-gradient(ellipse 820px 560px at 50% 116%, oklch(0.95 0.11 95 / 0.7), transparent 62%),
        var(--bg-2);
      background-repeat: no-repeat;
      min-height: 100vh;
    }
-   .wrap{ max-width: 1180px; margin: 0 auto; padding: 30px 20px 70px; }
+   body:not(.welcome-active)::before{
+     content:"";
+     position:fixed;
+     inset:0;
+     pointer-events:none;
+     background-image:
+       linear-gradient(to right, oklch(0.26 0.05 250 / 0.06) 2px, transparent 2px),
+       linear-gradient(to bottom, oklch(0.26 0.05 250 / 0.06) 2px, transparent 2px);
+     background-size:120px 120px;
+     -webkit-mask-image:radial-gradient(ellipse at 50% 40%, black, transparent 78%);
+     mask-image:radial-gradient(ellipse at 50% 40%, black, transparent 78%);
+   }
+    .wrap{ position:relative; max-width: 1180px; margin: 0 auto; padding: 30px 20px 70px; }
 
    header{ display:flex; align-items:center; justify-content:space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 24px; margin-bottom: 30px; border-bottom: 1px solid rgba(23,32,51,0.08); }
-   .brand{ display:flex; align-items:center; gap: 16px; flex-wrap: wrap; }
-   .brand-banner-sm{ display:block; height: 56px; width: auto; max-width: 260px; object-fit: contain; }
-   .sport-chip{ font-family: var(--font-display); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--green); background: rgba(186,255,41,0.20); border: 1px solid rgba(186,255,41,0.45); border-radius: 999px; padding: 6px 14px; }
-   .back-btn{ font-family: var(--font-display); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--line-dim); background: #fff; border: 1px solid rgba(23,32,51,0.1); border-radius: 999px; padding: 9px 16px; cursor: pointer; box-shadow: 0 4px 14px rgba(32,62,91,0.06); }
+    .brand{ display:flex; align-items:center; gap: 16px; flex-wrap: wrap; padding:10px 14px; border:1px solid oklch(0.62 0.19 143 / 0.42); border-radius:22px; background:linear-gradient(135deg,oklch(0.13 0.025 250),oklch(0.27 0.13 143)); box-shadow:0 24px 60px -30px rgba(20,40,30,0.6); }
+    .brand-banner-sm{ display:block; height: 56px; width: auto; max-width: 260px; object-fit: contain; border-radius:10px; }
+    .sport-chip{ font-family: var(--font-display); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: oklch(0.9 0.2 140); background: transparent; border: 1px solid oklch(0.72 0.2 140); border-radius: 999px; padding: 6px 14px; }
+    .back-btn{ font-family: var(--font-display); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--line-dim); background: var(--glass-strong); border: 1px solid oklch(0.26 0.05 250 / 0.15); border-radius: 999px; padding: 9px 16px; cursor: pointer; box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
    .back-btn:hover{ background: #f1f5f9; color: var(--line); }
-   .round-badge{ display:flex; align-items:center; gap:9px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: #172033; background: var(--lime); border-radius: 999px; padding: 10px 20px; white-space: nowrap; box-shadow: 0 6px 22px rgba(186,255,41,0.35); }
-   .live-dot{ width:8px; height:8px; border-radius:50%; background: #172033; animation: pulse 1.6s ease-in-out infinite; }
+    .round-badge{ display:flex; align-items:center; gap:9px; font-family: var(--font-display); font-weight: 700; font-size: 14.5px; color: var(--green); background: var(--glass-strong); border:1px solid oklch(0.62 0.19 143 / 0.55); border-radius: 999px; padding: 10px 20px; white-space: nowrap; box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
+    .live-dot{ width:8px; height:8px; border-radius:50%; background: var(--lime); animation: pulse 1.6s ease-in-out infinite; }
 
   body.welcome-active{ background:#f7fafc; color:#172033; }
   body.welcome-active .wrap{ max-width:none; padding:0; }
@@ -126,7 +138,7 @@
   .layout{ display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
   @media (max-width: 880px){ .layout{ grid-template-columns: 1fr; } }
 
-  .card{ background: #fff; border: 1px solid rgba(23,32,51,0.08); border-radius: var(--radius); padding: 20px; box-shadow: 0 14px 32px -22px rgba(32,62,91,0.28); }
+  .card{ background: var(--glass); border: 1px solid oklch(0.26 0.05 250 / 0.08); border-radius: var(--radius); padding: 20px; box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
   .card + .card{ margin-top: 18px; }
   .card h2{ font-family: var(--font-display); font-size: 13px; margin: 0 0 14px; color: var(--line-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
   label{ display:block; font-size: 13px; color: var(--line-dim); margin-bottom: 6px; }
@@ -168,11 +180,11 @@
   .hint{ font-size: 12.5px; color: var(--line-dim); margin-top: 6px; }
   .status{ font-size: 13px; margin-top: 10px; color: var(--gold); min-height: 16px; }
 
-  button{ font-family: var(--font-display); font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.02em; border: none; border-radius: 10px; padding: 13px 16px; cursor: pointer; width: 100%; transition: transform .08s ease, opacity .15s ease, box-shadow .15s ease; }
+  button{ font-family: var(--font-display); font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.02em; border: none; border-radius: 999px; padding: 13px 16px; cursor: pointer; width: 100%; transition: transform .08s ease, opacity .15s ease, box-shadow .15s ease; }
   button:active{ transform: scale(0.98); }
-  .btn-primary{ background: var(--lime); color: #0d1a00; box-shadow: 0 4px 14px rgba(101,140,10,0.18); }
-  .btn-primary:hover{ box-shadow: 0 0 24px rgba(186,255,41,0.45); }
-  .btn-secondary{ background: var(--glass-strong); color: var(--line); border: 1px solid rgba(23,32,51,0.14); margin-top: 10px; }
+  .btn-primary{ background: linear-gradient(135deg, oklch(0.72 0.2 140), oklch(0.62 0.19 143)); color: oklch(0.99 0 0); box-shadow: 0 16px 34px -14px oklch(0.62 0.19 143 / 0.8); }
+  .btn-primary:hover{ transform:translateY(-3px) scale(1.02); box-shadow: 0 22px 44px -14px oklch(0.62 0.19 143 / 0.9); }
+  .btn-secondary{ background: var(--glass-strong); color: var(--line); border: 1px solid oklch(0.26 0.05 250 / 0.15); margin-top: 10px; }
   .btn-secondary:hover{ background: rgba(226,232,240,0.9); }
   .btn-outline-danger{ background: transparent; color: var(--magenta); border: 1px solid rgba(255,61,129,0.4); margin-top: 10px; }
   .btn-outline-danger:hover{ background: rgba(255,61,129,0.08); }
@@ -188,7 +200,7 @@
   .section-label.next-label{ margin-top: 28px; opacity: 0.75; }
 
   .courts-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
-  .court-card{ background: #fff; border: 1px solid rgba(23,32,51,0.08); border-radius: var(--radius); overflow: hidden; opacity: 0; transform: translateY(8px); animation: cardIn .45s ease forwards; box-shadow: 0 14px 32px -22px rgba(32,62,91,0.28); }
+  .court-card{ background: var(--glass); border: 1px solid oklch(0.26 0.05 250 / 0.08); border-radius: var(--radius); overflow: hidden; opacity: 0; transform: translateY(8px); animation: cardIn .45s ease forwards; box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
   @keyframes cardIn{ to{ opacity: 1; transform: translateY(0); } }
   .court-card.preview{ background: transparent; border-style: dashed; border-color: rgba(23,32,51,0.14); }
   .court-head{ display:flex; justify-content:space-between; align-items:center; padding: 11px 16px; background: rgba(241,245,249,0.8); font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--line-dim); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -298,7 +310,7 @@
 
   .runner-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
   @media (max-width: 500px){ .runner-row{ grid-template-columns: 1fr; } }
-  .runner-card{ border-radius: var(--radius); padding: 18px; text-align:center; border: 1px solid rgba(23,32,51,0.09); background: #fff; box-shadow: 0 14px 32px -22px rgba(32,62,91,0.28); }
+  .runner-card{ border-radius: var(--radius); padding: 18px; text-align:center; border: 1px solid oklch(0.26 0.05 250 / 0.08); background: var(--glass); box-shadow: 0 14px 34px -22px oklch(0.26 0.05 250 / 0.55); }
   .runner-card.silver{ border-color: rgba(201,211,224,0.4); }
   .runner-card.bronze{ border-color: rgba(226,151,90,0.4); }
   .runner-card .medal{ font-size: 24px; }
