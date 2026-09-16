@@ -787,7 +787,8 @@
       current: null, next: null, currentSitOut: [], nextSitOut: [],
       paused: [],
       roundDurationMin: (durMin && durMin > 0) ? durMin : null,
-      roundStartTime: null, roundAlertFired: false, roundHistory: []
+      roundStartTime: null, roundAlertFired: false, roundHistory: [],
+      matchHistory: []
     };
 
     if (!arenaCode) { newKlasemenCode(selectedSport); refreshKlasemenLink(); }
@@ -1009,6 +1010,7 @@
       if (!state.mode) state.mode = 'individual';
       if (!state.pairs) state.pairs = [];
       if (!state.pairMembers) state.pairMembers = {};
+      if (!state.matchHistory) state.matchHistory = [];
       Object.keys(state.leaderboard || {}).forEach(name => {
         if (typeof state.leaderboard[name].wins !== 'number') state.leaderboard[name].wins = 0;
       });
@@ -1241,6 +1243,12 @@
 
       const players = (state.players || []).map(n => ({ arena_code: code, name: n }));
       if (players.length) await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
+
+      // Hapus dulu data ronde ini yang lama (kalau ada — misal ini penyimpanan ulang
+      // setelah diedit), baru insert versi terbaru. Biar aman dipanggil berkali-kali
+      // buat ronde yang sama tanpa bikin data dobel.
+      await ottoDb.from('arena_matches').delete().eq('arena_code', code).eq('round', round);
+      await ottoDb.from('arena_player_stats').delete().eq('arena_code', code).eq('round', round);
 
       const rows = matches.map((m, i) => ({
         arena_code: code,
@@ -1687,15 +1695,35 @@
     saveSessionToCloud();
   }
 
-  function commitScores(matches){
-    matches.forEach(m => {
-      const sa = parseInt(m.scoreA, 10) || 0;
-      const sb = parseInt(m.scoreB, 10) || 0;
-      const aWins = sa > sb;
-      const bWins = sb > sa;
-      m.teamA.forEach(p => { state.leaderboard[p].points += sa; state.leaderboard[p].games += 1; if (aWins) state.leaderboard[p].wins += 1; });
-      m.teamB.forEach(p => { state.leaderboard[p].points += sb; state.leaderboard[p].games += 1; if (bWins) state.leaderboard[p].wins += 1; });
+  function recomputeLeaderboard(){
+    const lb = {};
+    (state.players || []).forEach(p => { lb[p] = { points: 0, games: 0, wins: 0 }; });
+    (state.matchHistory || []).forEach(entry => {
+      (entry.matches || []).forEach(m => {
+        const sa = parseInt(m.scoreA, 10) || 0;
+        const sb = parseInt(m.scoreB, 10) || 0;
+        const aWins = sa > sb;
+        const bWins = sb > sa;
+        (m.teamA || []).forEach(p => {
+          if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0 };
+          lb[p].points += sa; lb[p].games += 1; if (aWins) lb[p].wins += 1;
+        });
+        (m.teamB || []).forEach(p => {
+          if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0 };
+          lb[p].points += sb; lb[p].games += 1; if (bWins) lb[p].wins += 1;
+        });
+      });
     });
+    state.leaderboard = lb;
+  }
+
+  function commitScores(matches){
+    if (!state.matchHistory) state.matchHistory = [];
+    const existingIdx = state.matchHistory.findIndex(e => e.round === state.round);
+    const snapshot = { round: state.round, matches: JSON.parse(JSON.stringify(matches)) };
+    if (existingIdx >= 0) state.matchHistory[existingIdx] = snapshot;
+    else state.matchHistory.push(snapshot);
+    recomputeLeaderboard();
   }
 
   function chooseSitOuts(players, need){
@@ -2117,12 +2145,78 @@
     const linkBtnStyle = "display:block;text-align:center;text-decoration:none;box-sizing:border-box;font-family:var(--font-display);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:0.02em;border-radius:10px;padding:13px 16px;";
     html += `<a class="btn-secondary" href="/klasemen?kode=${encodeURIComponent(ottoKlasemenCode(selectedSport))}" target="_blank" rel="noopener" style="${linkBtnStyle}margin-top:14px;">Lihat Statistik Lengkap →</a>`;
     html += `<a class="btn-secondary" href="/detail-pemain?kode=${encodeURIComponent(ottoKlasemenCode(selectedSport))}" target="_blank" rel="noopener" style="${linkBtnStyle}margin-top:10px;">Report Detail Pemain →</a>`;
+
+    if (state.matchHistory && state.matchHistory.length){
+      html += '<div style="margin-top:20px;"><h3 style="font-family:var(--font-display);font-size:15px;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:8px;">Riwayat Ronde (bisa diedit kalau ada salah input)</h3>';
+      state.matchHistory.slice().sort((a, b) => a.round - b.round).forEach(entry => {
+        html += `
+          <div class="round-history-item" style="border:1px solid var(--line-dim,#3b4a63);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <strong>Ronde ${entry.round}</strong>
+              <button class="btn-secondary btn-edit-round" data-round="${entry.round}" style="padding:6px 12px;font-size:12px;">Edit</button>
+            </div>
+            <div class="round-view" data-round-view="${entry.round}" style="margin-top:6px;font-size:12px;color:var(--line-dim);">
+              ${entry.matches.map(m => `${(m.teamA || []).join(' & ')} <b>${m.scoreA}</b> : <b>${m.scoreB}</b> ${(m.teamB || []).join(' & ')}`).join('<br>')}
+            </div>
+            <div class="round-edit-form" data-round-form="${entry.round}" style="display:none;margin-top:8px;"></div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+
     html += '<button class="btn-primary" id="restartBtn" style="margin-top:14px;">Mulai Turnamen Baru</button>';
 
     finalArea.innerHTML = html;
     document.getElementById('restartBtn').addEventListener('click', resetSession);
 
+    finalArea.querySelectorAll('.btn-edit-round').forEach(btn => {
+      btn.addEventListener('click', () => openRoundEditor(parseInt(btn.dataset.round, 10)));
+    });
+
     renderLeaderboard();
+  }
+
+  function openRoundEditor(round){
+    const entry = (state.matchHistory || []).find(e => e.round === round);
+    const formEl = finalArea.querySelector('[data-round-form="' + round + '"]');
+    const viewEl = finalArea.querySelector('[data-round-view="' + round + '"]');
+    if (!entry || !formEl) return;
+
+    formEl.innerHTML = entry.matches.map((m, i) => `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="flex:1;font-size:12px;">${(m.teamA || []).join(' & ')}</span>
+        <input type="number" min="0" class="score-input edit-score-a" data-idx="${i}" value="${m.scoreA}">
+        <span style="font-size:11px;color:var(--line-dim);">vs</span>
+        <input type="number" min="0" class="score-input edit-score-b" data-idx="${i}" value="${m.scoreB}">
+        <span style="flex:1;font-size:12px;">${(m.teamB || []).join(' & ')}</span>
+      </div>
+    `).join('') + `
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn-primary btn-save-round" style="padding:8px 14px;font-size:12px;">Simpan Perubahan</button>
+        <button class="btn-secondary btn-cancel-round" style="padding:8px 14px;font-size:12px;">Batal</button>
+      </div>
+    `;
+    formEl.style.display = 'block';
+    viewEl.style.display = 'none';
+
+    formEl.querySelector('.btn-cancel-round').addEventListener('click', () => {
+      formEl.style.display = 'none';
+      viewEl.style.display = 'block';
+    });
+
+    formEl.querySelector('.btn-save-round').addEventListener('click', async () => {
+      const scoreAInputs = formEl.querySelectorAll('.edit-score-a');
+      const scoreBInputs = formEl.querySelectorAll('.edit-score-b');
+      entry.matches.forEach((m, i) => {
+        m.scoreA = Math.max(0, parseInt(scoreAInputs[i].value, 10) || 0);
+        m.scoreB = Math.max(0, parseInt(scoreBInputs[i].value, 10) || 0);
+      });
+      recomputeLeaderboard();
+      saveSessionToCloud();
+      await persistRoundToDb(round, entry.matches);
+      renderFinal();
+    });
   }
 })();
 </script>
