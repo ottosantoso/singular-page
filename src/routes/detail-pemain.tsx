@@ -399,7 +399,12 @@ function DetailPemain() {
       if (playersRes.error) throw playersRes.error;
       if (matchesRes.error) throw matchesRes.error;
       const players = (playersRes.data ?? []).map((p) => p.name);
-      const matches = (matchesRes.data ?? []) as MatchRow[];
+      const allMatches = (matchesRes.data ?? []) as MatchRow[];
+      // Ronde yang masih 0-0 di kedua tim itu belum beneran dimainkan (baru dibuat
+      // pas ronde mulai, skornya belum diisi) — jangan ikut dihitung di statistik
+      // apapun (podium, MVP, jumlah game, tren, dst), biar nggak nampilin ronde
+      // yang masih kosong seolah-olah sudah selesai.
+      const matches = allMatches.filter((m) => (m.score_a ?? 0) !== 0 || (m.score_b ?? 0) !== 0);
       const statRows = statsRes.error ? [] : ((statsRes.data ?? []) as PlayerStatRow[]);
 
       const standings = buildStandings(players, matches);
