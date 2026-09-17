@@ -1636,6 +1636,9 @@
     if (state.mode === 'pairs'){
       state.pairs = state.pairs.filter(p => p !== unitId);
     } else {
+      if (!state.pausedPlayerProfiles) state.pausedPlayerProfiles = {};
+      const profile = state.players.find(player => player.name === unitId);
+      if (profile) state.pausedPlayerProfiles[unitId] = profile;
       state.players = state.players.filter(player => player.name !== unitId);
     }
     if (!state.paused.includes(unitId)) state.paused.push(unitId);
@@ -1800,7 +1803,7 @@
 
   function recomputeLeaderboard(){
     const lb = {};
-    (state.players || []).forEach(p => { lb[p] = { points: 0, games: 0, wins: 0 }; });
+    playerNames().forEach(name => { lb[name] = { points: 0, games: 0, wins: 0 }; });
     (state.matchHistory || []).forEach(entry => {
       (entry.matches || []).forEach(m => {
         const sa = parseInt(m.scoreA, 10) || 0;
@@ -1915,9 +1918,10 @@
       return { matches, sitOut };
     }
 
-    const numCourts = Math.min(state.courtsRequested, Math.floor(state.players.length / 4));
+    const names = playerNames();
+    const numCourts = Math.min(state.courtsRequested, Math.floor(names.length / 4));
     const need = numCourts * 4;
-    const { playing, sitOut } = chooseSitOuts(state.players, need);
+    const { playing, sitOut } = chooseSitOuts(names, need);
     sitOut.forEach(p => { state.sitOutCount[p] += 1; });
 
     const pairings = generateMatches(playing, numCourts);
