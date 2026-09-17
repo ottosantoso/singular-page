@@ -386,7 +386,7 @@
         </div>
         <div class="hint">Bagikan Kode + PIN ini ke panitia lain biar bisa dibuka dari device masing-masing, dan riwayat turnamen sebelumnya cuma bisa dilihat kalau tau keduanya.</div>
         <button class="btn-secondary" id="copyInfoBtn" style="display:none;">Salin Kode &amp; PIN</button>
-        <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">Buka Klasemen Online</a>
+        <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener">Buka Klasemen Online</a>
         <div class="status" id="syncStatus"></div>
 
       </div>
@@ -401,9 +401,26 @@
           </div>
           <div class="hint" id="modeHint">Tiap ronde partner diacak ulang (rotasi individu).</div>
         </div>
+        <div class="add-player-form">
+          <div class="add-player-row">
+            <div class="add-player-field">
+              <label for="playerNameInput">Nama</label>
+              <input type="text" id="playerNameInput" placeholder="cth. Andi" autocomplete="off">
+            </div>
+            <div class="add-player-field">
+              <label for="playerGenderInput">Jenis Kelamin</label>
+              <select id="playerGenderInput">
+                <option value="male">Laki-Laki</option>
+                <option value="female">Perempuan</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" class="btn-primary" id="registerPlayerBtn">+ Tambah</button>
+          <div class="status" id="playerEntryStatus"></div>
+        </div>
         <div class="field">
-          <label for="playersInput" id="playersLabel">Daftar pejuang (satu nama per baris)</label>
-          <textarea id="playersInput" placeholder="Andi, Budi, Wati&#10;atau satu nama per baris"></textarea>
+          <label id="playersLabel">Daftar Pemain Terdaftar</label>
+          <div id="registeredPlayersList" class="player-manage-list"><div class="empty-lb">Belum ada pemain.</div></div>
         </div>
         <div class="field">
           <label for="courtsInput">Jumlah lapangan</label>
