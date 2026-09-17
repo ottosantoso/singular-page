@@ -1861,6 +1861,11 @@
 
   function pairCost(a, b, weightMap){ return weightMap[pairKey(a, b)] || 0; }
 
+  function genderOf(name){
+    const player = (state.players || []).find(p => p.name === name);
+    return (player && player.gender) || 'male';
+  }
+
   function bestPairingForChunk(chunk){
     const [p0, p1, p2, p3] = chunk;
     const options = [
@@ -1872,7 +1877,12 @@
     options.forEach(opt => {
       const partnerScore = pairCost(opt.teamA[0], opt.teamA[1], state.partnerCount) + pairCost(opt.teamB[0], opt.teamB[1], state.partnerCount);
       const oppScore = [opt.teamA[0], opt.teamA[1]].reduce((s, x) => s + [opt.teamB[0], opt.teamB[1]].reduce((s2, y) => s2 + pairCost(x, y, state.opponentCount), 0), 0);
-      const score = partnerScore * 10 + oppScore;
+
+      let genderMixBonus = 0;
+      if (genderOf(opt.teamA[0]) !== genderOf(opt.teamA[1])) genderMixBonus += 0.5;
+      if (genderOf(opt.teamB[0]) !== genderOf(opt.teamB[1])) genderMixBonus += 0.5;
+
+      const score = (partnerScore * 10) + oppScore - genderMixBonus;
       if (score < bestScore){ bestScore = score; best = opt; }
     });
     return { pairing: best, cost: bestScore };
