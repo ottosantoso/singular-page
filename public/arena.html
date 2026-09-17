@@ -864,7 +864,7 @@
     if (courts < 1){ statusMsg.textContent = 'Jumlah lapangan minimal 1.'; return; }
 
     const durMin = parseInt(roundDurationInput.value, 10);
-    const unitIds = setupMode === 'pairs' ? pairs : players;
+    const unitIds = setupMode === 'pairs' ? pairs : players.map(player => player.name);
 
     const freshState = {
       mode: setupMode,
