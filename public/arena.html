@@ -789,7 +789,8 @@
     return pairs;
   }
 
-  function activeUnits(){ return state.mode === 'pairs' ? state.pairs : state.players; }
+  function playerNames(){ return (state.players || []).map(player => typeof player === 'string' ? player : player.name); }
+  function activeUnits(){ return state.mode === 'pairs' ? state.pairs : playerNames(); }
   function unitMembers(unitId){ return state.mode === 'pairs' ? (state.pairMembers[unitId] || [unitId]) : [unitId]; }
 
   function parsePlayers(raw){
@@ -831,9 +832,9 @@
       if (parsedPairs.length < 2){ statusMsg.textContent = 'Minimal 2 pasangan diperlukan (format: Nama1 & Nama2 per baris).'; return; }
       pairs = parsedPairs.map(p => p.id);
       parsedPairs.forEach(p => { pairMembers[p.id] = p.members; });
-      players = parsedPairs.flatMap(p => p.members);
+      players = registeredPlayers.map(player => ({ ...player }));
     } else {
-      players = registeredPlayers.map(player => player.name);
+      players = registeredPlayers.map(player => ({ ...player }));
       if (players.length < 4){ statusMsg.textContent = 'Minimal 4 pemain diperlukan.'; return; }
     }
 
@@ -850,11 +851,11 @@
 
     const freshState = {
       mode: setupMode,
-      players, playerProfiles: registeredPlayers.map(player => ({ ...player })), pairs, pairMembers,
+      players, pairs, pairMembers,
       courtsRequested: courts, round: 1, finished: false,
       sitOutCount: Object.fromEntries(unitIds.map(u => [u, 0])),
       partnerCount: {}, opponentCount: {},
-      leaderboard: Object.fromEntries(players.map(p => [p, { points: 0, games: 0, wins: 0 }])),
+      leaderboard: Object.fromEntries(players.map(player => [player.name, { points: 0, games: 0, wins: 0 }])),
       current: null, next: null, currentSitOut: [], nextSitOut: [],
       paused: [],
       roundDurationMin: (durMin && durMin > 0) ? durMin : null,
@@ -1095,16 +1096,16 @@
       if (!state.pairs) state.pairs = [];
       if (!state.pairMembers) state.pairMembers = {};
       if (!state.matchHistory) state.matchHistory = [];
-      if (!state.playerProfiles){
-        state.playerProfiles = (state.players || []).map(name => ({ id: playerId(), name, gender: 'male' }));
-      }
+      state.players = (state.players || []).map(player => typeof player === 'string'
+        ? { id: playerId(), name: player, gender: 'male' }
+        : player);
       Object.keys(state.leaderboard || {}).forEach(name => {
         if (typeof state.leaderboard[name].wins !== 'number') state.leaderboard[name].wins = 0;
       });
     }
     if (state && !state.finished){
       setSetupMode(state.mode);
-      registeredPlayers = state.playerProfiles.map(player => ({ ...player }));
+      registeredPlayers = state.players.map(player => ({ ...player }));
       renderRegisteredPlayers();
       courtsInput.value = state.courtsRequested;
       roundDurationInput.value = state.roundDurationMin || '';
@@ -1124,7 +1125,7 @@
       render();
     } else if (state && state.finished){
       setSetupMode(state.mode);
-      registeredPlayers = state.playerProfiles.map(player => ({ ...player }));
+      registeredPlayers = state.players.map(player => ({ ...player }));
       renderRegisteredPlayers();
       playerNameInput.disabled = true;
       playerGenderInput.disabled = true;
@@ -1338,7 +1339,7 @@
       }, { onConflict: 'code' });
 
 
-      const players = (state.players || []).map(n => ({ arena_code: code, name: n }));
+      const players = playerNames().map(name => ({ arena_code: code, name }));
       if (players.length) await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
 
       // Hapus dulu data ronde ini yang lama (kalau ada — misal ini penyimpanan ulang
@@ -1599,7 +1600,7 @@
   }
 
   function addNewPlayer(name, missedRounds){
-    state.players.push(name);
+    state.players.push({ id: playerId(), name, gender: 'male' });
     state.leaderboard[name] = { points: 0, games: 0, wins: 0 };
     state.sitOutCount[name] = missedRounds;
     regenerateNextRound();
@@ -1612,7 +1613,10 @@
     const pairId = name1 + ' & ' + name2;
     state.pairs.push(pairId);
     state.pairMembers[pairId] = [name1, name2];
-    state.players.push(name1, name2);
+    state.players.push(
+      { id: playerId(), name: name1, gender: 'male' },
+      { id: playerId(), name: name2, gender: 'male' }
+    );
     state.leaderboard[name1] = { points: 0, games: 0, wins: 0 };
     state.leaderboard[name2] = { points: 0, games: 0, wins: 0 };
     state.sitOutCount[pairId] = missedRounds;
@@ -1632,7 +1636,7 @@
     if (state.mode === 'pairs'){
       state.pairs = state.pairs.filter(p => p !== unitId);
     } else {
-      state.players = state.players.filter(p => p !== unitId);
+      state.players = state.players.filter(player => player.name !== unitId);
     }
     if (!state.paused.includes(unitId)) state.paused.push(unitId);
     regenerateNextRound();
@@ -1646,7 +1650,9 @@
     if (state.mode === 'pairs'){
       state.pairs.push(unitId);
     } else {
-      state.players.push(unitId);
+      const pausedProfile = state.pausedPlayerProfiles && state.pausedPlayerProfiles[unitId];
+      state.players.push(pausedProfile || { id: playerId(), name: unitId, gender: 'male' });
+      if (state.pausedPlayerProfiles) delete state.pausedPlayerProfiles[unitId];
     }
     state.sitOutCount[unitId] = (state.sitOutCount[unitId] || 0) + missedRounds;
     regenerateNextRound();
@@ -1677,7 +1683,7 @@
       const name = newPlayerName.value.trim();
       if (!name){ managePlayersStatus.textContent = 'Nama pemain tidak boleh kosong.'; return; }
       const nameLower = name.toLowerCase();
-      const exists = state.players.some(p => p.toLowerCase() === nameLower) || state.paused.some(p => p.toLowerCase() === nameLower);
+      const exists = state.players.some(player => player.name.toLowerCase() === nameLower) || state.paused.some(p => p.toLowerCase() === nameLower);
       if (exists){ managePlayersStatus.textContent = 'Nama pemain sudah ada di daftar.'; return; }
       addNewPlayer(name, missed);
       newPlayerName.value = '';
