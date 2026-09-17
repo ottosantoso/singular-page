@@ -941,12 +941,16 @@
 
     state = null;
 
-    playersInput.disabled = false;
+    playerNameInput.disabled = false;
+    playerGenderInput.disabled = false;
+    registerPlayerBtn.disabled = false;
     courtsInput.disabled = false;
     roundDurationInput.disabled = false;
     modeIndividualBtn.disabled = false;
     modePairsBtn.disabled = false;
-    playersInput.value = '';
+    playerNameInput.value = '';
+    registeredPlayers = [];
+    renderRegisteredPlayers();
     roundDurationInput.value = '';
     setSetupMode('individual');
     startBtn.style.display = 'block';
@@ -1091,16 +1095,23 @@
       if (!state.pairs) state.pairs = [];
       if (!state.pairMembers) state.pairMembers = {};
       if (!state.matchHistory) state.matchHistory = [];
+      if (!state.playerProfiles){
+        state.playerProfiles = (state.players || []).map(name => ({ id: playerId(), name, gender: 'male' }));
+      }
       Object.keys(state.leaderboard || {}).forEach(name => {
         if (typeof state.leaderboard[name].wins !== 'number') state.leaderboard[name].wins = 0;
       });
     }
     if (state && !state.finished){
       setSetupMode(state.mode);
-      playersInput.value = state.mode === 'pairs' ? state.pairs.join('\n') : state.players.join('\n');
+      registeredPlayers = state.playerProfiles.map(player => ({ ...player }));
+      renderRegisteredPlayers();
       courtsInput.value = state.courtsRequested;
       roundDurationInput.value = state.roundDurationMin || '';
-      playersInput.disabled = true;
+      playerNameInput.disabled = true;
+      playerGenderInput.disabled = true;
+      registerPlayerBtn.disabled = true;
+      registeredPlayersList.querySelectorAll('button').forEach(button => { button.disabled = true; });
       courtsInput.disabled = true;
       roundDurationInput.disabled = true;
       modeIndividualBtn.disabled = true;
@@ -1113,8 +1124,12 @@
       render();
     } else if (state && state.finished){
       setSetupMode(state.mode);
-      playersInput.value = state.mode === 'pairs' ? state.pairs.join('\n') : state.players.join('\n');
-      playersInput.disabled = true;
+      registeredPlayers = state.playerProfiles.map(player => ({ ...player }));
+      renderRegisteredPlayers();
+      playerNameInput.disabled = true;
+      playerGenderInput.disabled = true;
+      registerPlayerBtn.disabled = true;
+      registeredPlayersList.querySelectorAll('button').forEach(button => { button.disabled = true; });
       courtsInput.disabled = true;
       roundDurationInput.disabled = true;
       modeIndividualBtn.disabled = true;
@@ -1125,7 +1140,9 @@
       renderFinal();
     } else {
       state = null;
-      playersInput.disabled = false;
+      playerNameInput.disabled = false;
+      playerGenderInput.disabled = false;
+      registerPlayerBtn.disabled = false;
       courtsInput.disabled = false;
       roundDurationInput.disabled = false;
       modeIndividualBtn.disabled = false;
