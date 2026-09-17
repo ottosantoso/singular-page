@@ -130,9 +130,9 @@
   .card + .card{ margin-top: 18px; }
   .card h2{ font-family: var(--font-display); font-size: 13px; margin: 0 0 14px; color: var(--line-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
   label{ display:block; font-size: 13px; color: var(--line-dim); margin-bottom: 6px; }
-  textarea, input[type=number], input[type=text], input[type=password]{ width: 100%; background: rgba(248,250,252,0.9); border: 1px solid rgba(23,32,51,0.12); border-radius: 10px; color: var(--line); font-family: var(--font-body); font-size: 14.5px; padding: 10px 12px; resize: vertical; }
+  textarea, select, input[type=number], input[type=text], input[type=password]{ width: 100%; background: rgba(248,250,252,0.9); border: 1px solid rgba(23,32,51,0.12); border-radius: 10px; color: var(--line); font-family: var(--font-body); font-size: 14.5px; padding: 10px 12px; resize: vertical; }
   textarea{ min-height: 170px; line-height: 1.65; }
-  textarea:focus, input:focus{ outline: 2px solid var(--green); outline-offset: 1px; }
+  textarea:focus, select:focus, input:focus{ outline: 2px solid var(--green); outline-offset: 1px; }
 
   /* --- Sinkron cloud UI --- */
   #syncCard{ position: relative; overflow: hidden; border-color: rgba(186,255,41,0.35); background:
@@ -172,7 +172,7 @@
   button:active{ transform: scale(0.98); }
   .btn-primary{ background: var(--lime); color: #0d1a00; box-shadow: 0 4px 14px rgba(101,140,10,0.18); }
   .btn-primary:hover{ box-shadow: 0 0 24px rgba(186,255,41,0.45); }
-  .btn-secondary{ background: var(--glass-strong); color: var(--line); border: 1px solid rgba(23,32,51,0.14); margin-top: 10px; }
+  .btn-secondary{ display:flex; align-items:center; justify-content:center; width:100%; padding:13px 16px; border-radius:999px; background: var(--glass-strong); color: var(--line); border: 1px solid rgba(23,32,51,0.14); margin-top: 10px; font-family:var(--font-display); font-size:14px; font-weight:700; text-transform:uppercase; text-decoration:none; }
   .btn-secondary:hover{ background: rgba(226,232,240,0.9); }
   .btn-outline-danger{ background: transparent; color: var(--magenta); border: 1px solid rgba(255,61,129,0.4); margin-top: 10px; }
   .btn-outline-danger:hover{ background: rgba(255,61,129,0.08); }
@@ -386,7 +386,7 @@
         </div>
         <div class="hint">Bagikan Kode + PIN ini ke panitia lain biar bisa dibuka dari device masing-masing, dan riwayat turnamen sebelumnya cuma bisa dilihat kalau tau keduanya.</div>
         <button class="btn-secondary" id="copyInfoBtn" style="display:none;">Salin Kode &amp; PIN</button>
-        <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:8px;">Buka Klasemen Online</a>
+        <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener">Buka Klasemen Online</a>
         <div class="status" id="syncStatus"></div>
 
       </div>
@@ -401,9 +401,26 @@
           </div>
           <div class="hint" id="modeHint">Tiap ronde partner diacak ulang (rotasi individu).</div>
         </div>
+        <div class="add-player-form">
+          <div class="add-player-row">
+            <div class="add-player-field">
+              <label for="playerNameInput">Nama</label>
+              <input type="text" id="playerNameInput" placeholder="cth. Andi" autocomplete="off">
+            </div>
+            <div class="add-player-field">
+              <label for="playerGenderInput">Jenis Kelamin</label>
+              <select id="playerGenderInput">
+                <option value="male">Laki-Laki</option>
+                <option value="female">Perempuan</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" class="btn-primary" id="registerPlayerBtn">+ Tambah</button>
+          <div class="status" id="playerEntryStatus"></div>
+        </div>
         <div class="field">
-          <label for="playersInput" id="playersLabel">Daftar pejuang (satu nama per baris)</label>
-          <textarea id="playersInput" placeholder="Andi, Budi, Wati&#10;atau satu nama per baris"></textarea>
+          <label id="playersLabel">Daftar Pemain Terdaftar</label>
+          <div id="registeredPlayersList" class="player-manage-list"><div class="empty-lb">Belum ada pemain.</div></div>
         </div>
         <div class="field">
           <label for="courtsInput">Jumlah lapangan</label>
@@ -578,7 +595,11 @@
   let historyRows = [];
   let matchHistoryRows = [];
 
-  const playersInput = document.getElementById('playersInput');
+  const playerNameInput = document.getElementById('playerNameInput');
+  const playerGenderInput = document.getElementById('playerGenderInput');
+  const registerPlayerBtn = document.getElementById('registerPlayerBtn');
+  const playerEntryStatus = document.getElementById('playerEntryStatus');
+  const registeredPlayersList = document.getElementById('registeredPlayersList');
   const courtsInput = document.getElementById('courtsInput');
   const courtsHint = document.getElementById('courtsHint');
   const startBtn = document.getElementById('startBtn');
@@ -637,6 +658,7 @@
 
   let state = null;
   let setupMode = 'individual';
+  let registeredPlayers = [];
 
   // --- Navigasi antar layar (Beranda / Arena / Riwayat) & pemilihan cabang olahraga ---
 
@@ -686,32 +708,80 @@
     modeIndividualBtn.classList.toggle('active', mode === 'individual');
     modePairsBtn.classList.toggle('active', mode === 'pairs');
     if (mode === 'pairs'){
-      playersLabel.textContent = 'Daftar pasangan (satu pasangan per baris)';
-      playersInput.placeholder = 'Akbar & Vina\nBang Deni & Donna\nOtto & Diaz\nYamin & Faiz';
-      modeHint.textContent = 'Partner tetap sama sepanjang turnamen — cuma lawan yang diacak tiap ronde. 1 baris = 1 pasangan, format: Nama1 & Nama2.';
+      playersLabel.textContent = 'Daftar Pemain Terdaftar';
+      modeHint.textContent = 'Partner tetap sama sepanjang turnamen — pemain dipasangkan berurutan dari daftar.';
     } else {
-      playersLabel.textContent = 'Daftar pejuang (satu nama per baris)';
-      playersInput.placeholder = 'Andi, Budi, Wati\natau satu nama per baris';
+      playersLabel.textContent = 'Daftar Pemain Terdaftar';
       modeHint.textContent = 'Tiap ronde partner diacak ulang (rotasi individu).';
     }
-    playersInput.dispatchEvent(new Event('input'));
+    updatePlayerSuggestion();
   }
   modeIndividualBtn.addEventListener('click', () => setSetupMode('individual'));
   modePairsBtn.addEventListener('click', () => setSetupMode('pairs'));
 
-  playersInput.addEventListener('input', () => {
+  function updatePlayerSuggestion(){
     if (setupMode === 'pairs'){
-      const n = parsePairs(playersInput.value).length;
+      const n = Math.floor(registeredPlayers.length / 2);
       const suggested = Math.max(1, Math.floor(n / 2));
       courtsInput.value = suggested;
       courtsHint.textContent = n + ' pasangan terdeteksi → ' + suggested +
         ' lapangan disarankan (' + (suggested*2) + ' pasangan main' + (n - suggested*2 > 0 ? ', ' + (n - suggested*2) + ' pasangan istirahat per ronde' : '') + ').';
     } else {
-      const n = parsePlayers(playersInput.value).length;
+      const n = registeredPlayers.length;
       const suggested = Math.max(1, Math.floor(n / 4));
       courtsInput.value = suggested;
       courtsHint.textContent = n + ' pemain terdeteksi → ' + suggested +
         ' lapangan disarankan (' + (suggested*4) + ' bermain' + (n - suggested*4 > 0 ? ', ' + (n - suggested*4) + ' istirahat per ronde' : '') + ').';
+    }
+  }
+
+  function playerId(){
+    return window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'p-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+
+  function renderRegisteredPlayers(){
+    registeredPlayersList.innerHTML = '';
+    if (!registeredPlayers.length){
+      registeredPlayersList.innerHTML = '<div class="empty-lb">Belum ada pemain.</div>';
+      updatePlayerSuggestion();
+      return;
+    }
+    registeredPlayers.forEach(player => {
+      const row = document.createElement('div');
+      row.className = 'player-row';
+      const icon = player.gender === 'female' ? '♀' : '♂';
+      const label = player.gender === 'female' ? 'Perempuan' : 'Laki-Laki';
+      row.innerHTML = `<span aria-label="${label}" title="${label}">${icon}</span><span class="player-row-name">${escHtml(player.name)}</span><button type="button" class="btn-tiny" data-id="${player.id}" aria-label="Hapus ${escHtml(player.name)}" title="Hapus">×</button>`;
+      registeredPlayersList.appendChild(row);
+    });
+    registeredPlayersList.querySelectorAll('[data-id]').forEach(button => {
+      button.addEventListener('click', () => {
+        registeredPlayers = registeredPlayers.filter(player => player.id !== button.dataset.id);
+        playerEntryStatus.textContent = '';
+        renderRegisteredPlayers();
+      });
+    });
+    updatePlayerSuggestion();
+  }
+
+  registerPlayerBtn.addEventListener('click', () => {
+    const name = playerNameInput.value.trim();
+    playerEntryStatus.textContent = '';
+    if (!name){ playerEntryStatus.textContent = 'Nama pemain tidak boleh kosong.'; return; }
+    if (registeredPlayers.some(player => player.name.toLowerCase() === name.toLowerCase())){
+      playerEntryStatus.textContent = 'Nama pemain sudah ada di daftar.';
+      return;
+    }
+    registeredPlayers.push({ id: playerId(), name, gender: playerGenderInput.value });
+    playerNameInput.value = '';
+    renderRegisteredPlayers();
+    playerNameInput.focus();
+  });
+
+  playerNameInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter'){
+      event.preventDefault();
+      registerPlayerBtn.click();
     }
   });
 
@@ -736,7 +806,8 @@
     return pairs;
   }
 
-  function activeUnits(){ return state.mode === 'pairs' ? state.pairs : state.players; }
+  function playerNames(){ return (state.players || []).map(player => typeof player === 'string' ? player : player.name); }
+  function activeUnits(){ return state.mode === 'pairs' ? state.pairs : playerNames(); }
   function unitMembers(unitId){ return state.mode === 'pairs' ? (state.pairMembers[unitId] || [unitId]) : [unitId]; }
 
   function parsePlayers(raw){
@@ -769,13 +840,18 @@
 
     let players, pairs = [], pairMembers = {};
     if (setupMode === 'pairs'){
-      const parsedPairs = parsePairs(playersInput.value);
+      const parsedPairs = [];
+      for (let i = 0; i + 1 < registeredPlayers.length; i += 2){
+        const a = registeredPlayers[i].name;
+        const b = registeredPlayers[i + 1].name;
+        parsedPairs.push({ id: a + ' & ' + b, members: [a, b] });
+      }
       if (parsedPairs.length < 2){ statusMsg.textContent = 'Minimal 2 pasangan diperlukan (format: Nama1 & Nama2 per baris).'; return; }
       pairs = parsedPairs.map(p => p.id);
       parsedPairs.forEach(p => { pairMembers[p.id] = p.members; });
-      players = parsedPairs.flatMap(p => p.members);
+      players = registeredPlayers.map(player => ({ ...player }));
     } else {
-      players = parsePlayers(playersInput.value);
+      players = registeredPlayers.map(player => ({ ...player }));
       if (players.length < 4){ statusMsg.textContent = 'Minimal 4 pemain diperlukan.'; return; }
     }
 
@@ -788,7 +864,7 @@
     if (courts < 1){ statusMsg.textContent = 'Jumlah lapangan minimal 1.'; return; }
 
     const durMin = parseInt(roundDurationInput.value, 10);
-    const unitIds = setupMode === 'pairs' ? pairs : players;
+    const unitIds = setupMode === 'pairs' ? pairs : players.map(player => player.name);
 
     const freshState = {
       mode: setupMode,
@@ -796,7 +872,7 @@
       courtsRequested: courts, round: 1, finished: false,
       sitOutCount: Object.fromEntries(unitIds.map(u => [u, 0])),
       partnerCount: {}, opponentCount: {},
-      leaderboard: Object.fromEntries(players.map(p => [p, { points: 0, games: 0, wins: 0 }])),
+      leaderboard: Object.fromEntries(players.map(player => [player.name, { points: 0, games: 0, wins: 0 }])),
       current: null, next: null, currentSitOut: [], nextSitOut: [],
       paused: [],
       roundDurationMin: (durMin && durMin > 0) ? durMin : null,
@@ -812,7 +888,10 @@
     state = freshState;
     if (!arenaCode) { newKlasemenCode(selectedSport); refreshKlasemenLink(); } // fallback kalau koneksi cloud gagal
 
-    playersInput.disabled = true;
+    playerNameInput.disabled = true;
+    playerGenderInput.disabled = true;
+    registerPlayerBtn.disabled = true;
+    registeredPlayersList.querySelectorAll('button').forEach(button => { button.disabled = true; });
 
     courtsInput.disabled = true;
     roundDurationInput.disabled = true;
@@ -880,12 +959,16 @@
 
     state = null;
 
-    playersInput.disabled = false;
+    playerNameInput.disabled = false;
+    playerGenderInput.disabled = false;
+    registerPlayerBtn.disabled = false;
     courtsInput.disabled = false;
     roundDurationInput.disabled = false;
     modeIndividualBtn.disabled = false;
     modePairsBtn.disabled = false;
-    playersInput.value = '';
+    playerNameInput.value = '';
+    registeredPlayers = [];
+    renderRegisteredPlayers();
     roundDurationInput.value = '';
     setSetupMode('individual');
     startBtn.style.display = 'block';
@@ -1030,16 +1113,23 @@
       if (!state.pairs) state.pairs = [];
       if (!state.pairMembers) state.pairMembers = {};
       if (!state.matchHistory) state.matchHistory = [];
+      state.players = (state.players || []).map(player => typeof player === 'string'
+        ? { id: playerId(), name: player, gender: 'male' }
+        : player);
       Object.keys(state.leaderboard || {}).forEach(name => {
         if (typeof state.leaderboard[name].wins !== 'number') state.leaderboard[name].wins = 0;
       });
     }
     if (state && !state.finished){
       setSetupMode(state.mode);
-      playersInput.value = state.mode === 'pairs' ? state.pairs.join('\n') : state.players.join('\n');
+      registeredPlayers = state.players.map(player => ({ ...player }));
+      renderRegisteredPlayers();
       courtsInput.value = state.courtsRequested;
       roundDurationInput.value = state.roundDurationMin || '';
-      playersInput.disabled = true;
+      playerNameInput.disabled = true;
+      playerGenderInput.disabled = true;
+      registerPlayerBtn.disabled = true;
+      registeredPlayersList.querySelectorAll('button').forEach(button => { button.disabled = true; });
       courtsInput.disabled = true;
       roundDurationInput.disabled = true;
       modeIndividualBtn.disabled = true;
@@ -1052,8 +1142,12 @@
       render();
     } else if (state && state.finished){
       setSetupMode(state.mode);
-      playersInput.value = state.mode === 'pairs' ? state.pairs.join('\n') : state.players.join('\n');
-      playersInput.disabled = true;
+      registeredPlayers = state.players.map(player => ({ ...player }));
+      renderRegisteredPlayers();
+      playerNameInput.disabled = true;
+      playerGenderInput.disabled = true;
+      registerPlayerBtn.disabled = true;
+      registeredPlayersList.querySelectorAll('button').forEach(button => { button.disabled = true; });
       courtsInput.disabled = true;
       roundDurationInput.disabled = true;
       modeIndividualBtn.disabled = true;
@@ -1064,7 +1158,9 @@
       renderFinal();
     } else {
       state = null;
-      playersInput.disabled = false;
+      playerNameInput.disabled = false;
+      playerGenderInput.disabled = false;
+      registerPlayerBtn.disabled = false;
       courtsInput.disabled = false;
       roundDurationInput.disabled = false;
       modeIndividualBtn.disabled = false;
@@ -1260,7 +1356,7 @@
       }, { onConflict: 'code' });
 
 
-      const players = (state.players || []).map(n => ({ arena_code: code, name: n }));
+      const players = playerNames().map(name => ({ arena_code: code, name }));
       if (players.length) await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
 
       // Hapus dulu data ronde ini yang lama (kalau ada — misal ini penyimpanan ulang
@@ -1521,7 +1617,7 @@
   }
 
   function addNewPlayer(name, missedRounds){
-    state.players.push(name);
+    state.players.push({ id: playerId(), name, gender: 'male' });
     state.leaderboard[name] = { points: 0, games: 0, wins: 0 };
     state.sitOutCount[name] = missedRounds;
     regenerateNextRound();
@@ -1534,7 +1630,10 @@
     const pairId = name1 + ' & ' + name2;
     state.pairs.push(pairId);
     state.pairMembers[pairId] = [name1, name2];
-    state.players.push(name1, name2);
+    state.players.push(
+      { id: playerId(), name: name1, gender: 'male' },
+      { id: playerId(), name: name2, gender: 'male' }
+    );
     state.leaderboard[name1] = { points: 0, games: 0, wins: 0 };
     state.leaderboard[name2] = { points: 0, games: 0, wins: 0 };
     state.sitOutCount[pairId] = missedRounds;
@@ -1554,7 +1653,10 @@
     if (state.mode === 'pairs'){
       state.pairs = state.pairs.filter(p => p !== unitId);
     } else {
-      state.players = state.players.filter(p => p !== unitId);
+      if (!state.pausedPlayerProfiles) state.pausedPlayerProfiles = {};
+      const profile = state.players.find(player => player.name === unitId);
+      if (profile) state.pausedPlayerProfiles[unitId] = profile;
+      state.players = state.players.filter(player => player.name !== unitId);
     }
     if (!state.paused.includes(unitId)) state.paused.push(unitId);
     regenerateNextRound();
@@ -1568,7 +1670,9 @@
     if (state.mode === 'pairs'){
       state.pairs.push(unitId);
     } else {
-      state.players.push(unitId);
+      const pausedProfile = state.pausedPlayerProfiles && state.pausedPlayerProfiles[unitId];
+      state.players.push(pausedProfile || { id: playerId(), name: unitId, gender: 'male' });
+      if (state.pausedPlayerProfiles) delete state.pausedPlayerProfiles[unitId];
     }
     state.sitOutCount[unitId] = (state.sitOutCount[unitId] || 0) + missedRounds;
     regenerateNextRound();
@@ -1599,7 +1703,7 @@
       const name = newPlayerName.value.trim();
       if (!name){ managePlayersStatus.textContent = 'Nama pemain tidak boleh kosong.'; return; }
       const nameLower = name.toLowerCase();
-      const exists = state.players.some(p => p.toLowerCase() === nameLower) || state.paused.some(p => p.toLowerCase() === nameLower);
+      const exists = state.players.some(player => player.name.toLowerCase() === nameLower) || state.paused.some(p => p.toLowerCase() === nameLower);
       if (exists){ managePlayersStatus.textContent = 'Nama pemain sudah ada di daftar.'; return; }
       addNewPlayer(name, missed);
       newPlayerName.value = '';
@@ -1716,7 +1820,7 @@
 
   function recomputeLeaderboard(){
     const lb = {};
-    (state.players || []).forEach(p => { lb[p] = { points: 0, games: 0, wins: 0 }; });
+    playerNames().forEach(name => { lb[name] = { points: 0, games: 0, wins: 0 }; });
     (state.matchHistory || []).forEach(entry => {
       (entry.matches || []).forEach(m => {
         const sa = parseInt(m.scoreA, 10) || 0;
@@ -1831,9 +1935,10 @@
       return { matches, sitOut };
     }
 
-    const numCourts = Math.min(state.courtsRequested, Math.floor(state.players.length / 4));
+    const names = playerNames();
+    const numCourts = Math.min(state.courtsRequested, Math.floor(names.length / 4));
     const need = numCourts * 4;
-    const { playing, sitOut } = chooseSitOuts(state.players, need);
+    const { playing, sitOut } = chooseSitOuts(names, need);
     sitOut.forEach(p => { state.sitOutCount[p] += 1; });
 
     const pairings = generateMatches(playing, numCourts);
