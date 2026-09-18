@@ -192,7 +192,21 @@
   @keyframes cardIn{ to{ opacity: 1; transform: translateY(0); } }
   .court-card.preview{ background: transparent; border-style: dashed; border-color: rgba(23,32,51,0.14); }
   .court-head{ display:flex; justify-content:space-between; align-items:center; padding: 11px 16px; background: rgba(241,245,249,0.8); font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--line-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .court-status{ display:none; align-items:center; gap:8px; margin: 14px 16px 0; padding: 10px 12px; border: 1px solid rgba(186,255,41,0.45); border-radius: 10px; background: rgba(186,255,41,0.14); color: var(--green); font-size: 12.5px; font-weight: 700; }
+  .court-actions{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 14px 16px 16px; border-top: 1px solid rgba(23,32,51,0.08); }
+  .court-actions .btn-primary, .court-actions .btn-secondary{ min-width:0; margin:0; padding: 11px 12px; font-size: 11.5px; }
+  .court-score-static{ display:none; min-width:52px; justify-content:center; padding:8px 6px; font-family:var(--font-display); font-size:18px; font-weight:700; }
+  .court-card.finished{ border-color: rgba(186,255,41,0.45); }
+  .court-card.finished .court-status, .court-card.finished .court-score-static{ display:flex; }
+  .court-card.finished .court-controls, .court-card.finished .court-actions, .court-card.finished .score-value{ display:none !important; }
+  .round-progress{ display:none; margin: 0 0 16px; padding: 13px 16px; border: 1px solid rgba(23,32,51,0.08); border-radius: 10px; background: var(--glass-strong); box-shadow: 0 14px 32px -22px rgba(32,62,91,0.28); }
+  .round-progress.is-visible{ display:block; }
+  .round-progress-copy{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; font-size:12.5px; color:var(--line-dim); }
+  .round-progress-copy strong{ color:var(--line); font-family:var(--font-display); }
+  .round-progress-track{ height:7px; overflow:hidden; border-radius:999px; background:rgba(23,32,51,0.08); }
+  .round-progress-value{ display:block; width:var(--round-progress, 0%); height:100%; border-radius:inherit; background:var(--lime); transition:width .2s ease; }
   .court-card.preview .court-head{ background: transparent; border-bottom: 1px dashed rgba(23,32,51,0.12); }
+  .next-court-preview{ min-width:0; }
   .team-row{ display:flex; align-items:center; gap: 12px; padding: 15px 16px; border-left: 3px solid transparent; }
   .team-row.a{ border-left-color: var(--magenta); }
   .team-row.b{ border-left-color: var(--cyan); }
@@ -219,6 +233,12 @@
   .empty-lb{ color: var(--line-dim); font-size: 13px; padding: 6px 8px; }
 
   .action-stack{ margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .action-stack.multi-court #nextBtn, .action-stack.multi-court #finishBtn{ display:none; }
+
+  @media (max-width: 520px){
+    .court-actions{ grid-template-columns:1fr; }
+    .round-progress-copy{ align-items:flex-start; flex-direction:column; gap:3px; }
+  }
 
   .player-manage-list{ display:flex; flex-direction:column; gap:6px; max-height: 230px; overflow-y:auto; padding-right: 2px; }
   .player-row{ display:flex; align-items:center; gap:8px; background: rgba(241,245,249,0.6); border: 1px solid rgba(23,32,51,0.07); border-radius: 10px; padding: 7px 10px; font-size: 13px; }
@@ -499,6 +519,13 @@
 
         <div id="roundArea" style="display:none;">
           <div class="section-label"><span class="live-dot"></span>Sedang bermain</div>
+          <div class="round-progress" id="roundProgress" role="status" aria-live="polite">
+            <div class="round-progress-copy">
+              <strong>Progress ronde</strong>
+              <span id="roundProgressText">0 dari 0 lapangan sudah selesai</span>
+            </div>
+            <div class="round-progress-track" aria-hidden="true"><span class="round-progress-value"></span></div>
+          </div>
           <div class="timer-bar" id="timerBar" style="display:none;">
             <span class="timer-label">⏱ Waktu ronde</span>
             <div class="timer-clock" id="timerClock">00:00</div>
@@ -608,6 +635,8 @@
   const roundBadge = document.getElementById('roundBadge');
   const emptyState = document.getElementById('emptyState');
   const roundArea = document.getElementById('roundArea');
+  const roundProgress = document.getElementById('roundProgress');
+  const roundProgressText = document.getElementById('roundProgressText');
   const finalArea = document.getElementById('finalArea');
   const courtsGrid = document.getElementById('courtsGrid');
   const nextGrid = document.getElementById('nextGrid');
@@ -616,6 +645,7 @@
   const skipBtn = document.getElementById('skipBtn');
   const nextBtn = document.getElementById('nextBtn');
   const finishBtn = document.getElementById('finishBtn');
+  const actionStack = document.querySelector('#roundArea .action-stack');
   const leaderboardEl = document.getElementById('leaderboard');
 
   const managePlayersCard = document.getElementById('managePlayersCard');
@@ -1995,16 +2025,19 @@
   function buildCourtCard(idx){
     const m = state.current[idx];
     const mode = scoreModes[idx] || 'manual';
+    const isMultiCourt = state.current.length > 1;
+    const isFinished = m.finished === true;
     if (!Array.isArray(m.events)) m.events = [];
     const events = m.events;
     const sel = detailSel[idx] || null;
     const card = document.createElement('div');
-    card.className = 'court-card';
+    card.className = 'court-card' + (isFinished ? ' finished' : '');
     card.dataset.idx = String(idx);
     card.style.animationDelay = (idx * 0.07) + 's';
     card.innerHTML = `
       <div class="court-head"><span>Lapangan ${m.court}</span></div>
-      <div class="mode-switch" style="display:flex;gap:8px;margin:8px 0 10px;">
+      <div class="court-status" role="status">✅ Pertandingan di lapangan ini selesai</div>
+      <div class="mode-switch court-controls" style="display:flex;gap:8px;margin:8px 0 10px;">
         <button type="button" class="mode-btn ${mode === 'manual' ? 'active' : ''}" data-setmode="manual">Manual</button>
         <button type="button" class="mode-btn ${mode === 'cepat' ? 'active' : ''}" data-setmode="cepat">Cepat</button>
         <button type="button" class="mode-btn ${mode === 'detail' ? 'active' : ''}" data-setmode="detail">Detail</button>
@@ -2012,20 +2045,22 @@
       <div class="team-row a">
         <div class="team-names">${m.teamA.join(' &amp; ')}<small>tim a</small></div>
         <span class="score-value" tabindex="0" role="button" title="Klik untuk edit skor" data-idx="${idx}" data-team="A">${Number(m.scoreA) || 0}<span class="pencil">✏️</span></span>
+        <span class="court-score-static">${Number(m.scoreA) || 0}</span>
       </div>
       <div class="vs-divider"><span class="dot"></span>vs<span class="dot"></span></div>
       <div class="team-row b">
         <div class="team-names">${m.teamB.join(' &amp; ')}<small>tim b</small></div>
         <span class="score-value" tabindex="0" role="button" title="Klik untuk edit skor" data-idx="${idx}" data-team="B">${Number(m.scoreB) || 0}<span class="pencil">✏️</span></span>
+        <span class="court-score-static">${Number(m.scoreB) || 0}</span>
       </div>
       ${mode === 'cepat' ? `
-      <div class="quick-score" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <div class="quick-score court-controls" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
         <button type="button" class="mode-btn" data-plus="A" style="padding:16px 10px;font-size:13px;">+1 Tim A</button>
         <button type="button" class="mode-btn" data-plus="B" style="padding:16px 10px;font-size:13px;">+1 Tim B</button>
         <button type="button" class="mode-btn" data-undo="1" style="flex:0 0 100%;">Undo</button>
       </div>` : ''}
       ${mode === 'detail' ? `
-      <div class="detail-score" style="margin-top:12px;">
+      <div class="detail-score court-controls" style="margin-top:12px;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${['A','B'].map(t => (m['team' + t] || []).map((p, pi) => `
             <button type="button" class="mode-btn ${sel && sel.team === t && sel.player === p ? 'active' : ''}" data-pick="${t}" data-pi="${pi}" style="flex:1 1 42%;">${escHtml(p)}</button>
@@ -2048,6 +2083,11 @@
             <div style="padding:4px 0;border-top:1px solid rgba(23,32,51,0.07);">${escHtml(ev.player)} — ${ACTION_LABEL[ev.action] || ev.action}</div>
           `).join('') : '<div style="padding:4px 0;">Belum ada catatan.</div>'}
         </div>` : ''}
+      </div>` : ''}
+      ${isMultiCourt ? `
+      <div class="court-actions">
+        <button type="button" class="btn-primary" data-court-save="${idx}">Simpan &amp; Lanjutkan</button>
+        <button type="button" class="btn-secondary" data-court-finish="${idx}">Selesai</button>
       </div>` : ''}
     `;
 
@@ -2170,6 +2210,13 @@
     roundBadge.innerHTML = '<span class="live-dot"></span>Ronde ' + String(state.round).padStart(2, '0');
     newPlayerHint.textContent = 'Ronde berjalan saat ini: ' + state.round + '. Isi jumlah ronde yang terlewat biar pemain telat diprioritaskan main duluan saat rotasi berikutnya.';
 
+    const isMultiCourt = state.current.length > 1;
+    const finishedCourts = state.current.filter(match => match.finished === true).length;
+    roundProgress.classList.toggle('is-visible', isMultiCourt);
+    roundProgressText.textContent = finishedCourts + ' dari ' + state.current.length + ' lapangan sudah selesai';
+    roundProgress.style.setProperty('--round-progress', state.current.length ? ((finishedCourts / state.current.length) * 100) + '%' : '0%');
+    actionStack.classList.toggle('multi-court', isMultiCourt);
+
     courtsGrid.innerHTML = '';
     state.current.forEach((m, idx) => {
       courtsGrid.appendChild(buildCourtCard(idx));
@@ -2188,7 +2235,7 @@
     nextGrid.innerHTML = '';
     state.next.forEach((m, idx) => {
       const card = document.createElement('div');
-      card.className = 'court-card preview';
+      card.className = 'court-card preview next-court-preview';
       card.style.animationDelay = (idx * 0.07) + 's';
       card.innerHTML = `
         <div class="court-head"><span>Lapangan ${m.court}</span></div>
