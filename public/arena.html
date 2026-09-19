@@ -1891,6 +1891,147 @@
 
   function pairCost(a, b, weightMap){ return weightMap[pairKey(a, b)] || 0; }
 
+  // ===== LANGKAH 14 — logic progres per-lapangan independen (dipakai HANYA saat >1 lapangan) =====
+  // Jalur lama (nextBtn/finishBtn/advanceRound/commitScores/render "Rotasi Berikutnya")
+  // SAMA SEKALI TIDAK DISENTUH — tetap dipakai persis seperti sebelumnya kalau cuma 1 lapangan.
+
+  function allCourtsFinished(){
+    return !!(state && state.current && state.current.length && state.current.every(m => m.finished));
+  }
+
+  function courtBusyNames(excludeIdx){
+    const busy = new Set();
+    state.current.forEach((m, i) => {
+      if (i === excludeIdx || m.finished) return;
+      (m.teamA || []).forEach(n => busy.add(n));
+      (m.teamB || []).forEach(n => busy.add(n));
+    });
+    return busy;
+  }
+
+  function courtBusyPairUnits(excludeIdx){
+    const busy = new Set();
+    state.current.forEach((m, i) => {
+      if (i === excludeIdx || m.finished) return;
+      if (m.pairA) busy.add(m.pairA);
+      if (m.pairB) busy.add(m.pairB);
+    });
+    return busy;
+  }
+
+  function getAvailablePoolForCourt(idx){
+    if (state.mode === 'pairs'){
+      const busy = courtBusyPairUnits(idx);
+      return state.pairs.filter(u => !busy.has(u));
+    }
+    const busy = courtBusyNames(idx);
+    return playerNames().filter(n => !busy.has(n));
+  }
+
+  function gamesOf(name){ return (state.leaderboard[name] || { games: 0 }).games || 0; }
+
+  function avgPairGames(pairId){
+    const members = state.pairMembers[pairId] || [];
+    if (!members.length) return 0;
+    return members.reduce((s, name) => s + gamesOf(name), 0) / members.length;
+  }
+
+  // Urutkan pool: yang jumlah main-nya PALING SEDIKIT diprioritaskan duluan (syarat wajib pemerataan),
+  // baru di antara yang sama-sama sedikit, yang paling lama nunggu (sitOutCount tinggi) didahulukan.
+  function sortByFairness(pool, isPairUnit){
+    return pool.slice().sort((a, b) => {
+      const gA = isPairUnit ? avgPairGames(a) : gamesOf(a);
+      const gB = isPairUnit ? avgPairGames(b) : gamesOf(b);
+      if (gA !== gB) return gA - gB;
+      return (state.sitOutCount[b] || 0) - (state.sitOutCount[a] || 0);
+    });
+  }
+
+  function commitSingleMatch(m){
+    if (!m || (!m.teamA?.length && !m.teamB?.length)) return; // belum ada pemain (masih nunggu), tidak ada yang disimpan
+    if (!state.matchHistory) state.matchHistory = [];
+    state.matchHistory.push({ round: m.round || state.round, matches: [JSON.parse(JSON.stringify(m))] });
+    recomputeLeaderboard();
+  }
+
+  function buildWaitingMatch(court, round){
+    return { court, round, teamA: [], teamB: [], scoreA: 0, scoreB: 0, finished: false, waitingForPlayers: true, events: [] };
+  }
+
+  // Klik "Simpan & Lanjutkan" KHUSUS 1 lapangan (idx) — cuma lapangan ini yang lanjut,
+  // lapangan lain sama sekali tidak ikut ter-generate ulang atau terganggu.
+  function advanceCourt(idx){
+    const m = state.current[idx];
+    if (!m || m.finished) return;
+
+    commitSingleMatch(m);
+    if (m.teamA?.length || m.teamB?.length) persistRoundToDb(m.round || state.round, [m]);
+
+    const nextRoundNum = (m.round || state.round) + 1;
+
+    if (state.mode === 'pairs'){
+      const pool = getAvailablePoolForCourt(idx);
+      if (pool.length < 2){ state.current[idx] = buildWaitingMatch(m.court, nextRoundNum); render(); saveSessionToCloud(); return; }
+      const sorted = sortByFairness(pool, true);
+      const playing = sorted.slice(0, 2);
+      sorted.slice(2).forEach(u => { state.sitOutCount[u] = (state.sitOutCount[u] || 0) + 1; });
+      const [pairIdA, pairIdB] = playing;
+      const k = pairKey(pairIdA, pairIdB);
+      state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
+      state.current[idx] = {
+        court: m.court, round: nextRoundNum,
+        teamA: state.pairMembers[pairIdA], teamB: state.pairMembers[pairIdB],
+        pairA: pairIdA, pairB: pairIdB,
+        scoreA: 0, scoreB: 0, finished: false, events: []
+      };
+    } else {
+      const pool = getAvailablePoolForCourt(idx);
+      if (pool.length < 4){ state.current[idx] = buildWaitingMatch(m.court, nextRoundNum); render(); saveSessionToCloud(); return; }
+      const sorted = sortByFairness(pool, false);
+      const playing = sorted.slice(0, 4);
+      sorted.slice(4).forEach(p => { state.sitOutCount[p] = (state.sitOutCount[p] || 0) + 1; });
+      const { pairing } = bestPairingForChunk(playing);
+      const kA = pairKey(pairing.teamA[0], pairing.teamA[1]);
+      state.partnerCount[kA] = (state.partnerCount[kA] || 0) + 1;
+      const kB = pairKey(pairing.teamB[0], pairing.teamB[1]);
+      state.partnerCount[kB] = (state.partnerCount[kB] || 0) + 1;
+      pairing.teamA.forEach(x => pairing.teamB.forEach(y => {
+        const k = pairKey(x, y);
+        state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
+      }));
+      state.current[idx] = { court: m.court, round: nextRoundNum, teamA: pairing.teamA, teamB: pairing.teamB, scoreA: 0, scoreB: 0, finished: false, events: [] };
+    }
+
+    render();
+    saveSessionToCloud();
+  }
+
+  // Klik "Selesai" KHUSUS 1 lapangan (idx) — lapangan itu jadi read-only (finished),
+  // lapangan lain tetap jalan normal. Begitu SEMUA lapangan finished, otomatis ke layar final.
+  function finishCourt(idx){
+    const m = state.current[idx];
+    if (!m || m.finished) return;
+
+    commitSingleMatch(m);
+    if (m.teamA?.length || m.teamB?.length) persistRoundToDb(m.round || state.round, [m]);
+    m.finished = true;
+
+    render();
+    saveSessionToCloud();
+
+    if (allCourtsFinished()){
+      state.finished = true;
+      state.roundStartTime = null;
+      renderFinal();
+      if (isConnected()){
+        sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state })
+          .then(() => loadHistory({ silent: true }))
+          .catch(() => { /* arsip gagal, turnamen tetap selesai secara lokal */ });
+      }
+    }
+  }
+  // ===== akhir logic Langkah 14 =====
+
   function genderOf(name){
     const player = (state.players || []).find(p => p.name === name);
     return (player && player.gender) || 'male';
@@ -1969,7 +2110,7 @@
           court: idx + 1,
           teamA: state.pairMembers[pairIdA], teamB: state.pairMembers[pairIdB],
           pairA: pairIdA, pairB: pairIdB,
-          scoreA: 0, scoreB: 0
+          scoreA: 0, scoreB: 0, finished: false, round: state.round, events: []
         };
       });
       return { matches, sitOut };
@@ -1991,7 +2132,7 @@
         const k = pairKey(x, y);
         state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
       }));
-      return { court: idx + 1, teamA: pair.teamA, teamB: pair.teamB, scoreA: 0, scoreB: 0 };
+      return { court: idx + 1, teamA: pair.teamA, teamB: pair.teamB, scoreA: 0, scoreB: 0, finished: false, round: state.round, events: [] };
     });
 
     return { matches, sitOut };
@@ -2097,6 +2238,12 @@
         rerenderCourtCard(idx);
       });
     });
+
+    const courtSaveBtn = card.querySelector('[data-court-save]');
+    if (courtSaveBtn) courtSaveBtn.addEventListener('click', () => advanceCourt(idx));
+
+    const courtFinishBtn = card.querySelector('[data-court-finish]');
+    if (courtFinishBtn) courtFinishBtn.addEventListener('click', () => finishCourt(idx));
 
     card.querySelectorAll('[data-plus]').forEach(btn => {
       btn.addEventListener('click', () => {
