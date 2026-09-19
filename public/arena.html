@@ -1947,8 +1947,12 @@
     });
   }
 
+  function isMatchUntouched(m){
+    return !m || (!m.teamA?.length && !m.teamB?.length) || ((Number(m.scoreA) || 0) === 0 && (Number(m.scoreB) || 0) === 0);
+  }
+
   function commitSingleMatch(m){
-    if (!m || (!m.teamA?.length && !m.teamB?.length)) return; // belum ada pemain (masih nunggu), tidak ada yang disimpan
+    if (isMatchUntouched(m)) return; // belum ada pemain ATAU skor masih 0-0 (belum sempat dimainkan) — jangan dihitung "main"
     if (!state.matchHistory) state.matchHistory = [];
     state.matchHistory.push({ round: m.round || state.round, matches: [JSON.parse(JSON.stringify(m))] });
     recomputeLeaderboard();
@@ -1965,7 +1969,7 @@
     if (!m || m.finished) return;
 
     commitSingleMatch(m);
-    if (m.teamA?.length || m.teamB?.length) persistRoundToDb(m.round || state.round, [m]);
+    if (!isMatchUntouched(m)) persistRoundToDb(m.round || state.round, [m]);
 
     const nextRoundNum = (m.round || state.round) + 1;
 
@@ -2013,7 +2017,7 @@
     if (!m || m.finished) return;
 
     commitSingleMatch(m);
-    if (m.teamA?.length || m.teamB?.length) persistRoundToDb(m.round || state.round, [m]);
+    if (!isMatchUntouched(m)) persistRoundToDb(m.round || state.round, [m]);
     m.finished = true;
 
     render();
