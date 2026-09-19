@@ -364,7 +364,10 @@ function DetailPemain() {
       let latestAt = -1;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (!key || !key.startsWith("ottoKlasemenCode_") || key.endsWith("_at")) continue;
+        // Kode arena & kode klasemen sekarang disatukan (prefix kocokArenaCode_).
+        // Tetap cek prefix lama (ottoKlasemenCode_) juga buat kode-kode lama yang
+        // sudah kesimpen sebelum penyatuan ini — persis pola yang sama di klasemen.tsx.
+        if (!key || (!key.startsWith("kocokArenaCode_") && !key.startsWith("ottoKlasemenCode_")) || key.endsWith("_at")) continue;
         const value = localStorage.getItem(key);
         if (!value) continue;
         const at = Number(localStorage.getItem(key + "_at") ?? 0);
@@ -381,7 +384,14 @@ function DetailPemain() {
   const query = useQuery({
     queryKey: ["detail-pemain", code],
     enabled: !!code,
-    refetchInterval: 15000,
+    refetchInterval: (q) => {
+      const lastMatchAt = q.state.data?.lastMatchAt;
+      if (lastMatchAt) {
+        const elapsed = Date.now() - new Date(lastMatchAt).getTime();
+        if (elapsed > 2 * 60 * 60 * 1000) return false; // >2 jam sejak match terakhir, turnamen kemungkinan sudah kelar
+      }
+      return 15000;
+    },
     queryFn: async () => {
       const [playersRes, matchesRes, statsRes] = await Promise.all([
         supabase.from("arena_players").select("name").eq("arena_code", code),
@@ -414,6 +424,10 @@ function DetailPemain() {
         .map((s) => s.name);
       const partnerships = buildPartnerStats(matches);
 
+      const lastMatchAt = allMatches.length
+        ? allMatches.reduce((latest, m) => (m.created_at > latest ? m.created_at : latest), "")
+        : null;
+
       return {
         standings,
         actions: buildActionSummary(statRows),
@@ -426,6 +440,7 @@ function DetailPemain() {
         rivalries: buildHeadToHead(matches),
         roundMvp: buildRoundMvp(matches),
         winStreaks: buildWinStreaks(players, matches),
+        lastMatchAt,
       };
     },
   });
@@ -458,6 +473,7 @@ function DetailPemain() {
     : [];
   const topWinRate = data
     ? [...data.standings]
+        .filter((s) => s.games >= minGamesToRank)
         .map((s) => ({ name: s.name, value: s.games > 0 ? Math.round((s.wins / s.games) * 100) : 0 }))
         .sort((a, b) => b.value - a.value)
         .slice(0, 5)
