@@ -357,6 +357,29 @@ function RoundTrendChart({
 
 function DetailPemain() {
   const [code, setCode] = useState("");
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadImage = async () => {
+    if (!reportRef.current) return;
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        backgroundColor: "#f8fafc",
+        useCORS: true,
+      });
+      const dataURL = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = dataURL;
+      link.download = `Report-Ottoplay-${code || "Arena"}.png`;
+      link.click();
+    } catch (err) {
+      console.error("Gagal membuat gambar laporan:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   useEffect(() => {
     const fromUrl = new URLSearchParams(window.location.search).get("kode");
