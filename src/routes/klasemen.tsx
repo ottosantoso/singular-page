@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import html2canvas from "html2canvas";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/klasemen")({
