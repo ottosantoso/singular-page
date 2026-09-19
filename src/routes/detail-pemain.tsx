@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Bar,
@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import html2canvas from "html2canvas";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/detail-pemain")({
@@ -356,6 +357,29 @@ function RoundTrendChart({
 
 function DetailPemain() {
   const [code, setCode] = useState("");
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadImage = async () => {
+    if (!reportRef.current) return;
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        backgroundColor: "#f8fafc",
+        useCORS: true,
+      });
+      const dataURL = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = dataURL;
+      link.download = `Report-Ottoplay-${code || "Arena"}.png`;
+      link.click();
+    } catch (err) {
+      console.error("Gagal membuat gambar laporan:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   useEffect(() => {
     const fromUrl = new URLSearchParams(window.location.search).get("kode");
@@ -508,7 +532,7 @@ function DetailPemain() {
 
   return (
     <main className="arena-home court-lines min-h-screen">
-      <div className="mx-auto w-full max-w-5xl px-5 pb-20 pt-10">
+      <div ref={reportRef} className="mx-auto w-full max-w-5xl px-5 pb-20 pt-10">
         <nav className="mb-8 flex items-center justify-between">
           <Link
             to="/"
@@ -516,12 +540,21 @@ function DetailPemain() {
           >
             ← Beranda
           </Link>
-          <a
-            href={`/klasemen?kode=${encodeURIComponent(code)}`}
-            className="font-display text-xs font-bold uppercase tracking-wider text-arena-lime"
-          >
-            Lihat Klasemen
-          </a>
+          <div className="flex items-center gap-3">
+            <a
+              href={`/klasemen?kode=${encodeURIComponent(code)}`}
+              className="font-display text-xs font-bold uppercase tracking-wider text-arena-lime"
+            >
+              Lihat Klasemen
+            </a>
+            <button
+              onClick={handleDownloadImage}
+              disabled={isDownloading}
+              className="rounded-full bg-arena-lime px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-arena-ink transition hover:bg-[#a3e622] disabled:opacity-50"
+            >
+              {isDownloading ? "Memproses..." : "📸 Download Gambar"}
+            </button>
+          </div>
         </nav>
 
         <header className="text-center">
