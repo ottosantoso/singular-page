@@ -194,7 +194,18 @@
   .court-head{ display:flex; justify-content:space-between; align-items:center; padding: 11px 16px; background: rgba(241,245,249,0.8); font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--line-dim); text-transform: uppercase; letter-spacing: 0.04em; }
   .court-status{ display:none; align-items:center; gap:8px; margin: 14px 16px 0; padding: 10px 12px; border: 1px solid rgba(186,255,41,0.45); border-radius: 10px; background: rgba(186,255,41,0.14); color: var(--green); font-size: 12.5px; font-weight: 700; }
   .court-actions{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 14px 16px 16px; border-top: 1px solid rgba(23,32,51,0.08); }
+  .court-actions.custom-actions{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .court-actions .btn-primary, .court-actions .btn-secondary{ min-width:0; margin:0; padding: 11px 12px; font-size: 11.5px; }
+  .manual-board{ padding: 16px; }
+  .manual-board-grid{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
+  .manual-board-team{ min-width:0; padding:12px; border:1px solid rgba(23,32,51,0.08); border-radius:10px; background:var(--glass-strong); }
+  .manual-board-team.a{ border-left:3px solid var(--magenta); }
+  .manual-board-team.b{ border-left:3px solid var(--cyan); }
+  .manual-board-team strong{ display:block; margin-bottom:10px; font-family:var(--font-display); font-size:12px; color:var(--line-dim); text-transform:uppercase; }
+  .manual-board-team label{ margin-top:8px; font-size:11px; }
+  .manual-board-team select{ min-width:0; min-height:44px; }
+  .manual-board-submit{ margin-top:14px; }
+  .manual-board-error{ min-height:18px; margin-top:8px; color:var(--magenta); font-size:12px; line-height:1.45; }
   .court-score-static{ display:none; min-width:52px; justify-content:center; padding:8px 6px; font-family:var(--font-display); font-size:18px; font-weight:700; }
   .court-card.finished{ border-color: rgba(186,255,41,0.45); }
   .court-card.finished .court-status, .court-card.finished .court-score-static{ display:flex; }
@@ -236,7 +247,7 @@
   .action-stack.multi-court #nextBtn, .action-stack.multi-court #finishBtn{ display:none; }
 
   @media (max-width: 520px){
-    .court-actions{ grid-template-columns:1fr; }
+    .court-actions, .court-actions.custom-actions, .manual-board-grid{ grid-template-columns:1fr; }
     .round-progress-copy{ align-items:flex-start; flex-direction:column; gap:3px; }
   }
 
@@ -2256,6 +2267,7 @@
   const undoStacks = {};   // idx -> ['A','B',...]
   const detailSel = {};    // idx -> { team:'A'|'B', player:string }
   const logOpen = {};      // idx -> bool
+  const manualPickErrors = {}; // idx -> pesan validasi UI mode Custom
 
   function escHtml(s){
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2282,9 +2294,18 @@
     const mode = scoreModes[idx] || 'manual';
     const isMultiCourt = state.current.length > 1;
     const isFinished = m.finished === true;
+    const isManualPending = state.mode === 'custom' && m.manualPending === true;
     if (!Array.isArray(m.events)) m.events = [];
+    if (!Array.isArray(m.teamA)) m.teamA = [];
+    if (!Array.isArray(m.teamB)) m.teamB = [];
     const events = m.events;
     const sel = detailSel[idx] || null;
+    const currentManualPicks = state.current.flatMap(match => [...(match.teamA || []), ...(match.teamB || [])]).filter(Boolean);
+    const manualSlots = [m.teamA[0] || '', m.teamA[1] || '', m.teamB[0] || '', m.teamB[1] || ''];
+    const manualOptionHtml = (value) => {
+      const options = getAvailablePlayersForManualPick(currentManualPicks, value);
+      return `<option value="">Pilih pemain</option>${options.map(name => `<option value="${escHtml(name)}"${name === value ? ' selected' : ''}>${escHtml(name)}</option>`).join('')}`;
+    };
     const card = document.createElement('div');
     card.className = 'court-card' + (isFinished ? ' finished' : '');
     card.dataset.idx = String(idx);
@@ -2292,6 +2313,27 @@
     card.innerHTML = `
       <div class="court-head"><span>Lapangan ${m.court}</span></div>
       <div class="court-status" role="status">✅ Pertandingan di lapangan ini selesai</div>
+      ${isManualPending ? `
+      <div class="manual-board court-controls">
+        <div class="manual-board-grid">
+          <div class="manual-board-team a">
+            <strong>Tim A</strong>
+            <label for="manual-${idx}-a1">Slot 1</label>
+            <select id="manual-${idx}-a1" data-manual-team="A" data-manual-slot="0">${manualOptionHtml(manualSlots[0])}</select>
+            <label for="manual-${idx}-a2">Slot 2</label>
+            <select id="manual-${idx}-a2" data-manual-team="A" data-manual-slot="1">${manualOptionHtml(manualSlots[1])}</select>
+          </div>
+          <div class="manual-board-team b">
+            <strong>Tim B</strong>
+            <label for="manual-${idx}-b1">Slot 1</label>
+            <select id="manual-${idx}-b1" data-manual-team="B" data-manual-slot="0">${manualOptionHtml(manualSlots[2])}</select>
+            <label for="manual-${idx}-b2">Slot 2</label>
+            <select id="manual-${idx}-b2" data-manual-team="B" data-manual-slot="1">${manualOptionHtml(manualSlots[3])}</select>
+          </div>
+        </div>
+        <button type="button" class="btn-primary manual-board-submit" data-manual-submit="${idx}"${manualSlots.some(value => !value) ? ' disabled' : ''}>Mulai Ronde Ini</button>
+        <div class="manual-board-error" data-manual-error role="status">${escHtml(manualPickErrors[idx] || '')}</div>
+      </div>` : `
       <div class="mode-switch court-controls" style="display:flex;gap:8px;margin:8px 0 10px;">
         <button type="button" class="mode-btn ${mode === 'manual' ? 'active' : ''}" data-setmode="manual">Manual</button>
         <button type="button" class="mode-btn ${mode === 'cepat' ? 'active' : ''}" data-setmode="cepat">Cepat</button>
@@ -2338,13 +2380,36 @@
             <div style="padding:4px 0;border-top:1px solid rgba(23,32,51,0.07);">${escHtml(ev.player)} — ${ACTION_LABEL[ev.action] || ev.action}</div>
           `).join('') : '<div style="padding:4px 0;">Belum ada catatan.</div>'}
         </div>` : ''}
-      </div>` : ''}
-      ${isMultiCourt ? `
-      <div class="court-actions">
+      </div>` : ''}`}
+      ${isMultiCourt && !isManualPending ? `
+      <div class="court-actions${state.mode === 'custom' ? ' custom-actions' : ''}">
         <button type="button" class="btn-primary" data-court-save="${idx}">Simpan &amp; Lanjutkan</button>
+        ${state.mode === 'custom' ? `<button type="button" class="btn-secondary" data-next-player="${idx}">Next Player</button>` : ''}
         <button type="button" class="btn-secondary" data-court-finish="${idx}">Selesai</button>
       </div>` : ''}
     `;
+
+    card.querySelectorAll('[data-manual-team]').forEach(select => {
+      select.addEventListener('change', () => {
+        const teamKey = select.dataset.manualTeam === 'A' ? 'teamA' : 'teamB';
+        const slot = parseInt(select.dataset.manualSlot, 10);
+        state.current[idx][teamKey][slot] = select.value;
+        manualPickErrors[idx] = '';
+        render();
+      });
+    });
+
+    const manualSubmitBtn = card.querySelector('[data-manual-submit]');
+    if (manualSubmitBtn) manualSubmitBtn.addEventListener('click', () => {
+      const result = submitManualMatch(idx, [...m.teamA], [...m.teamB]);
+      if (!result.ok){
+        manualPickErrors[idx] = result.error;
+        const errorEl = card.querySelector('[data-manual-error]');
+        if (errorEl) errorEl.textContent = result.error;
+      } else {
+        manualPickErrors[idx] = '';
+      }
+    });
 
     card.querySelectorAll('[data-setmode]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -2358,6 +2423,17 @@
 
     const courtFinishBtn = card.querySelector('[data-court-finish]');
     if (courtFinishBtn) courtFinishBtn.addEventListener('click', () => finishCourt(idx));
+
+    const nextPlayerBtn = card.querySelector('[data-next-player]');
+    if (nextPlayerBtn) nextPlayerBtn.addEventListener('click', () => {
+      const result = nextPlayerAuto(idx);
+      if (!result.ok){
+        manualPickErrors[idx] = result.error;
+        rerenderCourtCard(idx);
+      } else {
+        manualPickErrors[idx] = '';
+      }
+    });
 
     card.querySelectorAll('[data-plus]').forEach(btn => {
       btn.addEventListener('click', () => {
