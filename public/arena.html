@@ -418,8 +418,10 @@
           <div class="mode-toggle">
             <button type="button" class="mode-btn active" id="modeIndividualBtn" data-mode="individual">Individu</button>
             <button type="button" class="mode-btn" id="modePairsBtn" data-mode="pairs">Pasangan Tetap</button>
+            <button type="button" class="mode-btn" id="modeCustomBtn" data-mode="custom">Custom</button>
           </div>
           <div class="hint" id="modeHint">Tiap ronde partner diacak ulang (rotasi individu).</div>
+          <div class="hint" id="customHint" style="display:none;color:var(--line-dim, #64748b);margin-top:6px;">Kamu atur manual siapa lawan siapa tiap ronde lewat dropdown, atau klik "Next Player" buat auto-generate ala Americano kapan saja mau.</div>
         </div>
         <div class="add-player-form">
           <div class="add-player-row">
@@ -664,6 +666,8 @@
 
   const modeIndividualBtn = document.getElementById('modeIndividualBtn');
   const modePairsBtn = document.getElementById('modePairsBtn');
+  const modeCustomBtn = document.getElementById('modeCustomBtn');
+  const customHint = document.getElementById('customHint');
   const modeHint = document.getElementById('modeHint');
   const playersLabel = document.getElementById('playersLabel');
 
@@ -737,9 +741,14 @@
     setupMode = mode;
     modeIndividualBtn.classList.toggle('active', mode === 'individual');
     modePairsBtn.classList.toggle('active', mode === 'pairs');
+    modeCustomBtn.classList.toggle('active', mode === 'custom');
+    customHint.style.display = mode === 'custom' ? 'block' : 'none';
     if (mode === 'pairs'){
       playersLabel.textContent = 'Daftar Pemain Terdaftar';
       modeHint.textContent = 'Partner tetap sama sepanjang turnamen — pemain dipasangkan berurutan dari daftar.';
+    } else if (mode === 'custom'){
+      playersLabel.textContent = 'Daftar Pemain Terdaftar';
+      modeHint.textContent = 'Ronde pertama kamu atur manual siapa lawan siapa lewat dropdown di tiap lapangan.';
     } else {
       playersLabel.textContent = 'Daftar Pemain Terdaftar';
       modeHint.textContent = 'Tiap ronde partner diacak ulang (rotasi individu).';
@@ -748,6 +757,7 @@
   }
   modeIndividualBtn.addEventListener('click', () => setSetupMode('individual'));
   modePairsBtn.addEventListener('click', () => setSetupMode('pairs'));
+  modeCustomBtn.addEventListener('click', () => setSetupMode('custom'));
 
   function updatePlayerSuggestion(){
     if (setupMode === 'pairs'){
@@ -927,6 +937,7 @@
     roundDurationInput.disabled = true;
     modeIndividualBtn.disabled = true;
     modePairsBtn.disabled = true;
+    modeCustomBtn.disabled = true;
     startBtn.style.display = 'none';
     resetBtn.style.display = 'block';
     emptyState.style.display = 'none';
@@ -939,12 +950,23 @@
     newPlayerMissed.value = 0;
     applyManageFormMode();
 
-    const first = generateSingleRound();
-    state.current = first.matches;
-    state.currentSitOut = first.sitOut;
-    const second = generateSingleRound();
-    state.next = second.matches;
-    state.nextSitOut = second.sitOut;
+    if (setupMode === 'custom'){
+      // Mode Custom: ronde pertama TIDAK diacak otomatis — host isi manual lewat dropdown
+      // ("papan kosong"). Match ditandai manualPending: true sampai host submit lewat
+      // submitManualMatch(idx, teamA, teamB), atau host bisa klik "Next Player" buat
+      // auto-generate ala Americano lewat nextPlayerAuto(idx) (reuse logic Langkah 14).
+      state.current = Array.from({ length: courts }, (_, i) => buildManualPendingMatch(i + 1));
+      state.currentSitOut = [];
+      state.next = null;
+      state.nextSitOut = [];
+    } else {
+      const first = generateSingleRound();
+      state.current = first.matches;
+      state.currentSitOut = first.sitOut;
+      const second = generateSingleRound();
+      state.next = second.matches;
+      state.nextSitOut = second.sitOut;
+    }
 
     startRoundTimer();
     render();
@@ -996,6 +1018,7 @@
     roundDurationInput.disabled = false;
     modeIndividualBtn.disabled = false;
     modePairsBtn.disabled = false;
+    modeCustomBtn.disabled = false;
     playerNameInput.value = '';
     registeredPlayers = [];
     renderRegisteredPlayers();
@@ -1164,6 +1187,7 @@
       roundDurationInput.disabled = true;
       modeIndividualBtn.disabled = true;
       modePairsBtn.disabled = true;
+    modeCustomBtn.disabled = true;
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
       emptyState.style.display = 'none';
@@ -1182,6 +1206,7 @@
       roundDurationInput.disabled = true;
       modeIndividualBtn.disabled = true;
       modePairsBtn.disabled = true;
+    modeCustomBtn.disabled = true;
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
       emptyState.style.display = 'none';
@@ -1195,6 +1220,7 @@
       roundDurationInput.disabled = false;
       modeIndividualBtn.disabled = false;
       modePairsBtn.disabled = false;
+    modeCustomBtn.disabled = false;
       startBtn.style.display = 'block';
       resetBtn.style.display = 'none';
       emptyState.style.display = 'block';
@@ -1971,6 +1997,15 @@
     commitSingleMatch(m);
     if (!isMatchUntouched(m)) persistRoundToDb(m.round || state.round, [m]);
 
+    if (state.mode === 'custom'){
+      // Mode Custom: "Simpan & Lanjutkan" biasa (tanpa klik "Next Player") balik ke papan
+      // kosong — host isi manual lagi lewat dropdown untuk ronde berikutnya di lapangan ini.
+      state.current[idx] = buildManualPendingMatch(m.court, (m.round || 1) + 1);
+      render();
+      saveSessionToCloud();
+      return;
+    }
+
     const nextRoundNum = (m.round || state.round) + 1;
 
     if (state.mode === 'pairs'){
@@ -2035,6 +2070,81 @@
     }
   }
   // ===== akhir logic Langkah 14 =====
+
+  // ===== LANGKAH 15 — logic mode "Custom" (dipakai HANYA saat setupMode === 'custom') =====
+
+  function buildManualPendingMatch(court, round){
+    return { court, round: round || 1, teamA: [], teamB: [], scoreA: 0, scoreB: 0, finished: false, manualPending: true, events: [] };
+  }
+
+  // Dipakai buat isi opsi <select> tiap slot dropdown — pemain yang sudah kepilih di
+  // SLOT MANAPUN (lapangan lain, atau slot lain di lapangan yang sama) tidak boleh muncul lagi,
+  // supaya tidak ada 1 pemain dobel di 2 tempat sekaligus.
+  function getAvailablePlayersForManualPick(currentlyPickedEverywhere, exceptValue){
+    return playerNames().filter(n => n === exceptValue || !currentlyPickedEverywhere.includes(n));
+  }
+
+  function allManualPicksMade(){
+    return state.current.every(m => !m.manualPending || (m.teamA.length === 2 && m.teamB.length === 2));
+  }
+
+  // Host isi manual 4 nama lewat dropdown lalu submit (dipanggil dari UI Lovable).
+  // teamA/teamB masing-masing array 2 nama. Return { ok: true } atau { ok: false, error }.
+  function submitManualMatch(idx, teamA, teamB){
+    const names = [...teamA, ...teamB];
+    if (names.length !== 4 || names.some(n => !n)) return { ok: false, error: 'Semua slot harus diisi (4 pemain).' };
+    if (new Set(names).size !== 4) return { ok: false, error: 'Tidak boleh ada pemain yang sama dipilih dobel.' };
+    const pickedElsewhere = new Set();
+    state.current.forEach((m, i) => {
+      if (i === idx) return;
+      (m.teamA || []).forEach(n => pickedElsewhere.add(n));
+      (m.teamB || []).forEach(n => pickedElsewhere.add(n));
+    });
+    if (names.some(n => pickedElsewhere.has(n))) return { ok: false, error: 'Ada pemain yang sudah dipakai di lapangan lain.' };
+
+    const m = state.current[idx];
+    state.current[idx] = { court: m.court, round: m.round || 1, teamA, teamB, scoreA: 0, scoreB: 0, finished: false, manualPending: false, events: [] };
+    render();
+    saveSessionToCloud();
+    return { ok: true };
+  }
+
+  // Tombol "Next Player" — auto-generate ala Americano buat 1 lapangan, reuse fungsi
+  // fairness Langkah 14 apa adanya (games-count paling sedikit duluan, minim ulang partner/lawan,
+  // dan gender-mix bonus dari Langkah 16 otomatis ikut kepakai karena reuse bestPairingForChunk).
+  function nextPlayerAuto(idx){
+    const pool = getAvailablePoolForCourt(idx);
+    const m = state.current[idx];
+    if (pool.length < 4){
+      state.current[idx] = buildManualPendingMatch(m.court, (m.round || 1));
+      state.current[idx].waitingForPlayers = true;
+      render(); saveSessionToCloud();
+      return { ok: false, error: 'Belum cukup pemain available (' + pool.length + ' dari 4 dibutuhkan) — isi manual dulu.' };
+    }
+    const sorted = sortByFairness(pool, false);
+    const playing = sorted.slice(0, 4);
+    sorted.slice(4).forEach(p => { state.sitOutCount[p] = (state.sitOutCount[p] || 0) + 1; });
+    const { pairing } = bestPairingForChunk(playing);
+    const kA = pairKey(pairing.teamA[0], pairing.teamA[1]);
+    state.partnerCount[kA] = (state.partnerCount[kA] || 0) + 1;
+    const kB = pairKey(pairing.teamB[0], pairing.teamB[1]);
+    state.partnerCount[kB] = (state.partnerCount[kB] || 0) + 1;
+    pairing.teamA.forEach(x => pairing.teamB.forEach(y => {
+      const k = pairKey(x, y);
+      state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
+    }));
+    state.current[idx] = { court: m.court, round: (m.round || 1), teamA: pairing.teamA, teamB: pairing.teamB, scoreA: 0, scoreB: 0, finished: false, manualPending: false, events: [] };
+    render();
+    saveSessionToCloud();
+    return { ok: true };
+  }
+
+  // Dipakai advanceCourt/finishCourt Langkah 14 supaya di mode Custom, lapangan yang lanjut
+  // balik lagi ke "papan kosong" (bukan auto ter-generate) KECUALI host baru saja pakai
+  // "Next Player" (nextPlayerAuto sudah langsung isi match-nya, tidak lewat advanceCourt lagi).
+  function isCustomMode(){ return state && state.mode === 'custom'; }
+
+  // ===== akhir logic Langkah 15 =====
 
   function genderOf(name){
     const player = (state.players || []).find(p => p.name === name);
