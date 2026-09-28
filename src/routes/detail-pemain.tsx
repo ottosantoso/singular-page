@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/detail-pemain")({
@@ -376,6 +376,7 @@ function DetailPemain() {
       link.click();
     } catch (err) {
       console.error("Gagal membuat gambar laporan:", err);
+      window.alert("Gagal membuat gambar, coba lagi.");
     } finally {
       setIsDownloading(false);
     }

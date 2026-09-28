@@ -23,6 +23,7 @@
      --silver: #64748b;
      --bronze: #9a5b2a;
      --radius: 18px;
+     --toast-ok: #1f7a3f;
      --font-display: 'Chakra Petch', sans-serif;
      --font-body: 'Inter', sans-serif;
    }
@@ -248,6 +249,8 @@
 
   .action-stack{ margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
   .action-stack.multi-court #nextBtn, .action-stack.multi-court #finishBtn{ display:none; }
+  .action-stack #finishAllBtn{ display:none; }
+  .action-stack.multi-court #finishAllBtn{ display:block; }
 
   @media (max-width: 520px){
     .court-actions, .court-actions.custom-actions, .manual-board-grid{ grid-template-columns:1fr; }
@@ -278,6 +281,20 @@
   .mode-btn{ flex: 1; padding: 10px 8px; border-radius: 10px; border: 1px solid rgba(23,32,51,0.12); background: rgba(241,245,249,0.6); color: var(--line-dim); font-family: var(--font-display); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; font-weight: 700; }
   .mode-btn:hover{ background: rgba(226,232,240,0.7); }
   .mode-btn.active{ background: rgba(186,255,41,0.14); border-color: rgba(186,255,41,0.4); color: var(--green); }
+  .act-btn{ display:flex; flex-direction:column; align-items:center; gap:3px; line-height:1.15; }
+  .act-btn .act-btn-team{ font-size:9.5px; font-weight:700; letter-spacing:0.03em; text-transform:none; opacity:0.85; }
+  .act-btn[data-scores="A"] .act-btn-team{ color: var(--magenta); }
+  .act-btn[data-scores="B"] .act-btn-team{ color: var(--cyan); }
+  .action-rule-hint{ margin-top:8px; padding:8px 10px; border-radius:10px; background:rgba(23,32,51,0.045); font-size:11px; line-height:1.5; color:var(--line-dim); }
+  .action-rule-hint strong{ color:var(--line); }
+  .score-toast-wrap{ position:fixed; left:0; right:0; bottom:18px; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; z-index:9999; }
+  .score-toast{ pointer-events:none; max-width:92vw; padding:10px 16px; border-radius:999px; background:var(--line); color:#fff; font-family:var(--font-display); font-size:12.5px; font-weight:700; letter-spacing:0.01em; box-shadow:0 10px 26px rgba(23,32,51,0.28); display:flex; align-items:center; gap:8px; animation: scoreToastIn 0.18s ease-out, scoreToastOut 0.25s ease-in 1.85s forwards; }
+  .score-toast .dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .score-toast.team-a .dot{ background:var(--magenta); }
+  .score-toast.team-b .dot{ background:var(--cyan); }
+  .score-toast.undo{ background:#3a4457; }
+  @keyframes scoreToastIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes scoreToastOut{ to{ opacity:0; transform:translateY(-6px); } }
   .add-player-form input[type=number]{ -moz-appearance: textfield; }
   .add-player-form input[type=number]::-webkit-outer-spin-button,
   .add-player-form input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
@@ -346,6 +363,7 @@
 </style>
 </head>
 <body class="welcome-active">
+<div class="score-toast-wrap" id="scoreToastWrap" aria-live="polite"></div>
 <div class="wrap">
 
   <div id="welcomeScreen">
@@ -563,6 +581,7 @@
               <button class="btn-primary" id="nextBtn">Simpan Skor &amp; Lanjut</button>
             </div>
             <button class="btn-outline-danger" id="finishBtn">Selesai Turnamen</button>
+            <button class="btn-outline-danger" id="finishAllBtn" type="button">Selesai Semua Lapangan</button>
           </div>
         </div>
 
@@ -2092,6 +2111,50 @@
       }
     }
   }
+  // Klik "Selesai Semua Lapangan" (khusus >1 lapangan) — menyelesaikan SEMUA lapangan yang
+  // belum selesai sekaligus lalu langsung ke layar final. Logika per-lapangan (finishCourt /
+  // advanceCourt) tidak diubah; lapangan yang SUDAH selesai sebelumnya tidak dihitung ulang.
+  function finishAllCourts(){
+    if (!state || state.finished || !state.current || state.current.length < 2) return;
+    const pending = state.current.filter(m => !m.finished);
+    if (!pending.length) return;
+
+    const lines = pending.map(m => {
+      if (isMatchUntouched(m)){
+        const why = (m.teamA && m.teamA.length) ? 'skor masih 0-0' : 'belum ada pemain';
+        return '• Lapangan ' + m.court + ': ' + why + ' → dilewati (TIDAK dihitung)';
+      }
+      return '• Lapangan ' + m.court + ': skor ' + (Number(m.scoreA) || 0) + '-' + (Number(m.scoreB) || 0) + ' → disimpan sebagai skor FINAL';
+    });
+    const allUntouched = pending.every(isMatchUntouched);
+    const doneCount = state.current.length - pending.length;
+
+    let msg = 'Selesaikan SEMUA lapangan dan akhiri turnamen sekarang?\n\n' + lines.join('\n');
+    if (doneCount) msg += '\n\n' + doneCount + ' lapangan lain sudah selesai sebelumnya dan tidak berubah.';
+    if (allUntouched) msg += '\n\nPERHATIAN: tidak ada lapangan yang punya skor. Tidak ada pertandingan baru yang akan disimpan ke laporan/klasemen.';
+    else msg += '\n\nKalau ada pertandingan yang sebenarnya belum selesai dimainkan, klik Cancel dulu dan lanjutkan mainnya.';
+    msg += '\n\nKlik OK untuk menyelesaikan, atau Cancel untuk kembali.';
+    if (!window.confirm(msg)) return;
+
+    pending.forEach(m => {
+      commitSingleMatch(m);
+      if (!isMatchUntouched(m)) persistRoundToDb(m.round || state.round, [m]);
+      m.finished = true;
+    });
+
+    state.finished = true;
+    state.roundStartTime = null;
+    timerAlert.style.display = 'none';
+    renderFinal();
+    saveSessionToCloud();
+    if (isConnected()){
+      sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state })
+        .then(() => loadHistory({ silent: true }))
+        .catch(() => { /* arsip gagal, turnamen tetap selesai secara lokal */ });
+    }
+  }
+  const finishAllBtn = document.getElementById('finishAllBtn');
+  if (finishAllBtn) finishAllBtn.addEventListener('click', finishAllCourts);
   // ===== akhir logic Langkah 14 =====
 
   // ===== LANGKAH 15 — logic mode "Custom" (dipakai HANYA saat setupMode === 'custom') =====
@@ -2286,6 +2349,24 @@
   }
 
   const ACTION_LABEL = { point: 'Poin', out: 'Out', foul: 'Kesalahan' };
+  // Aturan skor Mode Detail:
+  // - Poin  : pemain yang dipilih mencetak poin sendiri -> skor timnya sendiri +1.
+  // - Out & Kesalahan : itu kesalahan pemain yang dipilih -> skor pindah ke tim LAWAN +1.
+  const ACTION_VERB = { point: 'cetak poin', out: 'kena out', foul: 'bikin kesalahan' };
+
+  function showScoreToast({ team, player, action, court, undo }){
+    const wrap = document.getElementById('scoreToastWrap');
+    if (!wrap) return;
+    const teamLabel = team === 'A' ? 'Tim A' : 'Tim B';
+    const el = document.createElement('div');
+    el.className = 'score-toast ' + (undo ? 'undo' : (team === 'A' ? 'team-a' : 'team-b'));
+    const courtTag = court ? `Lap.${court} · ` : '';
+    el.innerHTML = undo
+      ? `<span class="dot"></span>${courtTag}Undo — ${escHtml(player)} (${ACTION_LABEL[action] || action})`
+      : `<span class="dot"></span>${courtTag}${escHtml(player)} ${ACTION_VERB[action] || ''} → +1 ${teamLabel}`;
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 2200);
+  }
 
   function setCourtScore(idx, team, value){
     const v = Math.max(0, parseInt(value, 10) || 0);
@@ -2375,13 +2456,23 @@
             <button type="button" class="mode-btn ${sel && sel.team === t && sel.player === p ? 'active' : ''}" data-pick="${t}" data-pi="${pi}" style="flex:1 1 42%;">${escHtml(p)}</button>
           `).join('')).join('')}
         </div>
-        ${sel ? `
+        ${sel ? (() => {
+          const oppTeam = sel.team === 'A' ? 'B' : 'A';
+          return `
         <div style="margin-top:10px;font-size:11px;color:var(--line-dim);">Aksi untuk <strong>${escHtml(sel.player)}</strong> (tim ${sel.team.toLowerCase()})</div>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
-          <button type="button" class="mode-btn" data-act="point" style="padding:14px 8px;">Poin</button>
-          <button type="button" class="mode-btn" data-act="out" style="padding:14px 8px;">Out</button>
-          <button type="button" class="mode-btn" data-act="foul" style="padding:14px 8px;">Kesalahan</button>
-        </div>` : `<div style="margin-top:10px;font-size:11px;color:var(--line-dim);">Pilih pemain dulu untuk mencatat aksi.</div>`}
+          <button type="button" class="mode-btn act-btn" data-act="point" data-scores="${sel.team}" style="padding:10px 8px;">
+            <span>Poin</span><span class="act-btn-team">+1 Tim ${sel.team}</span>
+          </button>
+          <button type="button" class="mode-btn act-btn" data-act="out" data-scores="${oppTeam}" style="padding:10px 8px;">
+            <span>Out</span><span class="act-btn-team">+1 Tim ${oppTeam}</span>
+          </button>
+          <button type="button" class="mode-btn act-btn" data-act="foul" data-scores="${oppTeam}" style="padding:10px 8px;">
+            <span>Kesalahan</span><span class="act-btn-team">+1 Tim ${oppTeam}</span>
+          </button>
+        </div>`;
+        })() : `<div style="margin-top:10px;font-size:11px;color:var(--line-dim);">Pilih pemain dulu untuk mencatat aksi.</div>
+        <div class="action-rule-hint"><strong>Aturan:</strong> Poin = skor tim sendiri. Out &amp; Kesalahan = itu kesalahan pemain ini, jadi skor pindah ke tim lawan.</div>`}
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
           <button type="button" class="mode-btn" data-togglelog="1">${logOpen[idx] ? 'Sembunyikan log' : 'Lihat log'} (${events.length})</button>
           <button type="button" class="mode-btn" data-undoevent="1">Undo terakhir</button>
@@ -2490,6 +2581,7 @@
         setCourtScore(idx, scoringTeam, (Number(cur) || 0) + 1);
         if (!Array.isArray(state.current[idx].events)) state.current[idx].events = [];
         state.current[idx].events.push({ player: s.player, team: s.team, action: action, ts: Date.now() });
+        showScoreToast({ team: scoringTeam, player: s.player, action, court: state.current[idx].court });
         saveSessionToCloud();
         rerenderCourtCard(idx);
       });
@@ -2512,6 +2604,7 @@
         const scoringTeam = last.action === 'point' ? last.team : (last.team === 'A' ? 'B' : 'A');
         const cur = scoringTeam === 'A' ? state.current[idx].scoreA : state.current[idx].scoreB;
         setCourtScore(idx, scoringTeam, (Number(cur) || 0) - 1);
+        showScoreToast({ team: scoringTeam, player: last.player, action: last.action, court: state.current[idx].court, undo: true });
         saveSessionToCloud();
         rerenderCourtCard(idx);
       });

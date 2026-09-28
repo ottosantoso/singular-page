@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import {
   Activity,
   ArrowLeft,
@@ -148,6 +148,7 @@ function Klasemen() {
       link.click();
     } catch (err) {
       console.error("Gagal membuat gambar laporan:", err);
+      window.alert("Gagal membuat gambar, coba lagi.");
     } finally {
       setIsDownloading(false);
     }
