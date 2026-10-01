@@ -14,11 +14,13 @@
  *      sitOutCount                 : { [unit]: number }
  *      gamesOf(unit)               : jumlah main (untuk pair: rata-rata anggota)
  *      genderOf(name)              : 'male' | 'female'  (opsional, default 'male')
+ *      pointsOf(unit), winsOf(unit): hanya untuk Mexicano (peringkat)
  *      rng()                       : opsional, default Math.random (berguna buat test)
  *    }
  *
  * Dipakai oleh 3 jalur yang dulu menduplikasi logika yang sama:
- *  1. planRound()    -> kocok SEMUA lapangan sekaligus (ronde serentak)
+ *  1. planRound()    -> kocok SEMUA lapangan sekaligus (Americano: acak + minim pengulangan)
+ *  1b. planMexicanoRound() -> semua lapangan sekaligus berdasarkan peringkat (Mexicano / Super Mexicano)
  *  2. pickForCourt() -> isi 1 lapangan saja (lapangan independen / tombol Next Player)
  *  3. recordMatch()  -> catat (+1) atau batalkan (-1) efek sebuah match ke counts
  */
@@ -201,6 +203,44 @@
     };
   }
 
+  // ---------- jalur 3: Mexicano (berbasis peringkat) ----------
+
+  // Urutkan unit dari peringkat terbaik ke terburuk: poin desc, lalu menang desc.
+  // Yang masih seri diacak (bukan urutan input), supaya tidak ada yang selalu diuntungkan.
+  // ctx.pointsOf(unit), ctx.winsOf(unit) (opsional, default 0).
+  function rankUnits(units, ctx) {
+    var pts = ctx.pointsOf || function () { return 0; };
+    var wins = ctx.winsOf || function () { return 0; };
+    return shuffle(units, ctx.rng).sort(function (a, b) {
+      return (pts(b) - pts(a)) || (wins(b) - wins(a));
+    });
+  }
+
+  // Satu lapangan Mexicano dari 4 pemain yang SUDAH urut peringkat [r1,r2,r3,r4]:
+  // #1 & #4 lawan #2 & #3 (dua tim seimbang).
+  function mexicanoMatch(group) {
+    return { teamA: [group[0], group[3]], teamB: [group[1], group[2]] };
+  }
+
+  // Ronde Mexicano untuk numCourts lapangan (berapa pun: 1, 2, 3, ...).
+  //   1. Siapa yang main ditentukan pemerataan dulu (sama persis dengan Americano):
+  //      yang paling sedikit istirahat, istirahat dulu.
+  //   2. Yang main diurutkan berdasar peringkat, lalu dipotong per 4:
+  //      Lapangan 1 = 4 teratas, Lapangan 2 = 4 berikutnya, dst.
+  //   3. Di tiap lapangan: #1 & #4 vs #2 & #3.
+  // Return { matches:[{teamA,teamB}], sitOut:[unit] }. Tidak mengubah ctx.
+  function planMexicanoRound(units, numCourts, ctx) {
+    var rng = ctx.rng || Math.random;
+    var size = perCourt(PLAYERS);
+    var split = chooseSitOuts(units, numCourts * size, ctx.sitOutCount, rng);
+    var ranked = rankUnits(split.playing, ctx);
+    var matches = [];
+    for (var c = 0; c < numCourts; c++) {
+      matches.push(mexicanoMatch(ranked.slice(c * size, c * size + size)));
+    }
+    return { matches: matches, sitOut: split.sitOut };
+  }
+
   return {
     PLAYERS: PLAYERS,
     PAIRS: PAIRS,
@@ -211,6 +251,8 @@
     bestPairingForChunk: bestPairingForChunk,
     chooseSitOuts: chooseSitOuts,
     planRound: planRound,
+    planMexicanoRound: planMexicanoRound,
+    rankUnits: rankUnits,
     pickForCourt: pickForCourt
   };
 });
