@@ -638,8 +638,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/pairing.js"></script>
 <script>
 (function(){
+  const P = window.OttoPairing; // modul pairing murni: lihat /pairing.js
   const SUPABASE_URL = 'https://qibsdczvxqmbjrtmvgtj.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYnNkY3p2eHFtYmpydG12Z3RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxNTkyMDMsImV4cCI6MjEwMzczNTIwM30.xRd_82fgnGaCYQOpXiQBxsan9Rxv1deMdFuVbKxGDxc';
   let sb = null;
@@ -903,7 +905,7 @@
     });
   }
 
-  function pairKey(a, b){ return [a, b].sort().join('␟'); }
+  const pairKey = P.pairKey;
 
   startBtn.addEventListener('click', async () => {
     statusMsg.textContent = '';
@@ -1686,21 +1688,7 @@
 
   function undoRoundEffects(matches, sitOut){
     if (matches){
-      matches.forEach(m => {
-        if (m.pairA && m.pairB){
-          const k = pairKey(m.pairA, m.pairB);
-          state.opponentCount[k] = Math.max(0, (state.opponentCount[k] || 0) - 1);
-        } else {
-          const kA = pairKey(m.teamA[0], m.teamA[1]);
-          state.partnerCount[kA] = Math.max(0, (state.partnerCount[kA] || 0) - 1);
-          const kB = pairKey(m.teamB[0], m.teamB[1]);
-          state.partnerCount[kB] = Math.max(0, (state.partnerCount[kB] || 0) - 1);
-          m.teamA.forEach(x => m.teamB.forEach(y => {
-            const k = pairKey(x, y);
-            state.opponentCount[k] = Math.max(0, (state.opponentCount[k] || 0) - 1);
-          }));
-        }
-      });
+      matches.forEach(m => P.recordMatch(state, m, -1));
     }
     (sitOut || []).forEach(p => {
       if (state.sitOutCount[p] !== undefined) state.sitOutCount[p] = Math.max(0, state.sitOutCount[p] - 1);
@@ -1947,18 +1935,6 @@
     recomputeLeaderboard();
   }
 
-  function chooseSitOuts(players, need){
-    const excess = players.length - need;
-    if (excess <= 0) return { playing: players.slice(), sitOut: [] };
-    const shuffled = players.slice().sort(() => Math.random() - 0.5);
-    shuffled.sort((a, b) => state.sitOutCount[a] - state.sitOutCount[b]);
-    const sitOut = shuffled.slice(0, excess);
-    const playing = players.filter(p => !sitOut.includes(p));
-    return { playing, sitOut };
-  }
-
-  function pairCost(a, b, weightMap){ return weightMap[pairKey(a, b)] || 0; }
-
   // ===== LANGKAH 14 — logic progres per-lapangan independen (dipakai HANYA saat >1 lapangan) =====
   // Jalur lama (nextBtn/finishBtn/advanceRound/commitScores/render "Rotasi Berikutnya")
   // SAMA SEKALI TIDAK DISENTUH — tetap dipakai persis seperti sebelumnya kalau cuma 1 lapangan.
@@ -2004,17 +1980,6 @@
     return members.reduce((s, name) => s + gamesOf(name), 0) / members.length;
   }
 
-  // Urutkan pool: yang jumlah main-nya PALING SEDIKIT diprioritaskan duluan (syarat wajib pemerataan),
-  // baru di antara yang sama-sama sedikit, yang paling lama nunggu (sitOutCount tinggi) didahulukan.
-  function sortByFairness(pool, isPairUnit){
-    return pool.slice().sort((a, b) => {
-      const gA = isPairUnit ? avgPairGames(a) : gamesOf(a);
-      const gB = isPairUnit ? avgPairGames(b) : gamesOf(b);
-      if (gA !== gB) return gA - gB;
-      return (state.sitOutCount[b] || 0) - (state.sitOutCount[a] || 0);
-    });
-  }
-
   function isMatchUntouched(m){
     return !m || (!m.teamA?.length && !m.teamB?.length) || ((Number(m.scoreA) || 0) === 0 && (Number(m.scoreB) || 0) === 0);
   }
@@ -2024,6 +1989,46 @@
     if (!state.matchHistory) state.matchHistory = [];
     state.matchHistory.push({ round: m.round || state.round, matches: [JSON.parse(JSON.stringify(m))] });
     recomputeLeaderboard();
+  }
+
+  // ===== Jembatan ke modul pairing (/pairing.js) =====
+  // Semua keputusan "siapa main dengan siapa" ada di modul itu. Di sini cuma:
+  // ambil data dari `state`, panggil modul, lalu bentuk objek match + update counter.
+  function pairingKind(){ return state.mode === 'pairs' ? P.PAIRS : P.PLAYERS; }
+
+  function pairingCtx(){
+    return {
+      partnerCount: state.partnerCount,
+      opponentCount: state.opponentCount,
+      sitOutCount: state.sitOutCount,
+      genderOf,
+      gamesOf: state.mode === 'pairs' ? avgPairGames : gamesOf
+    };
+  }
+
+  function addSitOut(units){
+    units.forEach(u => { state.sitOutCount[u] = (state.sitOutCount[u] || 0) + 1; });
+  }
+
+  // sel = { teamA, teamB } (individu) atau { pairA, pairB } (pasangan tetap) dari modul.
+  function toMatch(sel, court, round, extra){
+    const isPairs = !!(sel.pairA && sel.pairB);
+    return Object.assign({
+      court, round,
+      teamA: isPairs ? state.pairMembers[sel.pairA] : sel.teamA,
+      teamB: isPairs ? state.pairMembers[sel.pairB] : sel.teamB,
+      scoreA: 0, scoreB: 0, finished: false, events: []
+    }, isPairs ? { pairA: sel.pairA, pairB: sel.pairB } : {}, extra || {});
+  }
+
+  // Isi 1 lapangan dari pemain/pasangan yang sedang bebas. Return match, atau null kalau kurang orang.
+  function autoFillCourt(idx, court, round, extra){
+    const picked = P.pickForCourt(getAvailablePoolForCourt(idx), pairingKind(), pairingCtx());
+    if (!picked) return null;
+    addSitOut(picked.sitOut);
+    const match = toMatch(picked.match, court, round, extra);
+    P.recordMatch(state, match, 1);
+    return match;
   }
 
   function buildWaitingMatch(court, round){
@@ -2050,38 +2055,7 @@
 
     const nextRoundNum = (m.round || state.round) + 1;
 
-    if (state.mode === 'pairs'){
-      const pool = getAvailablePoolForCourt(idx);
-      if (pool.length < 2){ state.current[idx] = buildWaitingMatch(m.court, nextRoundNum); render(); saveSessionToCloud(); return; }
-      const sorted = sortByFairness(pool, true);
-      const playing = sorted.slice(0, 2);
-      sorted.slice(2).forEach(u => { state.sitOutCount[u] = (state.sitOutCount[u] || 0) + 1; });
-      const [pairIdA, pairIdB] = playing;
-      const k = pairKey(pairIdA, pairIdB);
-      state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
-      state.current[idx] = {
-        court: m.court, round: nextRoundNum,
-        teamA: state.pairMembers[pairIdA], teamB: state.pairMembers[pairIdB],
-        pairA: pairIdA, pairB: pairIdB,
-        scoreA: 0, scoreB: 0, finished: false, events: []
-      };
-    } else {
-      const pool = getAvailablePoolForCourt(idx);
-      if (pool.length < 4){ state.current[idx] = buildWaitingMatch(m.court, nextRoundNum); render(); saveSessionToCloud(); return; }
-      const sorted = sortByFairness(pool, false);
-      const playing = sorted.slice(0, 4);
-      sorted.slice(4).forEach(p => { state.sitOutCount[p] = (state.sitOutCount[p] || 0) + 1; });
-      const { pairing } = bestPairingForChunk(playing);
-      const kA = pairKey(pairing.teamA[0], pairing.teamA[1]);
-      state.partnerCount[kA] = (state.partnerCount[kA] || 0) + 1;
-      const kB = pairKey(pairing.teamB[0], pairing.teamB[1]);
-      state.partnerCount[kB] = (state.partnerCount[kB] || 0) + 1;
-      pairing.teamA.forEach(x => pairing.teamB.forEach(y => {
-        const k = pairKey(x, y);
-        state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
-      }));
-      state.current[idx] = { court: m.court, round: nextRoundNum, teamA: pairing.teamA, teamB: pairing.teamB, scoreA: 0, scoreB: 0, finished: false, events: [] };
-    }
+    state.current[idx] = autoFillCourt(idx, m.court, nextRoundNum) || buildWaitingMatch(m.court, nextRoundNum);
 
     render();
     saveSessionToCloud();
@@ -2197,29 +2171,19 @@
 
   // Tombol "Next Player" — auto-generate ala Americano buat 1 lapangan, reuse fungsi
   // fairness Langkah 14 apa adanya (games-count paling sedikit duluan, minim ulang partner/lawan,
-  // dan gender-mix bonus dari Langkah 16 otomatis ikut kepakai karena reuse bestPairingForChunk).
+  // dan gender-mix bonus dari Langkah 16 otomatis ikut kepakai karena lewat modul pairing).
   function nextPlayerAuto(idx){
-    const pool = getAvailablePoolForCourt(idx);
     const m = state.current[idx];
-    if (pool.length < 4){
-      state.current[idx] = buildManualPendingMatch(m.court, (m.round || 1));
+    const round = m.round || 1;
+    const filled = autoFillCourt(idx, m.court, round, { manualPending: false });
+    if (!filled){
+      const available = getAvailablePoolForCourt(idx).length;
+      state.current[idx] = buildManualPendingMatch(m.court, round);
       state.current[idx].waitingForPlayers = true;
       render(); saveSessionToCloud();
-      return { ok: false, error: 'Belum cukup pemain available (' + pool.length + ' dari 4 dibutuhkan) — isi manual dulu.' };
+      return { ok: false, error: 'Belum cukup pemain available (' + available + ' dari 4 dibutuhkan) — isi manual dulu.' };
     }
-    const sorted = sortByFairness(pool, false);
-    const playing = sorted.slice(0, 4);
-    sorted.slice(4).forEach(p => { state.sitOutCount[p] = (state.sitOutCount[p] || 0) + 1; });
-    const { pairing } = bestPairingForChunk(playing);
-    const kA = pairKey(pairing.teamA[0], pairing.teamA[1]);
-    state.partnerCount[kA] = (state.partnerCount[kA] || 0) + 1;
-    const kB = pairKey(pairing.teamB[0], pairing.teamB[1]);
-    state.partnerCount[kB] = (state.partnerCount[kB] || 0) + 1;
-    pairing.teamA.forEach(x => pairing.teamB.forEach(y => {
-      const k = pairKey(x, y);
-      state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
-    }));
-    state.current[idx] = { court: m.court, round: (m.round || 1), teamA: pairing.teamA, teamB: pairing.teamB, scoreA: 0, scoreB: 0, finished: false, manualPending: false, events: [] };
+    state.current[idx] = filled;
     render();
     saveSessionToCloud();
     return { ok: true };
@@ -2237,105 +2201,20 @@
     return (player && player.gender) || 'male';
   }
 
-  function bestPairingForChunk(chunk){
-    const [p0, p1, p2, p3] = chunk;
-    const options = [
-      { teamA: [p0, p1], teamB: [p2, p3] },
-      { teamA: [p0, p2], teamB: [p1, p3] },
-      { teamA: [p0, p3], teamB: [p1, p2] }
-    ];
-    let best = null, bestScore = Infinity;
-    options.forEach(opt => {
-      const partnerScore = pairCost(opt.teamA[0], opt.teamA[1], state.partnerCount) + pairCost(opt.teamB[0], opt.teamB[1], state.partnerCount);
-      const oppScore = [opt.teamA[0], opt.teamA[1]].reduce((s, x) => s + [opt.teamB[0], opt.teamB[1]].reduce((s2, y) => s2 + pairCost(x, y, state.opponentCount), 0), 0);
-
-      let genderMixBonus = 0;
-      if (genderOf(opt.teamA[0]) !== genderOf(opt.teamA[1])) genderMixBonus += 0.5;
-      if (genderOf(opt.teamB[0]) !== genderOf(opt.teamB[1])) genderMixBonus += 0.5;
-
-      const score = (partnerScore * 10) + oppScore - genderMixBonus;
-      if (score < bestScore){ bestScore = score; best = opt; }
-    });
-    return { pairing: best, cost: bestScore };
-  }
-
-  function generateMatches(playing, numCourts){
-    let bestGrouping = null, bestTotalCost = Infinity;
-    for (let t = 0; t < 400; t++){
-      const shuffled = playing.slice().sort(() => Math.random() - 0.5);
-      const chunks = [];
-      for (let i = 0; i < numCourts; i++) chunks.push(shuffled.slice(i * 4, i * 4 + 4));
-      let totalCost = 0;
-      const pairings = chunks.map(chunk => {
-        const { pairing, cost } = bestPairingForChunk(chunk);
-        totalCost += cost;
-        return pairing;
-      });
-      if (totalCost < bestTotalCost){ bestTotalCost = totalCost; bestGrouping = pairings; }
-      if (bestTotalCost === 0) break;
-    }
-    return bestGrouping;
-  }
-
-  function generateMatchesPairs(playingPairIds, numCourts){
-    let best = null, bestCost = Infinity;
-    for (let t = 0; t < 400; t++){
-      const shuffled = playingPairIds.slice().sort(() => Math.random() - 0.5);
-      let cost = 0;
-      const chunks = [];
-      for (let i = 0; i < numCourts; i++){
-        const a = shuffled[i * 2], b = shuffled[i * 2 + 1];
-        cost += pairCost(a, b, state.opponentCount);
-        chunks.push([a, b]);
-      }
-      if (cost < bestCost){ bestCost = cost; best = chunks; }
-      if (bestCost === 0) break;
-    }
-    return best;
-  }
-
   function generateSingleRound(){
-    if (state.mode === 'pairs'){
-      const numCourts = Math.min(state.courtsRequested, Math.floor(state.pairs.length / 2));
-      const need = numCourts * 2;
-      const { playing, sitOut } = chooseSitOuts(state.pairs, need);
-      sitOut.forEach(u => { state.sitOutCount[u] = (state.sitOutCount[u] || 0) + 1; });
+    const isPairs = state.mode === 'pairs';
+    const units = isPairs ? state.pairs : playerNames();
+    const numCourts = Math.min(state.courtsRequested, Math.floor(units.length / (isPairs ? 2 : 4)));
 
-      const duos = generateMatchesPairs(playing, numCourts);
-      const matches = duos.map((duo, idx) => {
-        const [pairIdA, pairIdB] = duo;
-        const k = pairKey(pairIdA, pairIdB);
-        state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
-        return {
-          court: idx + 1,
-          teamA: state.pairMembers[pairIdA], teamB: state.pairMembers[pairIdB],
-          pairA: pairIdA, pairB: pairIdB,
-          scoreA: 0, scoreB: 0, finished: false, round: state.round, events: []
-        };
-      });
-      return { matches, sitOut };
-    }
+    const plan = P.planRound(units, numCourts, pairingKind(), pairingCtx());
+    addSitOut(plan.sitOut);
 
-    const names = playerNames();
-    const numCourts = Math.min(state.courtsRequested, Math.floor(names.length / 4));
-    const need = numCourts * 4;
-    const { playing, sitOut } = chooseSitOuts(names, need);
-    sitOut.forEach(p => { state.sitOutCount[p] += 1; });
-
-    const pairings = generateMatches(playing, numCourts);
-    const matches = pairings.map((pair, idx) => {
-      const kA = pairKey(pair.teamA[0], pair.teamA[1]);
-      state.partnerCount[kA] = (state.partnerCount[kA] || 0) + 1;
-      const kB = pairKey(pair.teamB[0], pair.teamB[1]);
-      state.partnerCount[kB] = (state.partnerCount[kB] || 0) + 1;
-      pair.teamA.forEach(x => pair.teamB.forEach(y => {
-        const k = pairKey(x, y);
-        state.opponentCount[k] = (state.opponentCount[k] || 0) + 1;
-      }));
-      return { court: idx + 1, teamA: pair.teamA, teamB: pair.teamB, scoreA: 0, scoreB: 0, finished: false, round: state.round, events: [] };
+    const matches = plan.matches.map((sel, idx) => {
+      const match = toMatch(sel, idx + 1, state.round);
+      P.recordMatch(state, match, 1);
+      return match;
     });
-
-    return { matches, sitOut };
+    return { matches, sitOut: plan.sitOut };
   }
 
   const scoreModes = {};   // idx -> 'manual' | 'cepat' | 'detail'
@@ -2675,7 +2554,7 @@
     }
 
     nextGrid.innerHTML = '';
-    state.next.forEach((m, idx) => {
+    (state.next || []).forEach((m, idx) => { // mode Custom: state.next = null (tidak ada preview ronde berikutnya)
       const card = document.createElement('div');
       card.className = 'court-card preview next-court-preview';
       card.style.animationDelay = (idx * 0.07) + 's';
