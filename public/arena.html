@@ -456,6 +456,15 @@
           <div class="hint" id="modeHint">Tiap ronde partner diacak ulang (rotasi individu).</div>
           <div class="hint" id="customHint" style="display:none;color:var(--line-dim, #64748b);margin-top:6px;">Kamu atur manual siapa lawan siapa tiap ronde lewat dropdown, atau klik "Next Player" buat auto-generate ala Americano kapan saja mau.</div>
         </div>
+        <div class="field" id="formatField">
+          <label for="formatSelect">Format permainan</label>
+          <select id="formatSelect">
+            <option value="americano">Americano</option>
+            <option value="mexicano">Mexicano</option>
+            <option value="super">Super Mexicano</option>
+          </select>
+          <div class="hint" id="formatHint"></div>
+        </div>
         <div class="add-player-form">
           <div class="add-player-row">
             <div class="add-player-field">
@@ -705,6 +714,10 @@
   const modeCustomBtn = document.getElementById('modeCustomBtn');
   const customHint = document.getElementById('customHint');
   const modeHint = document.getElementById('modeHint');
+  const formatField = document.getElementById('formatField');
+  const formatSelect = document.getElementById('formatSelect');
+  const formatHint = document.getElementById('formatHint');
+  const nextLabel = document.querySelector('.next-label');
   const playersLabel = document.getElementById('playersLabel');
 
   const roundDurationInput = document.getElementById('roundDurationInput');
@@ -788,6 +801,8 @@
     modePairsBtn.classList.toggle('active', mode === 'pairs');
     modeCustomBtn.classList.toggle('active', mode === 'custom');
     customHint.style.display = mode === 'custom' ? 'block' : 'none';
+    formatField.style.display = mode === 'individual' ? 'block' : 'none';
+    updateFormatHint();
     if (mode === 'pairs'){
       playersLabel.textContent = 'Daftar Pemain Terdaftar';
       modeHint.textContent = 'Partner tetap sama sepanjang turnamen — pemain dipasangkan berurutan dari daftar.';
@@ -803,6 +818,15 @@
   modeIndividualBtn.addEventListener('click', () => setSetupMode('individual'));
   modePairsBtn.addEventListener('click', () => setSetupMode('pairs'));
   modeCustomBtn.addEventListener('click', () => setSetupMode('custom'));
+
+  const FORMAT_LABEL = { americano: 'Americano', mexicano: 'Mexicano', super: 'Super Mexicano' };
+  const FORMAT_HINT = {
+    americano: 'Partner & lawan diacak tiap ronde, semua pemain dapat giliran main merata.',
+    mexicano: 'Ronde 1 diacak. Mulai ronde 2, pasangan disusun dari peringkat sementara: #1 & #4 lawan #2 & #3 di tiap lapangan. Lapangan 1 diisi pemain peringkat teratas. Ronde berikutnya baru disusun setelah semua skor lapangan masuk.',
+    super: 'Sama seperti Mexicano, tapi poin yang didapat di Lapangan 1 dikali 2, jadi peluang comeback terbuka. Butuh minimal 2 lapangan agar bonusnya berpengaruh.'
+  };
+  function updateFormatHint(){ formatHint.textContent = FORMAT_HINT[formatSelect.value] || ''; }
+  formatSelect.addEventListener('change', updateFormatHint);
 
   function updatePlayerSuggestion(){
     if (setupMode === 'pairs'){
@@ -948,11 +972,17 @@
     }
     if (courts < 1){ statusMsg.textContent = 'Jumlah lapangan minimal 1.'; return; }
 
+    const format = setupMode === 'individual' ? formatSelect.value : 'americano';
+    if (format === 'super' && courts < 2){
+      statusMsg.textContent = (statusMsg.textContent ? statusMsg.textContent + ' ' : '') +
+        'Catatan: Super Mexicano dengan 1 lapangan hasilnya sama dengan Mexicano biasa (bonus ×2 butuh minimal 2 lapangan).';
+    }
+
     const durMin = parseInt(roundDurationInput.value, 10);
     const unitIds = setupMode === 'pairs' ? pairs : players.map(player => player.name);
 
     const freshState = {
-      mode: setupMode,
+      mode: setupMode, format,
       players, pairs, pairMembers,
       courtsRequested: courts, round: 1, finished: false,
       sitOutCount: Object.fromEntries(unitIds.map(u => [u, 0])),
@@ -983,6 +1013,7 @@
     modeIndividualBtn.disabled = true;
     modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
+    formatSelect.disabled = true;
     startBtn.style.display = 'none';
     resetBtn.style.display = 'block';
     emptyState.style.display = 'none';
@@ -1008,9 +1039,15 @@
       const first = generateSingleRound();
       state.current = first.matches;
       state.currentSitOut = first.sitOut;
-      const second = generateSingleRound();
-      state.next = second.matches;
-      state.nextSitOut = second.sitOut;
+      if (isRankedFormat()){
+        // Mexicano: ronde berikutnya tergantung skor ronde ini, jadi belum bisa dihitung sekarang.
+        state.next = null;
+        state.nextSitOut = [];
+      } else {
+        const second = generateSingleRound();
+        state.next = second.matches;
+        state.nextSitOut = second.sitOut;
+      }
     }
 
     startRoundTimer();
@@ -1064,10 +1101,12 @@
     modeIndividualBtn.disabled = false;
     modePairsBtn.disabled = false;
     modeCustomBtn.disabled = false;
+    formatSelect.disabled = false;
     playerNameInput.value = '';
     registeredPlayers = [];
     renderRegisteredPlayers();
     roundDurationInput.value = '';
+    formatSelect.value = 'americano';
     setSetupMode('individual');
     startBtn.style.display = 'block';
     resetBtn.style.display = 'none';
@@ -1208,6 +1247,8 @@
     if (state){
       // Jaga kompatibilitas data lama (sebelum fitur mode pasangan & wins ditambahkan)
       if (!state.mode) state.mode = 'individual';
+      if (!state.format) state.format = 'americano';
+      formatSelect.value = state.format;
       if (!state.pairs) state.pairs = [];
       if (!state.pairMembers) state.pairMembers = {};
       if (!state.matchHistory) state.matchHistory = [];
@@ -1233,6 +1274,7 @@
       modeIndividualBtn.disabled = true;
       modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
+    formatSelect.disabled = true;
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
       emptyState.style.display = 'none';
@@ -1252,6 +1294,7 @@
       modeIndividualBtn.disabled = true;
       modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
+    formatSelect.disabled = true;
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
       emptyState.style.display = 'none';
@@ -1266,6 +1309,7 @@
       modeIndividualBtn.disabled = false;
       modePairsBtn.disabled = false;
     modeCustomBtn.disabled = false;
+    formatSelect.disabled = false;
       startBtn.style.display = 'block';
       resetBtn.style.display = 'none';
       emptyState.style.display = 'block';
@@ -1696,6 +1740,7 @@
   }
 
   function regenerateNextRound(){
+    if (isRankedFormat()) return; // Mexicano tidak punya preview: pemain baru/jeda otomatis dihitung saat ronde berikutnya dibuat
     undoRoundEffects(state.next, state.nextSitOut);
     const upcoming = generateSingleRound();
     state.next = upcoming.matches;
@@ -1839,6 +1884,17 @@
   });
 
   nextBtn.addEventListener('click', () => {
+    if (isRankedFormat()){
+      // Di Mexicano, peringkat menentukan pasangan ronde depan — lapangan 0-0 yang terlupa akan
+      // tetap dihitung "sudah main" (poin 0) dan merusak peringkat, jadi tanya dulu.
+      const untouched = state.current.filter(isMatchUntouched).map(m => m.court);
+      if (untouched.length){
+        const ok = window.confirm('Lapangan ' + untouched.join(', ') + ' skornya masih 0-0. Kalau lanjut, ' +
+          'tetap dihitung sebagai 1 game dengan poin 0 dan ikut menentukan peringkat. Klik OK untuk lanjut, ' +
+          'atau Cancel untuk mengisi skornya dulu.');
+        if (!ok) return;
+      }
+    }
     advanceRound(true);
   });
 
@@ -1894,11 +1950,20 @@
       state.roundHistory.push({ round: state.round, ms: now - state.roundStartTime });
     }
     state.round += 1;
-    state.current = state.next;
-    state.currentSitOut = state.nextSitOut;
-    const upcoming = generateSingleRound();
-    state.next = upcoming.matches;
-    state.nextSitOut = upcoming.sitOut;
+    if (isRankedFormat()){
+      // Mexicano: ronde baru disusun SEKARANG dari peringkat terbaru (skor ronde lalu sudah masuk).
+      const fresh = generateSingleRound();
+      state.current = fresh.matches;
+      state.currentSitOut = fresh.sitOut;
+      state.next = null;
+      state.nextSitOut = [];
+    } else {
+      state.current = state.next;
+      state.currentSitOut = state.nextSitOut;
+      const upcoming = generateSingleRound();
+      state.next = upcoming.matches;
+      state.nextSitOut = upcoming.sitOut;
+    }
     startRoundTimer();
     render();
     saveSessionToCloud();
@@ -1913,13 +1978,14 @@
         const sb = parseInt(m.scoreB, 10) || 0;
         const aWins = sa > sb;
         const bWins = sb > sa;
+        const mult = pointMultiplier(m); // Super Mexicano: Lapangan 1 = ×2 (menang/kalah tetap dari skor asli)
         (m.teamA || []).forEach(p => {
           if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0 };
-          lb[p].points += sa; lb[p].games += 1; if (aWins) lb[p].wins += 1;
+          lb[p].points += sa * mult; lb[p].games += 1; if (aWins) lb[p].wins += 1;
         });
         (m.teamB || []).forEach(p => {
           if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0 };
-          lb[p].points += sb; lb[p].games += 1; if (bWins) lb[p].wins += 1;
+          lb[p].points += sb * mult; lb[p].games += 1; if (bWins) lb[p].wins += 1;
         });
       });
     });
@@ -1994,6 +2060,16 @@
   // ===== Jembatan ke modul pairing (/pairing.js) =====
   // Semua keputusan "siapa main dengan siapa" ada di modul itu. Di sini cuma:
   // ambil data dari `state`, panggil modul, lalu bentuk objek match + update counter.
+  // Format permainan. Data lama (sebelum fitur ini) dianggap Americano.
+  function formatOf(){ return (state && state.format) || 'americano'; }
+  // Mexicano & Super Mexicano: pasangan disusun dari peringkat, jadi SEMUA lapangan harus selesai
+  // dulu sebelum ronde berikutnya dibuat (ronde serentak, berlaku untuk 1 lapangan maupun banyak).
+  function isRankedFormat(){ return !!state && state.mode === 'individual' && formatOf() !== 'americano'; }
+  // Lapangan jalan sendiri-sendiri (jalur Langkah 14) hanya untuk format non-peringkat.
+  function isIndependentCourts(){ return !!state && state.current.length > 1 && !isRankedFormat(); }
+  // Super Mexicano: poin yang didapat di Lapangan 1 dikali 2.
+  function pointMultiplier(m){ return (formatOf() === 'super' && state.mode === 'individual' && m.court === 1) ? 2 : 1; }
+
   function pairingKind(){ return state.mode === 'pairs' ? P.PAIRS : P.PLAYERS; }
 
   function pairingCtx(){
@@ -2002,7 +2078,9 @@
       opponentCount: state.opponentCount,
       sitOutCount: state.sitOutCount,
       genderOf,
-      gamesOf: state.mode === 'pairs' ? avgPairGames : gamesOf
+      gamesOf: state.mode === 'pairs' ? avgPairGames : gamesOf,
+      pointsOf: name => (state.leaderboard[name] || {}).points || 0,
+      winsOf: name => (state.leaderboard[name] || {}).wins || 0
     };
   }
 
@@ -2206,7 +2284,11 @@
     const units = isPairs ? state.pairs : playerNames();
     const numCourts = Math.min(state.courtsRequested, Math.floor(units.length / (isPairs ? 2 : 4)));
 
-    const plan = P.planRound(units, numCourts, pairingKind(), pairingCtx());
+    // Mexicano: ronde 1 diacak (belum ada peringkat), mulai setelah ada skor masuk dipakai peringkat.
+    const useRanking = isRankedFormat() && (state.matchHistory || []).length > 0;
+    const plan = useRanking
+      ? P.planMexicanoRound(units, numCourts, pairingCtx())
+      : P.planRound(units, numCourts, pairingKind(), pairingCtx());
     addSitOut(plan.sitOut);
 
     const matches = plan.matches.map((sel, idx) => {
@@ -2264,7 +2346,7 @@
   function buildCourtCard(idx){
     const m = state.current[idx];
     const mode = scoreModes[idx] || 'manual';
-    const isMultiCourt = state.current.length > 1;
+    const isMultiCourt = isIndependentCourts();
     const isFinished = m.finished === true;
     const isManualPending = state.mode === 'custom' && m.manualPending === true;
     if (!Array.isArray(m.events)) m.events = [];
@@ -2528,10 +2610,11 @@
   function render(){
     roundArea.style.display = 'block';
     finalArea.style.display = 'none';
-    roundBadge.innerHTML = '<span class="live-dot"></span>Ronde ' + String(state.round).padStart(2, '0');
+    roundBadge.innerHTML = '<span class="live-dot"></span>Ronde ' + String(state.round).padStart(2, '0') +
+      (state.mode === 'individual' && formatOf() !== 'americano' ? ' · ' + FORMAT_LABEL[formatOf()] : '');
     newPlayerHint.textContent = 'Ronde berjalan saat ini: ' + state.round + '. Isi jumlah ronde yang terlewat biar pemain telat diprioritaskan main duluan saat rotasi berikutnya.';
 
-    const isMultiCourt = state.current.length > 1;
+    const isMultiCourt = isIndependentCourts();
     const finishedCourts = state.current.filter(match => match.finished === true).length;
     roundProgress.classList.toggle('is-visible', isMultiCourt);
     roundProgressText.textContent = finishedCourts + ' dari ' + state.current.length + ' lapangan sudah selesai';
@@ -2553,6 +2636,9 @@
       });
     }
 
+    nextLabel.textContent = isRankedFormat()
+      ? 'Ronde berikutnya disusun dari peringkat setelah semua skor lapangan masuk'
+      : 'Rotasi berikutnya';
     nextGrid.innerHTML = '';
     (state.next || []).forEach((m, idx) => { // mode Custom: state.next = null (tidak ada preview ronde berikutnya)
       const card = document.createElement('div');
@@ -2568,7 +2654,7 @@
     });
 
     nextSitoutStrip.innerHTML = '';
-    if (state.nextSitOut.length){
+    if ((state.nextSitOut || []).length){
       const label = document.createElement('span');
       label.textContent = 'Istirahat ronde depan:';
       nextSitoutStrip.appendChild(label);
