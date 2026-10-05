@@ -189,6 +189,19 @@
   .btn-secondary:hover{ background:color-mix(in srgb,var(--sport-wash) 72%,#fff); }
   .btn-outline-danger{ background: transparent; color: var(--magenta); border: 1px solid rgba(255,61,129,0.4); margin-top: 10px; }
   .btn-outline-danger:hover{ background: rgba(255,61,129,0.08); }
+  .action-stack{ display:flex; flex-direction:column; gap:10px; }
+  .action-stack > button{ width:100%; min-height:48px; }
+  .more-options{ border:1px dashed rgba(100,116,139,0.35); border-radius:12px; padding:4px 12px; }
+  .more-options summary{ cursor:pointer; padding:10px 0; font-weight:600; color:var(--line-dim,#64748b); list-style:none; }
+  .more-options-body{ display:flex; flex-direction:column; gap:8px; padding-bottom:10px; }
+  .more-options-body button{ width:100%; min-height:44px; margin:0; }
+  .btn-danger-solid{ background:#e11d48; color:#fff; border:none; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer; }
+  .btn-danger-solid:hover{ background:#be123c; }
+  .otto-confirm{ position:fixed; inset:0; z-index:1000; background:rgba(15,23,42,0.55); align-items:center; justify-content:center; padding:20px; }
+  .otto-confirm-box{ background:#fff; color:#0f172a; border-radius:16px; padding:22px; max-width:380px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
+  .otto-confirm-box p{ margin:0 0 18px; font-weight:600; line-height:1.5; }
+  .otto-confirm-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .otto-confirm-actions button{ min-height:46px; margin:0; }
   .btn-primary:disabled{ opacity: 0.4; cursor: not-allowed; }
   .btn-row{ display:flex; gap: 10px; }
   .btn-row button{ margin-top: 0; }
@@ -657,12 +670,24 @@
           <div class="sitout-strip" id="nextSitoutStrip"></div>
 
           <div class="action-stack">
-            <div class="btn-row">
-              <button class="btn-secondary" id="skipBtn">Lewati Ronde</button>
-              <button class="btn-primary" id="nextBtn">Simpan Skor &amp; Lanjut</button>
+            <button class="btn-primary btn-start-big" id="nextBtn">Simpan Skor &amp; Lanjut</button>
+            <button class="btn-secondary" id="finishAllBtn" type="button">Tandai semua lapangan selesai</button>
+            <details class="more-options">
+              <summary>⋯ Opsi lainnya</summary>
+              <div class="more-options-body">
+                <button class="btn-secondary" id="skipBtn">Lewati Ronde</button>
+                <button class="btn-danger-solid" id="finishBtn">Selesai Turnamen</button>
+              </div>
+            </details>
+          </div>
+          <div class="otto-confirm" id="finishConfirm" style="display:none;" role="dialog" aria-modal="true">
+            <div class="otto-confirm-box">
+              <p>Yakin mau mengakhiri turnamen? Ini tidak bisa dibatalkan.</p>
+              <div class="otto-confirm-actions">
+                <button type="button" class="btn-secondary" id="finishConfirmNo">Batal</button>
+                <button type="button" class="btn-danger-solid" id="finishConfirmYes">Ya, Selesaikan</button>
+              </div>
             </div>
-            <button class="btn-outline-danger" id="finishBtn">Selesai Turnamen</button>
-            <button class="btn-outline-danger" id="finishAllBtn" type="button">Selesai Semua Lapangan</button>
           </div>
         </div>
 
@@ -2153,7 +2178,20 @@
     advanceRound(true);
   });
 
+  function askFinishConfirm(){
+    return new Promise(resolve => {
+      const box = document.getElementById('finishConfirm');
+      const yes = document.getElementById('finishConfirmYes');
+      const no = document.getElementById('finishConfirmNo');
+      box.style.display = 'flex';
+      const done = v => { box.style.display = 'none'; yes.onclick = no.onclick = null; resolve(v); };
+      yes.onclick = () => done(true);
+      no.onclick = () => done(false);
+    });
+  }
+
   finishBtn.addEventListener('click', async () => {
+    if (!(await askFinishConfirm())) return;
     const roundUntouched = state.current.every(m => (m.scoreA || 0) === 0 && (m.scoreB || 0) === 0);
     const roundInProgress = !roundUntouched; // ada skor yang sudah diisi tapi belum tentu ronde ini "selesai" beneran
 
