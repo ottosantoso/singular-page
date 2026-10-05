@@ -138,6 +138,15 @@
   textarea{ min-height: 170px; line-height: 1.65; }
   textarea:focus, select:focus, input:focus{ outline: 2px solid var(--sport-color); outline-offset: 1px; }
 
+  #syncDetails > summary{ list-style:none; cursor:pointer; display:flex; flex-direction:column; gap:4px; padding-right:28px; position:relative; }
+  #syncDetails > summary::-webkit-details-marker{ display:none; }
+  #syncDetails > summary::after{ content:"▾"; position:absolute; right:0; top:2px; font-size:18px; color:var(--line-dim); transition:transform .2s; }
+  #syncDetails[open] > summary::after{ transform:rotate(180deg); }
+  #syncDetails > summary h2{ margin:0; }
+  #syncDetails[open] > summary{ margin-bottom:14px; }
+  .sync-sub{ font-size:12px; color:var(--line-dim); text-transform:none; letter-spacing:0; font-weight:500; }
+  .sync-mode-status{ font-size:12px; font-weight:600; color:var(--line-dim); padding:8px 14px; border-radius:999px; border:1px solid color-mix(in srgb,var(--sport-color, #85bd13) 40%,transparent); background:#fff; align-self:flex-start; margin-bottom:12px; display:inline-block; }
+  .sync-mode-status.on{ color:var(--line); background:color-mix(in srgb,var(--sport-color, #85bd13) 15%,#fff); }
   /* --- Sinkron cloud UI --- */
   #syncCard{ position: relative; overflow: hidden; border-color: rgba(186,255,41,0.35); background:
       radial-gradient(120% 140% at 100% 0%, rgba(186,255,41,0.12), transparent 60%), #fff; }
@@ -429,28 +438,7 @@
   <div class="layout">
 
     <div class="setup-col">
-      <div class="card" id="syncCard">
-        <h2>Sinkron cloud</h2>
-        <div class="sync-fields">
-          <div class="field">
-            <label for="arenaCodeInput">Kode arena</label>
-            <input type="text" id="arenaCodeInput" maxlength="8" placeholder="cth. AB12CD" autocomplete="off" spellcheck="false">
-          </div>
-          <div class="field">
-            <label for="arenaPinInput">PIN rahasia <span style="color:#ef4444;">*wajib</span></label>
-            <input type="password" id="arenaPinInput" maxlength="10" placeholder="cth. 2468" inputmode="numeric" autocomplete="off">
-          </div>
-        </div>
-        <div class="btn-row">
-          <button class="btn-secondary" id="newArenaBtn">Bikin Kode Baru</button>
-          <button class="btn-primary" id="connectArenaBtn">Sambungkan</button>
-        </div>
-        <div class="hint">Bagikan Kode + PIN ini ke panitia lain biar bisa dibuka dari device masing-masing, dan riwayat turnamen sebelumnya cuma bisa dilihat kalau tau keduanya.</div>
-        <button class="btn-secondary" id="copyInfoBtn" style="display:none;">Salin Kode &amp; PIN</button>
-        <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener">Buka Klasemen Online</a>
-        <div class="status" id="syncStatus"></div>
-
-      </div>
+      <div class="sync-mode-status" id="syncModeStatus">Mode: Lokal (belum tersambung)</div>
 
       <div class="card" id="setupCard">
         <h2>Pengaturan</h2>
@@ -514,6 +502,31 @@
         <button class="btn-secondary" id="resetBtn" style="display:none;">Reset sesi</button>
       </div>
 
+      <div class="card" id="syncCard">
+        <details id="syncDetails">
+        <summary><h2>Main bareng di beberapa HP (opsional)</h2><span class="sync-sub">Tidak wajib. Aktifkan kalau panitia lain mau ikut memantau dari HP masing-masing.</span></summary>
+        <div class="sync-fields">
+          <div class="field">
+            <label for="arenaCodeInput">Kode arena</label>
+            <input type="text" id="arenaCodeInput" maxlength="8" placeholder="cth. AB12CD" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="arenaPinInput">PIN rahasia</label>
+            <span class="sync-sub">PIN dibutuhkan hanya jika kamu mau membuka riwayat dari device lain.</span>
+            <input type="password" id="arenaPinInput" maxlength="10" placeholder="cth. 2468" inputmode="numeric" autocomplete="off">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-secondary" id="newArenaBtn">Bikin Kode Baru</button>
+          <button class="btn-primary" id="connectArenaBtn">Sambungkan</button>
+        </div>
+        <div class="hint">Bagikan Kode + PIN ini ke panitia lain biar bisa dibuka dari device masing-masing, dan riwayat turnamen sebelumnya cuma bisa dilihat kalau tau keduanya.</div>
+        <button class="btn-secondary" id="copyInfoBtn" style="display:none;">Salin Kode &amp; PIN</button>
+        <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener">Buka Klasemen Online</a>
+        <div class="status" id="syncStatus"></div>
+        </details>
+
+      </div>
       <div class="card">
         <h2>Klasemen sementara</h2>
         <div id="leaderboard"><div class="empty-lb">Belum ada data.</div></div>
@@ -957,6 +970,7 @@
       arenaPinInput.style.outline = '2px solid #ef4444';
       arenaPinInput.style.borderColor = '#ef4444';
       window.alert('PIN wajib diisi dulu sebelum turnamen bisa dimulai (kode sudah dibuatkan otomatis). Isi kolom PIN di panel "Sinkron Cloud" di sebelah kiri, biar turnamen ini bisa dibuka lagi nanti dari device manapun dan datanya nggak gampang hilang.');
+      { const d=document.getElementById('syncDetails'); if (d) d.open = true; }
       arenaPinInput.focus();
       return;
     }
@@ -1862,6 +1876,11 @@
   });
 
   connectArenaBtn.addEventListener('click', () => connectArena());
+  setInterval(() => {
+    const el = document.getElementById('syncModeStatus'); if (!el) return;
+    const t = arenaCode ? 'Tersambung ke arena ' + arenaCode : 'Mode: Lokal (belum tersambung)';
+    if (el.textContent !== t){ el.textContent = t; el.classList.toggle('on', !!arenaCode); }
+  }, 500);
 
   copyInfoBtn.addEventListener('click', () => {
     const text = 'Kode: ' + arenaCode + '  PIN: ' + arenaPin;
