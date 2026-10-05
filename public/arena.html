@@ -308,6 +308,14 @@
   .timer-clock.over-time{ color: var(--magenta); }
   .timer-target{ font-size: 12.5px; color: var(--line-dim); }
   .timer-prev{ font-size: 12.5px; color: var(--line-dim); }
+  .session-banner{ position:sticky; top:8px; z-index:20; margin:0 0 16px; padding:12px 14px; border-radius:12px; border:1px solid rgba(23,32,51,0.10); background:var(--glass-strong); box-shadow:0 14px 32px -22px rgba(32,62,91,0.35); font-size:13.5px; line-height:1.45; }
+  .session-banner.urgent{ border-color:rgba(255,61,129,0.45); background:rgba(255,241,246,0.97); }
+  .session-banner .sb-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-weight:700; }
+  .session-banner .sb-sub{ margin-top:2px; color:var(--line-dim); font-size:12.5px; }
+  .session-banner .sb-actions{ display:grid; gap:8px; margin-top:10px; }
+  .session-banner .sb-add{ display:grid; grid-template-columns:1fr 1.5fr; gap:8px; }
+  .session-banner .sb-actions small{ display:block; font-weight:500; opacity:.75; font-size:11.5px; margin-top:1px; }
+  .session-banner .sb-link{ background:none; border:0; padding:0; color:var(--green); font-weight:700; font-size:12.5px; cursor:pointer; text-decoration:underline; }
   .timer-alert{ display:flex; align-items:center; gap: 8px; background: rgba(255,61,129,0.10); border: 1px solid rgba(255,61,129,0.4); color: #9d174d; border-radius: 10px; padding: 11px 14px; margin-bottom: 16px; font-size: 13.5px; font-weight: 600; animation: alertPulse 1.2s ease-in-out infinite; }
   @keyframes alertPulse{ 0%,100%{ box-shadow: 0 0 0 rgba(255,61,129,0); } 50%{ box-shadow: 0 0 18px rgba(255,61,129,0.45); } }
 
@@ -496,6 +504,11 @@
           <input type="number" id="roundDurationInput" min="1" placeholder="cth. 15">
           <div class="hint">Kosongkan kalau nggak perlu pengingat waktu. Timer tetap jalan otomatis walau kosong.</div>
         </div>
+        <div class="field">
+          <label for="sessionDurationInput">Durasi total permainan (menit) — opsional</label>
+          <input type="number" id="sessionDurationInput" min="1" placeholder="cth. 120">
+          <div class="hint">Isi kalau ada batas waktu, misalnya sewa lapangan 2 jam. Sebelum waktu habis kamu dikasih pilihan: selesaikan pertandingan yang berjalan, main 1 ronde lagi, tambah waktu, atau free time.</div>
+        </div>
         <button class="btn-primary" id="startBtn">Kocok &amp; Mulai</button>
         <div class="status" id="statusMsg"></div>
         <button class="btn-secondary" id="resetBtn" style="display:none;">Reset sesi</button>
@@ -570,6 +583,7 @@
             </div>
             <div class="round-progress-track" aria-hidden="true"><span class="round-progress-value"></span></div>
           </div>
+          <div class="session-banner" id="sessionBanner" style="display:none;"></div>
           <div class="timer-bar" id="timerBar" style="display:none;">
             <span class="timer-label">⏱ Waktu ronde</span>
             <div class="timer-clock" id="timerClock">00:00</div>
@@ -714,6 +728,8 @@
   const modeCustomBtn = document.getElementById('modeCustomBtn');
   const customHint = document.getElementById('customHint');
   const modeHint = document.getElementById('modeHint');
+  const sessionDurationInput = document.getElementById('sessionDurationInput');
+  const sessionBanner = document.getElementById('sessionBanner');
   const formatField = document.getElementById('formatField');
   const formatSelect = document.getElementById('formatSelect');
   const formatHint = document.getElementById('formatHint');
@@ -979,6 +995,7 @@
     }
 
     const durMin = parseInt(roundDurationInput.value, 10);
+    const sessMin = parseInt(sessionDurationInput.value, 10);
     const unitIds = setupMode === 'pairs' ? pairs : players.map(player => player.name);
 
     const freshState = {
@@ -992,6 +1009,11 @@
       paused: [],
       roundDurationMin: (durMin && durMin > 0) ? durMin : null,
       roundStartTime: null, roundAlertFired: false, roundHistory: [],
+      // Batas waktu total sesi (opsional). endMode 'finish' = jangan buat pertandingan baru kecuali
+      // jatah extraLeft[idx] > 0 (dipakai untuk "1 ronde lagi").
+      sessionDurationMin: (sessMin && sessMin > 0) ? sessMin : null,
+      sessionEndAt: null, sessionWarned: false, sessionTimeUpFired: false,
+      sessionDecision: null, sessionFree: false, endMode: null, extraLeft: [],
       matchHistory: []
     };
     state = freshState;
@@ -1014,6 +1036,7 @@
     modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
     formatSelect.disabled = true;
+    sessionDurationInput.disabled = true;
     startBtn.style.display = 'none';
     resetBtn.style.display = 'block';
     emptyState.style.display = 'none';
@@ -1051,6 +1074,7 @@
     }
 
     startRoundTimer();
+    if (state.sessionDurationMin) state.sessionEndAt = Date.now() + state.sessionDurationMin * 60000;
     render();
     saveSessionToCloud();
   });
@@ -1102,10 +1126,12 @@
     modePairsBtn.disabled = false;
     modeCustomBtn.disabled = false;
     formatSelect.disabled = false;
+    sessionDurationInput.disabled = false;
     playerNameInput.value = '';
     registeredPlayers = [];
     renderRegisteredPlayers();
     roundDurationInput.value = '';
+    sessionDurationInput.value = '';
     formatSelect.value = 'americano';
     setSetupMode('individual');
     startBtn.style.display = 'block';
@@ -1215,6 +1241,153 @@
 
   setInterval(updateTimerDisplay, 1000);
 
+  // =====================================================================
+  // Batas waktu total sesi: peringatan sebelum habis + pilihan lanjutan.
+  //   finish  : selesaikan pertandingan yang berjalan, lalu sesi berakhir (jumlah main tetap merata)
+  //   oneMore : tiap lapangan/ronde dapat 1 pertandingan lagi, lalu berakhir
+  //   add     : tambah waktu (peringatan dipasang ulang)
+  //   free    : tanpa batas waktu
+  // Tidak ada yang dipaksa otomatis: kalau host belum memilih, banner tetap menunggu.
+  // =====================================================================
+  const SESSION_WARN_MAX_MS = 5 * 60000;
+
+  function sessionWarnMs(){
+    const total = (state.sessionDurationMin || 0) * 60000;
+    return Math.min(SESSION_WARN_MAX_MS, Math.round(total * 0.25)); // sesi pendek: maksimal 25% terakhir
+  }
+  function sessionRemainingMs(){ return (state && state.sessionEndAt) ? state.sessionEndAt - Date.now() : null; }
+  function sessionStage(){
+    if (!state || state.finished || !state.sessionEndAt) return 'none';
+    const rem = sessionRemainingMs();
+    if (rem <= 0) return 'timeup';
+    if (rem <= sessionWarnMs()) return 'warn';
+    return 'running';
+  }
+  // Apakah lapangan idx TIDAK boleh dibuatkan pertandingan baru setelah yang sekarang selesai?
+  function sessionStops(idx){
+    return !!state && state.endMode === 'finish' && !(state.extraLeft && state.extraLeft[idx || 0] > 0);
+  }
+  // Pakai jatah "1 lagi" kalau ada. Return false kalau lapangan ini harus berhenti.
+  function sessionConsumeSlot(idx){
+    if (!state || state.endMode !== 'finish') return true;
+    if (state.extraLeft && state.extraLeft[idx || 0] > 0){ state.extraLeft[idx || 0] -= 1; return true; }
+    return false;
+  }
+
+  function formatLong(ms){
+    const t = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+    const mm = String(m).padStart(2, '0'), ss = String(sec).padStart(2, '0');
+    return h ? h + ':' + mm + ':' + ss : mm + ':' + ss;
+  }
+
+  function notifyUser(body){
+    try{
+      if ('Notification' in window){
+        if (Notification.permission === 'granted') new Notification('OTTOPLAY ARENA', { body });
+        else if (Notification.permission !== 'denied') Notification.requestPermission();
+      }
+    } catch (e){ /* notifikasi tidak tersedia */ }
+  }
+
+  function setSessionDecision(kind, addMinutes){
+    if (!state || state.finished) return;
+    const n = Math.max(1, state.current ? state.current.length : 1);
+    if (kind === 'finish'){
+      state.endMode = 'finish'; state.extraLeft = new Array(n).fill(0); state.sessionDecision = 'finish';
+    } else if (kind === 'oneMore'){
+      state.endMode = 'finish'; state.extraLeft = new Array(n).fill(1); state.sessionDecision = 'oneMore';
+    } else if (kind === 'free'){
+      state.endMode = null; state.extraLeft = []; state.sessionDecision = 'free';
+      state.sessionFree = true; state.sessionEndAt = null;
+    } else if (kind === 'add'){
+      const base = Math.max(state.sessionEndAt || 0, Date.now());
+      state.sessionEndAt = base + (addMinutes || 10) * 60000;
+      state.sessionWarned = false; state.sessionTimeUpFired = false;
+      state.endMode = null; state.extraLeft = []; state.sessionDecision = null;
+    } else if (kind === 'reset'){
+      state.endMode = null; state.extraLeft = []; state.sessionDecision = null;
+    }
+    sessionBannerSig = null;
+    finishIdleCourtsIfStopping();
+    if (!state.finished) render();
+    saveSessionToCloud();
+  }
+
+  // Saat mode "selesaikan": lapangan yang cuma menunggu pemain tidak akan pernah main lagi -> tutup.
+  function finishIdleCourtsIfStopping(){
+    if (!state || state.finished || state.endMode !== 'finish' || !isIndependentCourts()) return;
+    state.current.forEach((m, idx) => {
+      if (!m.finished && sessionStops(idx) && (!m.teamA || !m.teamA.length)) m.finished = true;
+    });
+    finalizeIfAllCourtsDone();
+  }
+
+  let sessionBannerSig = null;
+  function updateSessionBanner(){
+    const stage = sessionStage();
+    const decision = state && state.sessionDecision;
+    const show = !!state && !state.finished && (stage !== 'none' || (state && state.sessionFree));
+    if (!show){ sessionBanner.style.display = 'none'; sessionBannerSig = null; return; }
+
+    // Bunyi + notifikasi sekali per tahap, dan hanya kalau host belum memilih.
+    if (!decision){
+      if (stage === 'warn' && !state.sessionWarned){
+        state.sessionWarned = true; playBeep();
+        notifyUser('Sisa waktu sesi ±' + Math.ceil(sessionRemainingMs() / 60000) + ' menit.'); saveSessionToCloud();
+      } else if (stage === 'timeup' && !state.sessionTimeUpFired){
+        state.sessionTimeUpFired = true; state.sessionWarned = true; playBeep();
+        notifyUser('Waktu sesi sudah habis!'); saveSessionToCloud();
+      }
+    }
+
+    const extras = (state.extraLeft || []).join(',');
+    const sig = [stage, decision, state.endMode, extras, state.sessionFree, isIndependentCourts()].join('|');
+    if (sig !== sessionBannerSig){
+      sessionBannerSig = sig;
+      sessionBanner.style.display = 'block';
+      const urgent = (stage === 'warn' || stage === 'timeup') && !decision;
+      sessionBanner.classList.toggle('urgent', urgent);
+      const independent = isIndependentCourts();
+      const oneMoreLabel = independent ? 'Tiap lapangan main 1 pertandingan lagi' : 'Main 1 ronde lagi';
+      const lastNow = state.endMode === 'finish' && !(state.extraLeft || []).some(v => v > 0);
+
+      if (state.sessionFree && !state.sessionEndAt){
+        sessionBanner.innerHTML = '<div class="sb-head"><span>♾️ Free time — tanpa batas waktu</span></div>' +
+          '<div class="sb-sub">Sesi berakhir kalau kamu tekan tombol selesai.</div>';
+      } else if (decision === 'finish' || decision === 'oneMore'){
+        const msg = lastNow
+          ? '✅ Pertandingan terakhir sedang berjalan — sesi berakhir setelah ini selesai.'
+          : '🔁 ' + (independent ? 'Tiap lapangan main 1 pertandingan lagi' : '1 ronde lagi') + ', lalu sesi berakhir.';
+        sessionBanner.innerHTML = '<div class="sb-head"><span>' + msg + '</span><span>Sisa <strong class="sess-remaining"></strong></span></div>' +
+          '<div class="sb-sub"><button type="button" class="sb-link" data-sess="reset">Ubah pilihan</button></div>';
+      } else if (urgent){
+        const head = stage === 'timeup' ? '⏰ Waktu sesi sudah habis' : '⏳ Waktu sesi hampir habis — sisa <strong class="sess-remaining"></strong>';
+        sessionBanner.innerHTML = '<div class="sb-head"><span>' + head + '</span></div>' +
+          '<div class="sb-sub">Mau lanjut bagaimana? Tidak ada yang berhenti otomatis sampai kamu memilih.</div>' +
+          '<div class="sb-actions">' +
+            '<button type="button" class="btn-primary" data-sess="finish">Selesaikan pertandingan yang berjalan<small>Disarankan — semua pemain berhenti di jumlah main yang sama</small></button>' +
+            '<button type="button" class="btn-secondary" data-sess="oneMore">' + oneMoreLabel + '</button>' +
+            '<div class="sb-add"><select id="sessAddSel" aria-label="Tambahan waktu"><option value="5">+5 menit</option><option value="10" selected>+10 menit</option><option value="15">+15 menit</option><option value="30">+30 menit</option></select>' +
+            '<button type="button" class="btn-secondary" data-sess="add">Tambah waktu</button></div>' +
+            '<button type="button" class="btn-secondary" data-sess="free">Free time (tanpa batas)</button>' +
+          '</div>';
+      } else {
+        sessionBanner.innerHTML = '<div class="sb-head"><span>⏳ Sisa waktu sesi <strong class="sess-remaining"></strong></span><span style="font-weight:500;color:var(--line-dim)">dari ' + state.sessionDurationMin + ' menit</span></div>';
+      }
+      sessionBanner.querySelectorAll('[data-sess]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const kind = btn.getAttribute('data-sess');
+          const sel = document.getElementById('sessAddSel');
+          setSessionDecision(kind, kind === 'add' && sel ? parseInt(sel.value, 10) : undefined);
+        });
+      });
+    }
+    const rem = sessionBanner.querySelector('.sess-remaining');
+    if (rem) rem.textContent = stage === 'timeup' ? '00:00' : formatLong(sessionRemainingMs());
+  }
+  setInterval(updateSessionBanner, 1000);
+
   // --- Sinkron ke Supabase (kode + PIN, biar bisa dibuka lagi & dipantau dari device lain) ---
 
   function genSessionCode(){
@@ -1265,6 +1438,7 @@
       renderRegisteredPlayers();
       courtsInput.value = state.courtsRequested;
       roundDurationInput.value = state.roundDurationMin || '';
+      sessionDurationInput.value = state.sessionDurationMin || '';
       playerNameInput.disabled = true;
       playerGenderInput.disabled = true;
       registerPlayerBtn.disabled = true;
@@ -1275,6 +1449,7 @@
       modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
     formatSelect.disabled = true;
+    sessionDurationInput.disabled = true;
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
       emptyState.style.display = 'none';
@@ -1295,6 +1470,7 @@
       modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
     formatSelect.disabled = true;
+    sessionDurationInput.disabled = true;
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
       emptyState.style.display = 'none';
@@ -1310,6 +1486,7 @@
       modePairsBtn.disabled = false;
     modeCustomBtn.disabled = false;
     formatSelect.disabled = false;
+    sessionDurationInput.disabled = false;
       startBtn.style.display = 'block';
       resetBtn.style.display = 'none';
       emptyState.style.display = 'block';
@@ -1918,7 +2095,12 @@
       if (!ok) return; // batal, balik ke layar isi skor
     }
 
-    if (!roundUntouched){
+    await concludeTournament(!roundUntouched);
+  });
+
+  // Akhiri turnamen untuk alur ronde serentak (1 lapangan / Mexicano). commitCurrent = simpan skor ronde berjalan.
+  async function concludeTournament(commitCurrent){
+    if (commitCurrent){
       commitScores(state.current);
       logMatchesToCloud(state.round, state.current);
       persistRoundToDb(state.round, state.current);
@@ -1937,9 +2119,11 @@
         await loadHistory({ silent: true });
       } catch (e){ /* arsip gagal, turnamen tetap selesai secara lokal */ }
     }
-  });
+  }
 
   function advanceRound(shouldCommit){
+    // Batas waktu sesi: tidak ada ronde baru kalau host memilih "selesaikan" dan jatah "1 ronde lagi" habis.
+    if (!sessionConsumeSlot(0)){ concludeTournament(shouldCommit); return; }
     if (shouldCommit){
       commitScores(state.current);
       logMatchesToCloud(state.round, state.current);
@@ -2119,6 +2303,9 @@
     const m = state.current[idx];
     if (!m || m.finished) return;
 
+    // Batas waktu sesi: kalau host memilih "selesaikan", lapangan ini ditutup, bukan lanjut ke pertandingan baru.
+    if (!sessionConsumeSlot(idx)){ finishCourt(idx); return; }
+
     commitSingleMatch(m);
     if (!isMatchUntouched(m)) persistRoundToDb(m.round || state.round, [m]);
 
@@ -2151,16 +2338,20 @@
 
     render();
     saveSessionToCloud();
+    finalizeIfAllCourtsDone();
+  }
 
-    if (allCourtsFinished()){
-      state.finished = true;
-      state.roundStartTime = null;
-      renderFinal();
-      if (isConnected()){
-        sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state })
-          .then(() => loadHistory({ silent: true }))
-          .catch(() => { /* arsip gagal, turnamen tetap selesai secara lokal */ });
-      }
+  // Dipanggil setiap ada lapangan yang selesai: kalau semua lapangan sudah selesai, turnamen ditutup & diarsip.
+  function finalizeIfAllCourtsDone(){
+    if (!state || state.finished || !allCourtsFinished()) return;
+    state.finished = true;
+    state.roundStartTime = null;
+    renderFinal();
+    saveSessionToCloud();
+    if (isConnected()){
+      sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state })
+        .then(() => loadHistory({ silent: true }))
+        .catch(() => { /* arsip gagal, turnamen tetap selesai secara lokal */ });
     }
   }
   // Klik "Selesai Semua Lapangan" (khusus >1 lapangan) — menyelesaikan SEMUA lapangan yang
@@ -2447,7 +2638,7 @@
       </div>` : ''}`}
       ${isMultiCourt && !isManualPending ? `
       <div class="court-actions${state.mode === 'custom' ? ' custom-actions' : ''}">
-        <button type="button" class="btn-primary" data-court-save="${idx}">Simpan &amp; Lanjutkan</button>
+        <button type="button" class="btn-primary" data-court-save="${idx}">${sessionStops(idx) ? 'Simpan &amp; Selesai' : 'Simpan &amp; Lanjutkan'}</button>
         ${state.mode === 'custom' ? `<button type="button" class="btn-secondary" data-next-player="${idx}">Next Player</button>` : ''}
         <button type="button" class="btn-secondary" data-court-finish="${idx}">Selesai</button>
       </div>` : ''}
@@ -2663,6 +2854,15 @@
       });
     }
 
+    const stopping = sessionStops(0);
+    nextBtn.textContent = stopping ? 'Simpan Skor & Selesaikan Sesi' : 'Simpan Skor & Lanjut';
+    if (stopping){
+      nextLabel.textContent = 'Ronde terakhir — sesi berakhir setelah ronde ini selesai';
+      nextGrid.innerHTML = '';
+      nextSitoutStrip.innerHTML = '';
+    }
+
+    updateSessionBanner();
     renderLeaderboard();
     renderPlayerManageList();
   }
