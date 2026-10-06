@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OTTOPLAY ARENA — Rotasi Padel</title>
+<title>OTTOPLAY ARENA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
@@ -127,8 +127,8 @@
   .history-screen-body{ max-width: 640px; margin: 0 auto; display:flex; flex-direction:column; gap: 20px; }
   @keyframes pulse{ 0%,100%{ opacity: 1; } 50%{ opacity: 0.25; } }
 
-  .layout{ display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
-  @media (max-width: 880px){ .layout{ grid-template-columns: 1fr; } }
+  .layout{ display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
+  @media (min-width: 1024px){ .layout{ grid-template-columns: 300px 1fr; } }
 
   .card{ background: #fff; border: 1px solid rgba(23,32,51,0.08); border-radius: var(--radius); padding: 20px; box-shadow: 0 14px 32px -22px rgba(32,62,91,0.28); }
   .card + .card{ margin-top: 18px; }
@@ -138,6 +138,15 @@
   textarea{ min-height: 170px; line-height: 1.65; }
   textarea:focus, select:focus, input:focus{ outline: 2px solid var(--sport-color); outline-offset: 1px; }
 
+  #syncDetails > summary{ list-style:none; cursor:pointer; display:flex; flex-direction:column; gap:4px; padding-right:28px; position:relative; }
+  #syncDetails > summary::-webkit-details-marker{ display:none; }
+  #syncDetails > summary::after{ content:"▾"; position:absolute; right:0; top:2px; font-size:18px; color:var(--line-dim); transition:transform .2s; }
+  #syncDetails[open] > summary::after{ transform:rotate(180deg); }
+  #syncDetails > summary h2{ margin:0; }
+  #syncDetails[open] > summary{ margin-bottom:14px; }
+  .sync-sub{ font-size:12px; color:var(--line-dim); text-transform:none; letter-spacing:0; font-weight:500; }
+  .sync-mode-status{ font-size:12px; font-weight:600; color:var(--line-dim); padding:8px 14px; border-radius:999px; border:1px solid color-mix(in srgb,var(--sport-color, #85bd13) 40%,transparent); background:#fff; align-self:flex-start; margin-bottom:12px; display:inline-block; }
+  .sync-mode-status.on{ color:var(--line); background:color-mix(in srgb,var(--sport-color, #85bd13) 15%,#fff); }
   /* --- Sinkron cloud UI --- */
   #syncCard{ position: relative; overflow: hidden; border-color: rgba(186,255,41,0.35); background:
       radial-gradient(120% 140% at 100% 0%, rgba(186,255,41,0.12), transparent 60%), #fff; }
@@ -277,6 +286,25 @@
   .add-player-field label{ font-size: 11.5px; margin-bottom: 5px; }
   .add-player-field input{ width: 100%; }
 
+  .setup-step{ padding: 14px 0; border-top: 1px dashed rgba(23,32,51,0.12); }
+  .setup-step:first-of-type{ border-top: 0; padding-top: 4px; }
+  .step-head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .step-num{ width:28px; height:28px; flex-shrink:0; border-radius:999px; display:grid; place-items:center; background: var(--sport-color, var(--green)); color:#fff; font-family: var(--font-display); font-weight:700; font-size:14px; }
+  .step-title{ font-family: var(--font-display); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; font-size:13px; color: var(--line); }
+  .choice-grid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+  .choice-card{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; text-align:left; padding:12px; min-height:48px; border-radius:14px; border:1px solid rgba(23,32,51,0.12); background:#fff; color: var(--line); cursor:pointer; font-family: inherit; text-transform:none; letter-spacing:0; font-size:12px; font-weight:500; }
+  .choice-card:hover{ background: color-mix(in srgb, var(--sport-wash, #f1fadf) 70%, #fff); }
+  .choice-card.active{ border:2px solid var(--sport-color, var(--green)); background: color-mix(in srgb, var(--sport-color, #85bd13) 10%, #fff); color: var(--line); }
+  .choice-card:disabled{ opacity:.55; cursor:not-allowed; }
+  .choice-name{ font-family: var(--font-display); font-weight:700; text-transform:uppercase; letter-spacing:0.04em; font-size:12.5px; }
+  .choice-desc{ color: var(--line-dim); line-height:1.35; }
+  .choice-tag{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; background: color-mix(in srgb, var(--sport-color, #85bd13) 18%, #fff); color: var(--line); }
+  .visually-hidden-select{ position:absolute !important; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden; }
+  .advanced-settings{ border:1px solid rgba(23,32,51,0.1); border-radius:14px; padding:12px 14px; margin:6px 0 4px; background: rgba(248,250,252,0.7); }
+  .advanced-settings > summary{ cursor:pointer; font-family: var(--font-display); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; font-size:12.5px; color: var(--line); min-height:28px; display:flex; align-items:center; }
+  .advanced-settings[open] > summary{ margin-bottom:10px; }
+  .btn-start-big{ width:100%; min-height:56px; font-size:16px; }
+  @media (max-width: 640px){ .choice-grid{ grid-template-columns: 1fr; } .choice-card{ padding:14px; } }
   .mode-toggle{ display:flex; gap: 8px; margin-bottom: 4px; }
   .mode-btn{ flex: 1; padding: 10px 8px; border-radius: 10px; border: 1px solid rgba(23,32,51,0.12); background: rgba(241,245,249,0.6); color: var(--line-dim); font-family: var(--font-display); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; font-weight: 700; }
   .mode-btn:hover{ background: rgba(226,232,240,0.7); }
@@ -429,15 +457,116 @@
   <div class="layout">
 
     <div class="setup-col">
+      <div class="sync-mode-status" id="syncModeStatus">Mode: Lokal (belum tersambung)</div>
+
+      <div class="card" id="setupCard">
+        <h2>Pengaturan</h2>
+
+        <div class="setup-step">
+          <div class="step-head"><span class="step-num">1</span><span class="step-title">Isi nama pemain</span></div>
+          <div class="add-player-form">
+            <div class="add-player-row">
+              <div class="add-player-field">
+                <label for="playerNameInput">Nama</label>
+                <input type="text" id="playerNameInput" placeholder="cth. Andi" autocomplete="off">
+              </div>
+              <div class="add-player-field">
+                <label for="playerGenderInput">Jenis Kelamin</label>
+                <select id="playerGenderInput">
+                  <option value="male">Laki-Laki</option>
+                  <option value="female">Perempuan</option>
+                </select>
+                <div class="hint">Dipakai untuk menyeimbangkan pasangan campur saat diacak.</div>
+              </div>
+            </div>
+            <button type="button" class="btn-primary" id="registerPlayerBtn">+ Tambah</button>
+            <div class="status" id="playerEntryStatus"></div>
+          </div>
+          <div class="field">
+            <label id="playersLabel">Daftar Pemain Terdaftar</label>
+            <div id="registeredPlayersList" class="player-manage-list"><div class="empty-lb">Belum ada pemain.</div></div>
+          </div>
+        </div>
+
+        <div class="setup-step">
+          <div class="step-head"><span class="step-num">2</span><span class="step-title">Pilih jumlah lapangan</span></div>
+          <div class="field">
+            <label for="courtsInput">Jumlah lapangan</label>
+            <input type="number" id="courtsInput" min="1" value="1">
+            <div class="hint" id="courtsHint">1 lapangan = 4 pemain per ronde.</div>
+          </div>
+        </div>
+
+        <div class="setup-step">
+          <div class="step-head"><span class="step-num">3</span><span class="step-title">Pilih format permainan</span></div>
+          <div class="field">
+            <label>Mode rotasi</label>
+            <div class="mode-toggle choice-grid">
+              <button type="button" class="mode-btn choice-card active" id="modeIndividualBtn" data-mode="individual"><span class="choice-name">Individu</span><span class="choice-desc">Partner diacak ulang tiap ronde.</span><span class="choice-tag">Disarankan untuk pemula</span></button>
+              <button type="button" class="mode-btn choice-card" id="modePairsBtn" data-mode="pairs"><span class="choice-name">Pasangan Tetap</span><span class="choice-desc">Pasangan tidak berubah sepanjang main, dipasangkan berurutan dari daftar.</span></button>
+              <button type="button" class="mode-btn choice-card" id="modeCustomBtn" data-mode="custom"><span class="choice-name">Custom</span><span class="choice-desc">Kamu atur sendiri siapa lawan siapa di tiap lapangan.</span></button>
+            </div>
+            <div class="hint" id="modeHint">Tiap ronde partner diacak ulang (rotasi individu).</div>
+            <div class="hint" id="customHint" style="display:none;color:var(--line-dim, #64748b);margin-top:6px;">Kamu atur manual siapa lawan siapa tiap ronde lewat dropdown, atau klik "Next Player" buat auto-generate ala Americano kapan saja mau.</div>
+          </div>
+          <div class="field" id="formatField">
+            <label for="formatSelect">Format permainan</label>
+            <div class="choice-grid" id="formatCards">
+              <button type="button" class="choice-card active" data-format-card="americano"><span class="choice-name">Americano</span><span class="choice-desc">Partner &amp; lawan diacak, semua dapat giliran merata.</span><span class="choice-tag">Disarankan untuk pemula</span></button>
+              <button type="button" class="choice-card" data-format-card="mexicano"><span class="choice-name">Mexicano</span><span class="choice-desc">Mulai ronde 2, lawan disusun dari klasemen sementara.</span></button>
+              <button type="button" class="choice-card" data-format-card="super"><span class="choice-name">Super Mexicano</span><span class="choice-desc">Seperti Mexicano, tapi poin di Lapangan 1 dikali 2.</span></button>
+            </div>
+            <select id="formatSelect" class="visually-hidden-select" tabindex="-1" aria-hidden="true">
+              <option value="americano">Americano</option>
+              <option value="mexicano">Mexicano</option>
+              <option value="super">Super Mexicano</option>
+            </select>
+            <div class="hint" id="formatHint"></div>
+          </div>
+          <div class="field" id="rotationField" style="display:none;">
+            <label for="rotationSelect">Rotasi lapangan</label>
+            <select id="rotationSelect">
+              <option value="auto">Otomatis (disarankan)</option>
+              <option value="independent">Mandiri — tiap lapangan jalan sendiri</option>
+              <option value="synchronized">Serentak — semua lapangan ganti bersamaan</option>
+            </select>
+            <div class="hint" id="rotationHint"></div>
+          </div>
+        </div>
+
+        <details class="advanced-settings" id="advancedSettings">
+          <summary>Pengaturan lanjutan (opsional)</summary>
+          <div class="field">
+            <label for="roundDurationInput">Durasi per ronde (menit)</label>
+            <input type="number" id="roundDurationInput" min="1" placeholder="cth. 15">
+            <div class="hint">Isi kalau mau pengingat waktu tiap ronde.</div>
+          </div>
+          <div class="field">
+            <label for="sessionDurationInput">Durasi total permainan (menit)</label>
+            <input type="number" id="sessionDurationInput" min="1" placeholder="cth. 120">
+            <div class="hint">Sebelum habis: selesaikan pertandingan, 1 ronde lagi, tambah waktu, atau free time.</div>
+          </div>
+        </details>
+
+        <div class="setup-step">
+          <div class="step-head"><span class="step-num">4</span><span class="step-title">Mulai permainan</span></div>
+          <button class="btn-primary btn-start-big" id="startBtn">Kocok &amp; Mulai</button>
+          <div class="status" id="statusMsg"></div>
+          <button class="btn-secondary" id="resetBtn" style="display:none;">Reset sesi</button>
+        </div>
+      </div>
+
       <div class="card" id="syncCard">
-        <h2>Sinkron cloud</h2>
+        <details id="syncDetails">
+        <summary><h2>Main bareng di beberapa HP (opsional)</h2><span class="sync-sub">Tidak wajib. Aktifkan kalau panitia lain mau ikut memantau dari HP masing-masing.</span></summary>
         <div class="sync-fields">
           <div class="field">
             <label for="arenaCodeInput">Kode arena</label>
             <input type="text" id="arenaCodeInput" maxlength="8" placeholder="cth. AB12CD" autocomplete="off" spellcheck="false">
           </div>
           <div class="field">
-            <label for="arenaPinInput">PIN rahasia <span style="color:#ef4444;">*wajib</span></label>
+            <label for="arenaPinInput">PIN rahasia</label>
+            <span class="sync-sub">PIN dibutuhkan hanya jika kamu mau membuka riwayat dari device lain.</span>
             <input type="password" id="arenaPinInput" maxlength="10" placeholder="cth. 2468" inputmode="numeric" autocomplete="off">
           </div>
         </div>
@@ -449,80 +578,9 @@
         <button class="btn-secondary" id="copyInfoBtn" style="display:none;">Salin Kode &amp; PIN</button>
         <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener">Buka Klasemen Online</a>
         <div class="status" id="syncStatus"></div>
+        </details>
 
       </div>
-
-      <div class="card" id="setupCard">
-        <h2>Pengaturan</h2>
-        <div class="field">
-          <label>Mode rotasi</label>
-          <div class="mode-toggle">
-            <button type="button" class="mode-btn active" id="modeIndividualBtn" data-mode="individual">Individu</button>
-            <button type="button" class="mode-btn" id="modePairsBtn" data-mode="pairs">Pasangan Tetap</button>
-            <button type="button" class="mode-btn" id="modeCustomBtn" data-mode="custom">Custom</button>
-          </div>
-          <div class="hint" id="modeHint">Tiap ronde partner diacak ulang (rotasi individu).</div>
-          <div class="hint" id="customHint" style="display:none;color:var(--line-dim, #64748b);margin-top:6px;">Kamu atur manual siapa lawan siapa tiap ronde lewat dropdown, atau klik "Next Player" buat auto-generate ala Americano kapan saja mau.</div>
-        </div>
-        <div class="field" id="formatField">
-          <label for="formatSelect">Format permainan</label>
-          <select id="formatSelect">
-            <option value="americano">Americano</option>
-            <option value="mexicano">Mexicano</option>
-            <option value="super">Super Mexicano</option>
-          </select>
-          <div class="hint" id="formatHint"></div>
-        </div>
-        <div class="add-player-form">
-          <div class="add-player-row">
-            <div class="add-player-field">
-              <label for="playerNameInput">Nama</label>
-              <input type="text" id="playerNameInput" placeholder="cth. Andi" autocomplete="off">
-            </div>
-            <div class="add-player-field">
-              <label for="playerGenderInput">Jenis Kelamin</label>
-              <select id="playerGenderInput">
-                <option value="male">Laki-Laki</option>
-                <option value="female">Perempuan</option>
-              </select>
-            </div>
-          </div>
-          <button type="button" class="btn-primary" id="registerPlayerBtn">+ Tambah</button>
-          <div class="status" id="playerEntryStatus"></div>
-        </div>
-        <div class="field">
-          <label id="playersLabel">Daftar Pemain Terdaftar</label>
-          <div id="registeredPlayersList" class="player-manage-list"><div class="empty-lb">Belum ada pemain.</div></div>
-        </div>
-        <div class="field">
-          <label for="courtsInput">Jumlah lapangan</label>
-          <input type="number" id="courtsInput" min="1" value="1">
-          <div class="hint" id="courtsHint">1 lapangan = 4 pemain per ronde.</div>
-        </div>
-        <div class="field" id="rotationField" style="display:none;">
-          <label for="rotationSelect">Rotasi lapangan</label>
-          <select id="rotationSelect">
-            <option value="auto">Otomatis (disarankan)</option>
-            <option value="independent">Mandiri — tiap lapangan jalan sendiri</option>
-            <option value="synchronized">Serentak — semua lapangan ganti bersamaan</option>
-          </select>
-          <div class="hint" id="rotationHint"></div>
-        </div>
-        <div class="field">
-          <label for="roundDurationInput">Durasi per ronde (menit) — opsional</label>
-          <input type="number" id="roundDurationInput" min="1" placeholder="cth. 15">
-          <div class="hint">Kosongkan kalau nggak perlu pengingat waktu. Timer tetap jalan otomatis walau kosong.</div>
-        </div>
-        <div class="field">
-          <label for="sessionDurationInput">Durasi total permainan (menit) — opsional</label>
-          <input type="number" id="sessionDurationInput" min="1" placeholder="cth. 120">
-          <div class="hint">Isi kalau ada batas waktu, misalnya sewa lapangan 2 jam. Sebelum waktu habis kamu dikasih pilihan: selesaikan pertandingan yang berjalan, main 1 ronde lagi, tambah waktu, atau free time.</div>
-        </div>
-        <button class="btn-primary" id="startBtn">Kocok &amp; Mulai</button>
-        <div class="status" id="statusMsg"></div>
-        <button class="btn-secondary" id="resetBtn" style="display:none;">Reset sesi</button>
-      </div>
-
       <div class="card">
         <h2>Klasemen sementara</h2>
         <div id="leaderboard"><div class="empty-lb">Belum ada data.</div></div>
@@ -581,7 +639,7 @@
       <div class="card" id="mainCard">
         <div class="empty-state" id="emptyState">
           <div class="ball-dot"></div>
-          Isi daftar pemain di sebelah kiri lalu tekan <strong>Kocok &amp; Mulai</strong> untuk mengacak ronde pertama.
+          Isi daftar pemain di atas lalu tekan <strong>Kocok &amp; Mulai</strong> untuk mengacak ronde pertama.
         </div>
 
         <div id="roundArea" style="display:none;">
@@ -808,6 +866,7 @@
     arenaSportChip.textContent = meta.label;
     arenaSportIcon.src = meta.icon;
     arenaSportIcon.alt = 'Ikon ' + meta.label;
+    document.title = 'OTTOPLAY ARENA — ' + meta.label;
   }
 
   function showScreen(name){
@@ -866,6 +925,19 @@
   };
   function updateFormatHint(){ formatHint.textContent = FORMAT_HINT[formatSelect.value] || ''; }
   formatSelect.addEventListener('change', () => { updateFormatHint(); updateRotationHint(); });
+  document.querySelectorAll('[data-format-card]').forEach(card => {
+    card.addEventListener('click', () => {
+      if (formatSelect.disabled) return;
+      formatSelect.value = card.dataset.formatCard;
+      formatSelect.dispatchEvent(new Event('change'));
+    });
+  });
+  setInterval(() => {
+    document.querySelectorAll('[data-format-card]').forEach(card => {
+      card.classList.toggle('active', card.dataset.formatCard === formatSelect.value);
+      card.disabled = formatSelect.disabled;
+    });
+  }, 300);
 
   function updatePlayerSuggestion(){
     if (setupMode === 'pairs'){
@@ -1012,15 +1084,13 @@
   startBtn.addEventListener('click', async () => {
     statusMsg.textContent = '';
 
+    // Sinkron cloud itu opsional: kalau kode/PIN kosong, buatkan otomatis lalu lanjut (tanpa alert pemblokir).
+    // Kalau host mengisi PIN sendiri, PIN itu yang dipakai.
+    if (!arenaCodeInput.value || !arenaCodeInput.value.trim()){
+      arenaCodeInput.value = genSessionCode();
+    }
     if (!arenaPinInput.value || !arenaPinInput.value.trim()){
-      if (!arenaCodeInput.value || !arenaCodeInput.value.trim()){
-        arenaCodeInput.value = genSessionCode();
-      }
-      arenaPinInput.style.outline = '2px solid #ef4444';
-      arenaPinInput.style.borderColor = '#ef4444';
-      window.alert('PIN wajib diisi dulu sebelum turnamen bisa dimulai (kode sudah dibuatkan otomatis). Isi kolom PIN di panel "Sinkron Cloud" di sebelah kiri, biar turnamen ini bisa dibuka lagi nanti dari device manapun dan datanya nggak gampang hilang.');
-      arenaPinInput.focus();
-      return;
+      arenaPinInput.value = genSessionPin();
     }
     arenaPinInput.style.outline = '';
     arenaPinInput.style.borderColor = '';
@@ -1101,6 +1171,12 @@
     // yang baru saja dibuat harus tetap menang — paksa balik ke freshState.
     state = freshState;
     if (!arenaCode) { newKlasemenCode(selectedSport); refreshKlasemenLink(); } // fallback kalau koneksi cloud gagal
+    if (isConnected()){
+      // Tampilkan Kode & PIN beserta tombol "Salin Kode & PIN" supaya bisa langsung dibagikan.
+      const syncDetailsEl = document.getElementById('syncDetails');
+      if (syncDetailsEl) syncDetailsEl.open = true;
+      copyInfoBtn.style.display = 'block';
+    }
 
     playerNameInput.disabled = true;
     playerGenderInput.disabled = true;
@@ -1475,6 +1551,17 @@
   setInterval(updateSessionBanner, 1000);
 
   // --- Sinkron ke Supabase (kode + PIN, biar bisa dibuka lagi & dipantau dari device lain) ---
+
+  // PIN 4 angka acak (0000-9999). Pakai crypto kalau tersedia supaya tidak mudah ditebak.
+  function genSessionPin(){
+    let n;
+    if (window.crypto && window.crypto.getRandomValues){
+      n = window.crypto.getRandomValues(new Uint32Array(1))[0] % 10000;
+    } else {
+      n = Math.floor(Math.random() * 10000);
+    }
+    return String(n).padStart(4, '0');
+  }
 
   function genSessionCode(){
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1955,6 +2042,11 @@
   });
 
   connectArenaBtn.addEventListener('click', () => connectArena());
+  setInterval(() => {
+    const el = document.getElementById('syncModeStatus'); if (!el) return;
+    const t = arenaCode ? 'Tersambung ke arena ' + arenaCode + (arenaPin ? ' · PIN ' + arenaPin : '') : 'Mode: Lokal (belum tersambung)';
+    if (el.textContent !== t){ el.textContent = t; el.classList.toggle('on', !!arenaCode); }
+  }, 500);
 
   copyInfoBtn.addEventListener('click', () => {
     const text = 'Kode: ' + arenaCode + '  PIN: ' + arenaPin;
