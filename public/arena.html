@@ -499,6 +499,15 @@
           <input type="number" id="courtsInput" min="1" value="1">
           <div class="hint" id="courtsHint">1 lapangan = 4 pemain per ronde.</div>
         </div>
+        <div class="field" id="rotationField" style="display:none;">
+          <label for="rotationSelect">Rotasi lapangan</label>
+          <select id="rotationSelect">
+            <option value="auto">Otomatis (disarankan)</option>
+            <option value="independent">Mandiri — tiap lapangan jalan sendiri</option>
+            <option value="synchronized">Serentak — semua lapangan ganti bersamaan</option>
+          </select>
+          <div class="hint" id="rotationHint"></div>
+        </div>
         <div class="field">
           <label for="roundDurationInput">Durasi per ronde (menit) — opsional</label>
           <input type="number" id="roundDurationInput" min="1" placeholder="cth. 15">
@@ -554,6 +563,7 @@
           <button class="btn-primary" id="addPlayerBtn">Tambah ke Rotasi</button>
           <div class="status" id="managePlayersStatus"></div>
         </div>
+        <div class="hint" id="rotationLiveHint" style="display:none;margin-top:10px;"></div>
 
         <div class="field" style="margin-top:18px;">
           <label>Pemain aktif</label>
@@ -683,6 +693,15 @@
   let historyRows = [];
   let matchHistoryRows = [];
 
+  // State UI per kartu lapangan. HARUS dideklarasikan di atas initSession(): memulihkan sesi lokal saat
+  // halaman dibuka memanggil render() -> buildCourtCard() sebelum kode di bawah sempat dieksekusi
+  // (dulu `const` ini ada jauh di bawah, sehingga sesi yang belum selesai gagal dipulihkan: TDZ ReferenceError).
+  const scoreModes = {};   // idx -> 'manual' | 'cepat' | 'detail'
+  const undoStacks = {};   // idx -> ['A','B',...]
+  const detailSel = {};    // idx -> { team:'A'|'B', player:string }
+  const logOpen = {};      // idx -> bool
+  const manualPickErrors = {}; // idx -> pesan validasi UI mode Custom
+
   const playerNameInput = document.getElementById('playerNameInput');
   const playerGenderInput = document.getElementById('playerGenderInput');
   const registerPlayerBtn = document.getElementById('registerPlayerBtn');
@@ -735,6 +754,10 @@
   const formatHint = document.getElementById('formatHint');
   const nextLabel = document.querySelector('.next-label');
   const playersLabel = document.getElementById('playersLabel');
+  const rotationField = document.getElementById('rotationField');
+  const rotationSelect = document.getElementById('rotationSelect');
+  const rotationHint = document.getElementById('rotationHint');
+  const rotationLiveHint = document.getElementById('rotationLiveHint');
 
   const roundDurationInput = document.getElementById('roundDurationInput');
   const timerBar = document.getElementById('timerBar');
@@ -842,7 +865,7 @@
     super: 'Sama seperti Mexicano, tapi poin yang didapat di Lapangan 1 dikali 2, jadi peluang comeback terbuka. Butuh minimal 2 lapangan agar bonusnya berpengaruh.'
   };
   function updateFormatHint(){ formatHint.textContent = FORMAT_HINT[formatSelect.value] || ''; }
-  formatSelect.addEventListener('change', updateFormatHint);
+  formatSelect.addEventListener('change', () => { updateFormatHint(); updateRotationHint(); });
 
   function updatePlayerSuggestion(){
     if (setupMode === 'pairs'){
@@ -858,7 +881,46 @@
       courtsHint.textContent = n + ' pemain terdeteksi → ' + suggested +
         ' lapangan disarankan (' + (suggested*4) + ' bermain' + (n - suggested*4 > 0 ? ', ' + (n - suggested*4) + ' istirahat per ronde' : '') + ').';
     }
+    updateRotationHint();
   }
+
+  // ===== Rotasi lapangan: Mandiri vs Serentak =====
+  //  Mandiri  : tiap lapangan lanjut sendiri begitu selesai (lapangan yang cepat tidak menunggu).
+  //  Serentak : semua lapangan selesai dulu, lalu ronde berikutnya dibuat bersamaan (jumlah main paling merata).
+  //  Otomatis : Mandiri kalau ada cukup cadangan, selain itu Serentak (lihat P.recommendRotation).
+  // Pilihan hanya relevan untuk Americano / Pasangan Tetap dengan >1 lapangan. Mexicano selalu serentak
+  // (peringkat butuh semua skor), mode Custom selalu manual per lapangan.
+  function rotationApplies(){
+    return setupMode === 'pairs' || (setupMode === 'individual' && formatSelect.value === 'americano');
+  }
+  function rotationHintText(choice, rec, unitWord){
+    const resolved = choice === 'auto' ? rec.mode : choice;
+    const lack = rec.spare < rec.needed;
+    const spareTxt = Math.max(0, rec.spare) + ' ' + unitWord + ' cadangan';
+    if (choice === 'auto'){
+      return resolved === 'independent'
+        ? 'Otomatis → Mandiri. Ada ' + spareTxt + ' (minimal ' + rec.needed + '), jadi pilihan partner & lawan luas dan tiap lapangan bisa jalan sendiri.'
+        : 'Otomatis → Serentak. Hanya ' + spareTxt + ' (Mandiri butuh minimal ' + rec.needed + '): kalau tiap lapangan jalan sendiri, grup yang sama terus berulang. Semua lapangan ganti ronde bersamaan.';
+    }
+    if (choice === 'independent'){
+      return 'Mandiri: tiap lapangan lanjut sendiri begitu selesai, ada tombol Selesai per lapangan.' +
+        (lack ? ' Perhatian: cadangan cuma ' + Math.max(0, rec.spare) + ' ' + unitWord + ' (disarankan minimal ' + rec.needed + ') — partner/lawan lebih mudah berulang.' : '');
+    }
+    return 'Serentak: semua lapangan ganti ronde bersamaan. Jumlah main paling merata dan partner minim berulang, tapi lapangan yang selesai duluan ikut menunggu. Tombol Selesai per lapangan tetap ada untuk menutup lapangan tertentu.';
+  }
+  function updateRotationHint(){
+    const courts = parseInt(courtsInput.value, 10) || 1;
+    const show = rotationApplies() && courts > 1;
+    rotationField.style.display = show ? 'block' : 'none';
+    if (!show) return;
+    const isPairs = setupMode === 'pairs';
+    const units = isPairs ? Math.floor(registeredPlayers.length / 2) : registeredPlayers.length;
+    const maxCourts = Math.max(1, Math.floor(units / (isPairs ? 2 : 4)));
+    const rec = P.recommendRotation(units, Math.min(courts, maxCourts), isPairs ? P.PAIRS : P.PLAYERS);
+    rotationHint.textContent = rotationHintText(rotationSelect.value, rec, isPairs ? 'pasangan' : 'pemain');
+  }
+  rotationSelect.addEventListener('change', updateRotationHint);
+  courtsInput.addEventListener('input', updateRotationHint);
 
   function playerId(){
     return window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'p-' + Date.now() + '-' + Math.random().toString(16).slice(2);
@@ -994,12 +1056,27 @@
         'Catatan: Super Mexicano dengan 1 lapangan hasilnya sama dengan Mexicano biasa (bonus ×2 butuh minimal 2 lapangan).';
     }
 
+    // Rotasi lapangan. Dipilih SEKALI di awal dan tidak berubah di tengah sesi (susunan pertandingan
+    // berjalan beda antara dua mode). Mexicano selalu serentak; Custom selalu manual per lapangan.
+    const rotationChoice = (rotationApplies() && courts > 1) ? rotationSelect.value : 'auto';
+    const rotationRec = P.recommendRotation(setupMode === 'pairs' ? pairs.length : players.length, courts, setupMode === 'pairs' ? P.PAIRS : P.PLAYERS);
+    let rotation = 'synchronized';
+    if (setupMode === 'custom') rotation = 'independent';
+    else if (format === 'americano' && courts > 1) rotation = rotationChoice === 'auto' ? rotationRec.mode : rotationChoice;
+    if (rotationApplies() && courts > 1){
+      const unitWord = setupMode === 'pairs' ? 'pasangan' : 'pemain';
+      statusMsg.textContent = (statusMsg.textContent ? statusMsg.textContent + ' ' : '') +
+        'Rotasi lapangan: ' + (rotation === 'independent' ? 'Mandiri' : 'Serentak') + '. ' + rotationHintText(rotationChoice, rotationRec, unitWord);
+    }
+
     const durMin = parseInt(roundDurationInput.value, 10);
     const sessMin = parseInt(sessionDurationInput.value, 10);
     const unitIds = setupMode === 'pairs' ? pairs : players.map(player => player.name);
 
     const freshState = {
       mode: setupMode, format,
+      rotation, rotationChoice,
+      gamesBase: {}, // titik awal jumlah main untuk pemain yang masuk / kembali di tengah sesi (khusus rotasi Mandiri)
       players, pairs, pairMembers,
       courtsRequested: courts, round: 1, finished: false,
       sitOutCount: Object.fromEntries(unitIds.map(u => [u, 0])),
@@ -1036,6 +1113,7 @@
     modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
     formatSelect.disabled = true;
+    rotationSelect.disabled = true;
     sessionDurationInput.disabled = true;
     startBtn.style.display = 'none';
     resetBtn.style.display = 'block';
@@ -1064,6 +1142,12 @@
       state.currentSitOut = first.sitOut;
       if (isRankedFormat()){
         // Mexicano: ronde berikutnya tergantung skor ronde ini, jadi belum bisa dihitung sekarang.
+        state.next = null;
+        state.nextSitOut = [];
+      } else if (isIndependentCourts()){
+        // Mandiri: tiap lapangan memilih pertandingan berikutnya sendiri saat selesai, jadi tidak ada
+        // "ronde berikutnya" untuk dipreview. (Dulu tetap dibuat dan ikut dihitung sebagai partner/lawan
+        // padahal tidak pernah dimainkan — itu mengacaukan riwayat pasangan.)
         state.next = null;
         state.nextSitOut = [];
       } else {
@@ -1126,6 +1210,8 @@
     modePairsBtn.disabled = false;
     modeCustomBtn.disabled = false;
     formatSelect.disabled = false;
+    rotationSelect.disabled = false;
+    rotationSelect.value = 'auto';
     sessionDurationInput.disabled = false;
     playerNameInput.value = '';
     registeredPlayers = [];
@@ -1422,6 +1508,9 @@
       if (!state.mode) state.mode = 'individual';
       if (!state.format) state.format = 'americano';
       formatSelect.value = state.format;
+      // Sesi lama (sebelum ada pilihan rotasi): lapangan >1 selalu jalan mandiri, jadi itu yang dipertahankan.
+      if (!state.gamesBase) state.gamesBase = {};
+      rotationSelect.value = state.rotationChoice || (state.rotation ? state.rotation : 'independent');
       if (!state.pairs) state.pairs = [];
       if (!state.pairMembers) state.pairMembers = {};
       if (!state.matchHistory) state.matchHistory = [];
@@ -1437,6 +1526,7 @@
       registeredPlayers = state.players.map(player => ({ ...player }));
       renderRegisteredPlayers();
       courtsInput.value = state.courtsRequested;
+      updateRotationHint();
       roundDurationInput.value = state.roundDurationMin || '';
       sessionDurationInput.value = state.sessionDurationMin || '';
       playerNameInput.disabled = true;
@@ -1449,6 +1539,7 @@
       modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
     formatSelect.disabled = true;
+    rotationSelect.disabled = true;
     sessionDurationInput.disabled = true;
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
@@ -1470,6 +1561,7 @@
       modePairsBtn.disabled = true;
     modeCustomBtn.disabled = true;
     formatSelect.disabled = true;
+    rotationSelect.disabled = true;
     sessionDurationInput.disabled = true;
       startBtn.style.display = 'none';
       resetBtn.style.display = 'block';
@@ -1486,6 +1578,7 @@
       modePairsBtn.disabled = false;
     modeCustomBtn.disabled = false;
     formatSelect.disabled = false;
+    rotationSelect.disabled = false;
     sessionDurationInput.disabled = false;
       startBtn.style.display = 'block';
       resetBtn.style.display = 'none';
@@ -1918,6 +2011,9 @@
 
   function regenerateNextRound(){
     if (isRankedFormat()) return; // Mexicano tidak punya preview: pemain baru/jeda otomatis dihitung saat ronde berikutnya dibuat
+    // Mandiri & Custom juga tidak punya preview ronde berikutnya; membuatnya di sini hanya akan mencatat
+    // partner/lawan palsu ke riwayat.
+    if (isIndependentCourts() || state.mode === 'custom') return;
     undoRoundEffects(state.next, state.nextSitOut);
     const upcoming = generateSingleRound();
     state.next = upcoming.matches;
@@ -1928,6 +2024,7 @@
     state.players.push({ id: playerId(), name, gender: 'male' });
     state.leaderboard[name] = { points: 0, games: 0, wins: 0 };
     state.sitOutCount[name] = missedRounds;
+    applyGamesFloor([name]);
     regenerateNextRound();
     managePlayersStatus.textContent = name + ' ditambahkan, mulai main mulai ronde berikutnya.';
     render();
@@ -1945,6 +2042,7 @@
     state.leaderboard[name1] = { points: 0, games: 0, wins: 0 };
     state.leaderboard[name2] = { points: 0, games: 0, wins: 0 };
     state.sitOutCount[pairId] = missedRounds;
+    applyGamesFloor([pairId]);
     regenerateNextRound();
     managePlayersStatus.textContent = pairId + ' ditambahkan, mulai main mulai ronde berikutnya.';
     render();
@@ -1983,6 +2081,7 @@
       if (state.pausedPlayerProfiles) delete state.pausedPlayerProfiles[unitId];
     }
     state.sitOutCount[unitId] = (state.sitOutCount[unitId] || 0) + missedRounds;
+    applyGamesFloor([unitId]);
     regenerateNextRound();
     managePlayersStatus.textContent = unitId + ' ditandai hadir, masuk rotasi mulai ronde berikutnya.';
     render();
@@ -2249,8 +2348,18 @@
   // Mexicano & Super Mexicano: pasangan disusun dari peringkat, jadi SEMUA lapangan harus selesai
   // dulu sebelum ronde berikutnya dibuat (ronde serentak, berlaku untuk 1 lapangan maupun banyak).
   function isRankedFormat(){ return !!state && state.mode === 'individual' && formatOf() !== 'americano'; }
-  // Lapangan jalan sendiri-sendiri (jalur Langkah 14) hanya untuk format non-peringkat.
-  function isIndependentCourts(){ return !!state && state.current.length > 1 && !isRankedFormat(); }
+  // Mode rotasi lapangan sesi ini: 'independent' (Mandiri) atau 'synchronized' (Serentak).
+  // Mexicano selalu serentak, Custom selalu mandiri. Sesi lama (sebelum ada pilihan rotasi) tidak punya
+  // state.rotation dan dulu selalu mandiri kalau lapangannya >1, jadi itu default-nya.
+  function rotationOf(){
+    if (!state) return 'synchronized';
+    if (state.mode === 'custom') return 'independent';
+    if (isRankedFormat()) return 'synchronized';
+    return state.rotation || 'independent';
+  }
+  // Lapangan jalan sendiri-sendiri (jalur Langkah 14): hanya kalau >1 lapangan dan rotasinya Mandiri.
+  // Selain itu (1 lapangan, Mexicano, atau Serentak) memakai alur ronde serentak: nextBtn / advanceRound.
+  function isIndependentCourts(){ return !!state && state.current.length > 1 && rotationOf() === 'independent'; }
   // Super Mexicano: poin yang didapat di Lapangan 1 dikali 2.
   function pointMultiplier(m){ return (formatOf() === 'super' && state.mode === 'individual' && m.court === 1) ? 2 : 1; }
 
@@ -2272,6 +2381,55 @@
     units.forEach(u => { state.sitOutCount[u] = (state.sitOutCount[u] || 0) + 1; });
   }
 
+  // Jumlah main untuk keperluan KEADILAN = main sebenarnya + titik awal (state.gamesBase).
+  // Titik awal diberikan ke pemain yang masuk / kembali dari jeda di tengah sesi, supaya dia tidak
+  // dianggap "ketinggalan 10 main" lalu dipaksa main terus (itu yang mengunci grupnya). Tampilan klasemen
+  // tetap memakai jumlah main sebenarnya.
+  function baseOf(name){ return (state.gamesBase && state.gamesBase[name]) || 0; }
+  function fairGamesOf(unit){
+    if (state.mode === 'pairs'){
+      const mem = state.pairMembers[unit] || [];
+      return mem.length ? mem.reduce((s, n) => s + gamesOf(n) + baseOf(n), 0) / mem.length : 0;
+    }
+    return gamesOf(unit) + baseOf(unit);
+  }
+
+  // Nama pemain yang sedang aktif (pasangan yang dijeda tidak dihitung).
+  function activeMemberNames(){
+    return state.mode === 'pairs' ? state.pairs.flatMap(p => state.pairMembers[p] || []) : playerNames();
+  }
+
+  // Dipanggil setelah pemain/pasangan masuk atau kembali: naikkan titik awalnya ke jumlah main TERKECIL
+  // pemain lain yang aktif. Tidak pernah menurunkan, dan tidak mengubah jumlah main sebenarnya.
+  function applyGamesFloor(unitIds){
+    if (!state.gamesBase) state.gamesBase = {};
+    const joining = new Set();
+    unitIds.forEach(u => unitMembers(u).forEach(n => joining.add(n)));
+    const others = activeMemberNames().filter(n => !joining.has(n));
+    if (!others.length) return;
+    const floor = Math.min(...others.map(n => gamesOf(n) + baseOf(n)));
+    joining.forEach(n => {
+      const effective = gamesOf(n) + baseOf(n);
+      if (effective < floor) state.gamesBase[n] = baseOf(n) + (floor - effective);
+    });
+  }
+
+  // Konteks untuk memilih pertandingan 1 lapangan (Mandiri): jumlah main terkecil dihitung dari SEMUA
+  // pemain aktif, dan yang sedang main di lapangan lain dihitung sudah +1 (pertandingannya sudah terjadwal).
+  function independentCtx(idx){
+    const ctx = pairingCtx();
+    const busy = state.mode === 'pairs' ? courtBusyPairUnits(idx) : courtBusyNames(idx);
+    ctx.gamesOf = unit => fairGamesOf(unit) + (busy.has(unit) ? 1 : 0);
+    ctx.allUnits = activeUnits();
+    return ctx;
+  }
+
+  // Pemain/pasangan aktif yang saat ini tidak berada di lapangan manapun.
+  function waitingUnits(){
+    const busy = state.mode === 'pairs' ? courtBusyPairUnits(-1) : courtBusyNames(-1);
+    return activeUnits().filter(u => !busy.has(u));
+  }
+
   // sel = { teamA, teamB } (individu) atau { pairA, pairB } (pasangan tetap) dari modul.
   function toMatch(sel, court, round, extra){
     const isPairs = !!(sel.pairA && sel.pairB);
@@ -2285,7 +2443,7 @@
 
   // Isi 1 lapangan dari pemain/pasangan yang sedang bebas. Return match, atau null kalau kurang orang.
   function autoFillCourt(idx, court, round, extra){
-    const picked = P.pickForCourt(getAvailablePoolForCourt(idx), pairingKind(), pairingCtx());
+    const picked = P.pickForCourt(getAvailablePoolForCourt(idx), pairingKind(), independentCtx(idx));
     if (!picked) return null;
     addSitOut(picked.sitOut);
     const match = toMatch(picked.match, court, round, extra);
@@ -2322,6 +2480,38 @@
 
     state.current[idx] = autoFillCourt(idx, m.court, nextRoundNum) || buildWaitingMatch(m.court, nextRoundNum);
 
+    render();
+    saveSessionToCloud();
+  }
+
+  // Serentak: lapangan boleh ditutup lebih awal (mis. satu lapangan harus dikosongkan). Hanya untuk Americano /
+  // Pasangan Tetap dengan >1 lapangan aktif; Mexicano tidak (peringkat butuh semua lapangan), Custom punya alur sendiri.
+  function canCloseCourtSync(){
+    return !!state && !state.finished && state.mode !== 'custom' && !isRankedFormat() &&
+      rotationOf() === 'synchronized' && state.current.length > 1 &&
+      state.current.some(m => !m.finished);
+  }
+
+  // Klik "Selesai" di satu lapangan pada rotasi Serentak: skor lapangan itu dikunci (ikut tersimpan saat ronde
+  // disimpan), lapangan tidak dipakai lagi mulai ronde berikutnya, dan pratinjau ronde berikutnya disusun ulang
+  // dengan lapangan yang lebih sedikit. Lapangan lain tidak terganggu. Lapangan terakhir ditutup = turnamen selesai.
+  function closeCourtSync(idx){
+    const m = state.current[idx];
+    if (!m || m.finished || !canCloseCourtSync()) return;
+    const stillOpen = state.current.filter(x => !x.finished).length;
+    const isLast = stillOpen === 1;
+    const ok = window.confirm(isLast
+      ? 'Ini lapangan terakhir yang masih berjalan. Menutupnya akan menyelesaikan turnamen. Lanjut?'
+      : 'Tutup Lapangan ' + m.court + '? Skornya dianggap final dan lapangan ini tidak dipakai lagi mulai ronde berikutnya. ' +
+        'Lapangan lain tetap lanjut serentak.');
+    if (!ok) return;
+
+    m.finished = true;
+    m.closedEarly = true;
+    if (isLast){ concludeTournament(true); return; }
+
+    state.courtsRequested = Math.max(1, Math.min(state.courtsRequested, state.current.length) - 1);
+    regenerateNextRound(); // pratinjau lama dibatalkan dari riwayat partner/lawan, lalu disusun ulang
     render();
     saveSessionToCloud();
   }
@@ -2490,12 +2680,6 @@
     return { matches, sitOut: plan.sitOut };
   }
 
-  const scoreModes = {};   // idx -> 'manual' | 'cepat' | 'detail'
-  const undoStacks = {};   // idx -> ['A','B',...]
-  const detailSel = {};    // idx -> { team:'A'|'B', player:string }
-  const logOpen = {};      // idx -> bool
-  const manualPickErrors = {}; // idx -> pesan validasi UI mode Custom
-
   function escHtml(s){
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -2642,6 +2826,10 @@
         ${state.mode === 'custom' ? `<button type="button" class="btn-secondary" data-next-player="${idx}">Next Player</button>` : ''}
         <button type="button" class="btn-secondary" data-court-finish="${idx}">Selesai</button>
       </div>` : ''}
+      ${canCloseCourtSync() && !isFinished ? `
+      <div class="court-actions">
+        <button type="button" class="btn-secondary" data-court-close="${idx}" title="Tutup lapangan ini: skor dianggap final dan lapangan tidak dipakai di ronde berikutnya. Lapangan lain lanjut seperti biasa.">Selesai (tutup lapangan ini)</button>
+      </div>` : ''}
     `;
 
     card.querySelectorAll('[data-manual-team]').forEach(select => {
@@ -2678,6 +2866,9 @@
 
     const courtFinishBtn = card.querySelector('[data-court-finish]');
     if (courtFinishBtn) courtFinishBtn.addEventListener('click', () => finishCourt(idx));
+
+    const courtCloseBtn = card.querySelector('[data-court-close]');
+    if (courtCloseBtn) courtCloseBtn.addEventListener('click', () => closeCourtSync(idx));
 
     const nextPlayerBtn = card.querySelector('[data-next-player]');
     if (nextPlayerBtn) nextPlayerBtn.addEventListener('click', () => {
@@ -2801,8 +2992,10 @@
   function render(){
     roundArea.style.display = 'block';
     finalArea.style.display = 'none';
+    const showRotationTag = state.mode !== 'custom' && !isRankedFormat() && state.current.length > 1;
     roundBadge.innerHTML = '<span class="live-dot"></span>Ronde ' + String(state.round).padStart(2, '0') +
-      (state.mode === 'individual' && formatOf() !== 'americano' ? ' · ' + FORMAT_LABEL[formatOf()] : '');
+      (state.mode === 'individual' && formatOf() !== 'americano' ? ' · ' + FORMAT_LABEL[formatOf()] : '') +
+      (showRotationTag ? ' · ' + (isIndependentCourts() ? 'Mandiri' : 'Serentak') : '');
     newPlayerHint.textContent = 'Ronde berjalan saat ini: ' + state.round + '. Isi jumlah ronde yang terlewat biar pemain telat diprioritaskan main duluan saat rotasi berikutnya.';
 
     const isMultiCourt = isIndependentCourts();
@@ -2817,12 +3010,15 @@
       courtsGrid.appendChild(buildCourtCard(idx));
     });
 
+    // Mandiri: daftar istirahat dihitung langsung dari siapa yang tidak sedang di lapangan (state.currentSitOut
+    // cuma foto ronde pertama dan cepat basi begitu tiap lapangan jalan sendiri-sendiri).
+    const restingNow = isMultiCourt ? waitingUnits() : state.currentSitOut;
     sitoutStrip.innerHTML = '';
-    if (state.currentSitOut.length){
+    if (restingNow.length){
       const label = document.createElement('span');
-      label.textContent = 'Istirahat ronde ini:';
+      label.textContent = isMultiCourt ? 'Menunggu giliran:' : 'Istirahat ronde ini:';
       sitoutStrip.appendChild(label);
-      state.currentSitOut.forEach(p => {
+      restingNow.forEach(p => {
         const chip = document.createElement('span'); chip.className = 'chip'; chip.textContent = p; sitoutStrip.appendChild(chip);
       });
     }
@@ -2861,6 +3057,24 @@
       nextGrid.innerHTML = '';
       nextSitoutStrip.innerHTML = '';
     }
+
+    // Blok "Rotasi berikutnya" hanya ada untuk alur serentak (ada preview) dan Mexicano (ada keterangan).
+    const showNextBlock = !isMultiCourt && (isRankedFormat() || !!(state.next && state.next.length));
+    nextLabel.style.display = showNextBlock ? '' : 'none';
+    nextGrid.style.display = showNextBlock ? '' : 'none';
+    nextSitoutStrip.style.display = showNextBlock ? '' : 'none';
+
+    // Peringatan kalau pemain aktif menyusut sampai Mandiri tidak punya cukup cadangan.
+    let liveHint = '';
+    if (isMultiCourt && state.mode !== 'custom'){
+      const rec = P.recommendRotation(activeUnits().length, state.current.length, pairingKind());
+      if (rec.spare < rec.needed){
+        liveHint = 'Pemain aktif tinggal ' + activeUnits().length + (state.mode === 'pairs' ? ' pasangan' : '') + ' untuk ' + state.current.length +
+          ' lapangan (cadangan ' + Math.max(0, rec.spare) + ', idealnya minimal ' + rec.needed + '). Pada rotasi Mandiri, partner/lawan jadi lebih mudah berulang — tambah pemain kalau bisa.';
+      }
+    }
+    rotationLiveHint.textContent = liveHint;
+    rotationLiveHint.style.display = liveHint ? 'block' : 'none';
 
     updateSessionBanner();
     renderLeaderboard();
