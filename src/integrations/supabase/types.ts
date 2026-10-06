@@ -167,12 +167,156 @@ export type Database = {
         }
         Relationships: []
       }
+      kocok_arena_history: {
+        Row: {
+          access_key: string
+          finished_at: string
+          id: number
+          summary: Json
+        }
+        Insert: {
+          access_key: string
+          finished_at?: string
+          id?: never
+          summary: Json
+        }
+        Update: {
+          access_key?: string
+          finished_at?: string
+          id?: never
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kocok_arena_history_access_key_fkey"
+            columns: ["access_key"]
+            isOneToOne: false
+            referencedRelation: "kocok_arena_venues"
+            referencedColumns: ["access_key"]
+          },
+        ]
+      }
+      kocok_arena_matches: {
+        Row: {
+          access_key: string
+          court: number
+          id: number
+          played_at: string
+          round: number
+          score_a: number | null
+          score_b: number | null
+          team_a: string[]
+          team_b: string[]
+          winner: string | null
+        }
+        Insert: {
+          access_key: string
+          court: number
+          id?: never
+          played_at?: string
+          round: number
+          score_a?: number | null
+          score_b?: number | null
+          team_a: string[]
+          team_b: string[]
+          winner?: string | null
+        }
+        Update: {
+          access_key?: string
+          court?: number
+          id?: never
+          played_at?: string
+          round?: number
+          score_a?: number | null
+          score_b?: number | null
+          team_a?: string[]
+          team_b?: string[]
+          winner?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kocok_arena_matches_access_key_fkey"
+            columns: ["access_key"]
+            isOneToOne: false
+            referencedRelation: "kocok_arena_venues"
+            referencedColumns: ["access_key"]
+          },
+        ]
+      }
+      kocok_arena_venues: {
+        Row: {
+          access_key: string
+          current_state: Json | null
+          updated_at: string
+        }
+        Insert: {
+          access_key: string
+          current_state?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          access_key?: string
+          current_state?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      kocok_access_key: {
+        Args: { p_code: string; p_pin: string }
+        Returns: string
+      }
+      kocok_archive_tournament: {
+        Args: { p_code: string; p_pin: string; p_summary: Json }
+        Returns: number
+      }
+      kocok_get_updated_at: {
+        Args: { p_code: string; p_pin: string }
+        Returns: string
+      }
+      kocok_list_history: {
+        Args: { p_code: string; p_pin: string }
+        Returns: {
+          finished_at: string
+          id: number
+          summary: Json
+        }[]
+      }
+      kocok_list_matches: {
+        Args: { p_code: string; p_limit?: number; p_pin: string }
+        Returns: {
+          court: number
+          id: number
+          played_at: string
+          round: number
+          score_a: number
+          score_b: number
+          team_a: string[]
+          team_b: string[]
+          winner: string
+        }[]
+      }
+      kocok_load_state: {
+        Args: { p_code: string; p_pin: string }
+        Returns: Json
+      }
+      kocok_log_matches: {
+        Args: {
+          p_code: string
+          p_matches: Json
+          p_pin: string
+          p_round: number
+        }
+        Returns: number
+      }
+      kocok_save_state: {
+        Args: { p_code: string; p_pin: string; p_state: Json }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
