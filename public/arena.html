@@ -396,6 +396,36 @@
 
   footer{ margin-top: 44px; text-align: center; font-size: 12.5px; color: rgba(23,32,51,0.4); line-height: 1.7; }
   footer .foot-brand{ color: var(--green); font-family: var(--font-display); letter-spacing: 0.04em; }
+
+  /* ===== Latar & ikon tematik per olahraga ===== */
+  #arenaScreen{ position:relative; isolation:isolate; }
+  body:not(.welcome-active) #arenaScreen::before{ content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.11; background-repeat:no-repeat; background-position:center 55%; background-size:min(560px,90vw) auto; }
+  body[data-sport='padel'] #arenaScreen::before{ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20400%20600%22%20fill%3D%22none%22%20stroke%3D%22%235f8c0a%22%20stroke-width%3D%224%22%3E%3Crect%20x%3D%2240%22%20y%3D%2240%22%20width%3D%22320%22%20height%3D%22520%22%20rx%3D%226%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%22300%22%20x2%3D%22360%22%20y2%3D%22300%22%20stroke-dasharray%3D%2210%206%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%22190%22%20x2%3D%22360%22%20y2%3D%22190%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%22410%22%20x2%3D%22360%22%20y2%3D%22410%22/%3E%3Cline%20x1%3D%22200%22%20y1%3D%22190%22%20x2%3D%22200%22%20y2%3D%22410%22/%3E%3C/svg%3E"); }
+  body[data-sport='padel'] .sport-deco span, body[data-sport='padel'] .empty-state .ball-dot{ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cellipse%20cx%3D%2226%22%20cy%3D%2224%22%20rx%3D%2217%22%20ry%3D%2220%22%20fill%3D%22%2385bd13%22/%3E%3Cg%20fill%3D%22%23f1fadf%22%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2218%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%2228%22%20cy%3D%2216%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%2226%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2226%22%20r%3D%222%22/%3E%3C/g%3E%3Crect%20x%3D%2231%22%20y%3D%2240%22%20width%3D%227%22%20height%3D%2220%22%20rx%3D%223%22%20transform%3D%22rotate%28-30%2034%2050%29%22%20fill%3D%22%233d5a07%22/%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2246%22%20r%3D%228%22%20fill%3D%22%23e6f75a%22%20stroke%3D%22%2385bd13%22%20stroke-width%3D%222%22/%3E%3C/svg%3E"); }
+  body[data-sport='badminton'] #arenaScreen::before{ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20400%20600%22%20fill%3D%22none%22%20stroke%3D%22%231b7fae%22%20stroke-width%3D%224%22%3E%3Crect%20x%3D%2240%22%20y%3D%2240%22%20width%3D%22320%22%20height%3D%22520%22/%3E%3Cline%20x1%3D%2270%22%20y1%3D%2240%22%20x2%3D%2270%22%20y2%3D%22560%22/%3E%3Cline%20x1%3D%22330%22%20y1%3D%2240%22%20x2%3D%22330%22%20y2%3D%22560%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%22300%22%20x2%3D%22360%22%20y2%3D%22300%22%20stroke-width%3D%226%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%22230%22%20x2%3D%22360%22%20y2%3D%22230%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%22370%22%20x2%3D%22360%22%20y2%3D%22370%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%2270%22%20x2%3D%22360%22%20y2%3D%2270%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%22530%22%20x2%3D%22360%22%20y2%3D%22530%22/%3E%3Cline%20x1%3D%22200%22%20y1%3D%2240%22%20x2%3D%22200%22%20y2%3D%22230%22/%3E%3Cline%20x1%3D%22200%22%20y1%3D%22370%22%20x2%3D%22200%22%20y2%3D%22560%22/%3E%3C/svg%3E"); }
+  body[data-sport='badminton'] .sport-deco span, body[data-sport='badminton'] .empty-state .ball-dot{ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M16%208%20L48%208%20L40%2040%20L24%2040%20Z%22%20fill%3D%22%23fff%22%20stroke%3D%22%2328a9e0%22%20stroke-width%3D%223%22/%3E%3Cpath%20d%3D%22M24%208%20L28%2040%20M32%208%20L32%2040%20M40%208%20L36%2040%22%20stroke%3D%22%2328a9e0%22%20stroke-width%3D%222%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2248%22%20r%3D%2210%22%20fill%3D%22%2328a9e0%22/%3E%3C/svg%3E"); }
+  body[data-sport='tennis'] #arenaScreen::before{ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20400%20600%22%20fill%3D%22none%22%20stroke%3D%22%23b7820f%22%20stroke-width%3D%224%22%3E%3Crect%20x%3D%2240%22%20y%3D%2240%22%20width%3D%22320%22%20height%3D%22520%22/%3E%3Cline%20x1%3D%2280%22%20y1%3D%2240%22%20x2%3D%2280%22%20y2%3D%22560%22/%3E%3Cline%20x1%3D%22320%22%20y1%3D%2240%22%20x2%3D%22320%22%20y2%3D%22560%22/%3E%3Cline%20x1%3D%2240%22%20y1%3D%22300%22%20x2%3D%22360%22%20y2%3D%22300%22%20stroke-width%3D%226%22/%3E%3Cline%20x1%3D%2280%22%20y1%3D%22180%22%20x2%3D%22320%22%20y2%3D%22180%22/%3E%3Cline%20x1%3D%2280%22%20y1%3D%22420%22%20x2%3D%22320%22%20y2%3D%22420%22/%3E%3Cline%20x1%3D%22200%22%20y1%3D%22180%22%20x2%3D%22200%22%20y2%3D%22420%22/%3E%3C/svg%3E"); }
+  body[data-sport='tennis'] .sport-deco span, body[data-sport='tennis'] .empty-state .ball-dot{ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2226%22%20fill%3D%22%23f0e04a%22%20stroke%3D%22%23f0b429%22%20stroke-width%3D%223%22/%3E%3Cpath%20d%3D%22M12%2014%20C26%2024%2026%2040%2012%2050%20M52%2014%20C38%2024%2038%2040%2052%2050%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224%22/%3E%3C/svg%3E"); }
+  body[data-sport='tenismeja'] #arenaScreen::before{ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20400%20600%22%20fill%3D%22none%22%20stroke%3D%22%23d63a4d%22%20stroke-width%3D%225%22%3E%3Crect%20x%3D%2270%22%20y%3D%2280%22%20width%3D%22260%22%20height%3D%22440%22%20rx%3D%2210%22/%3E%3Cline%20x1%3D%22200%22%20y1%3D%2280%22%20x2%3D%22200%22%20y2%3D%22520%22%20stroke-width%3D%223%22/%3E%3Cline%20x1%3D%2250%22%20y1%3D%22300%22%20x2%3D%22350%22%20y2%3D%22300%22%20stroke-width%3D%228%22/%3E%3C/svg%3E"); }
+  body[data-sport='tenismeja'] .sport-deco span, body[data-sport='tenismeja'] .empty-state .ball-dot{ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Ccircle%20cx%3D%2226%22%20cy%3D%2226%22%20r%3D%2218%22%20fill%3D%22%23ff5b6e%22/%3E%3Crect%20x%3D%2234%22%20y%3D%2238%22%20width%3D%228%22%20height%3D%2220%22%20rx%3D%223%22%20transform%3D%22rotate%28-45%2038%2048%29%22%20fill%3D%22%238a3b14%22/%3E%3Ccircle%20cx%3D%2252%22%20cy%3D%2214%22%20r%3D%227%22%20fill%3D%22%23fff%22%20stroke%3D%22%23ff5b6e%22%20stroke-width%3D%222%22/%3E%3C/svg%3E"); }
+  .sport-deco{ position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden; }
+  .sport-deco span{ position:absolute; width:56px; height:56px; background-size:contain; background-repeat:no-repeat; opacity:.22; animation: deco-float 9s ease-in-out infinite; }
+  .sport-deco span:nth-child(1){ top:14%; left:4%; }
+  .sport-deco span:nth-child(2){ top:62%; left:2%; width:42px; height:42px; animation-delay:-3s; }
+  .sport-deco span:nth-child(3){ top:22%; right:4%; width:48px; height:48px; animation-delay:-5s; }
+  .sport-deco span:nth-child(4){ bottom:8%; right:6%; width:60px; height:60px; animation-delay:-7s; }
+  @keyframes deco-float{ 0%,100%{ transform:translateY(0) rotate(0); } 50%{ transform:translateY(-18px) rotate(10deg); } }
+  .empty-state .ball-dot{ width:64px; height:64px; border-radius:0; background-color:transparent; box-shadow:none; background-size:contain; background-repeat:no-repeat; background-position:center; animation: ball-bounce 1.6s ease-in-out infinite; }
+  @keyframes ball-bounce{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-12px); } }
+  .empty-guide{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:16px; font-size:12.5px; color:var(--line); }
+  .empty-guide span{ background:#fff; border:1px solid color-mix(in srgb,var(--sport-color) 45%,transparent); border-radius:999px; padding:5px 12px; font-weight:600; }
+  .empty-guide b{ display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:var(--sport-color); color:#172033; font-size:11px; margin-right:6px; }
+  .step-icon{ font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; margin-right:6px; font-size:15px; }
+  #arenaScreen header .back-btn{ width:auto; flex:0 0 auto; align-self:center; }
+  .arena-sport-icon{ width:50px; height:50px; min-width:50px; flex:0 0 50px; }
+  #customHint{ display:none !important; }
+  @media (max-width:480px){ .sport-deco span{ display:none; } }
+  @media (prefers-reduced-motion:reduce){ .sport-deco span,.empty-state .ball-dot{ animation:none !important; } }
 </style>
 </head>
 <body class="welcome-active">
@@ -443,6 +473,7 @@
   </div>
 
   <div id="arenaScreen" style="display:none;">
+  <div class="sport-deco" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 
   <header>
     <button type="button" class="back-btn" id="backFromArenaBtn">← Beranda</button>
@@ -463,7 +494,7 @@
         <h2>Pengaturan</h2>
 
         <div class="setup-step">
-          <div class="step-head"><span class="step-num">1</span><span class="step-title">Isi nama pemain</span></div>
+          <div class="step-head"><span class="step-num">1</span><span class="step-title"><span class="step-icon" aria-hidden="true">👥</span>Isi nama pemain</span></div>
           <div class="add-player-form">
             <div class="add-player-row">
               <div class="add-player-field">
@@ -489,7 +520,7 @@
         </div>
 
         <div class="setup-step">
-          <div class="step-head"><span class="step-num">2</span><span class="step-title">Pilih jumlah lapangan</span></div>
+          <div class="step-head"><span class="step-num">2</span><span class="step-title"><span class="step-icon" aria-hidden="true">🏟️</span>Pilih jumlah lapangan</span></div>
           <div class="field">
             <label for="courtsInput">Jumlah lapangan</label>
             <input type="number" id="courtsInput" min="1" value="1">
@@ -498,7 +529,7 @@
         </div>
 
         <div class="setup-step">
-          <div class="step-head"><span class="step-num">3</span><span class="step-title">Pilih format permainan</span></div>
+          <div class="step-head"><span class="step-num">3</span><span class="step-title"><span class="step-icon" aria-hidden="true">🎲</span>Pilih format permainan</span></div>
           <div class="field">
             <label>Mode rotasi</label>
             <div class="mode-toggle choice-grid">
@@ -549,7 +580,7 @@
         </details>
 
         <div class="setup-step">
-          <div class="step-head"><span class="step-num">4</span><span class="step-title">Mulai permainan</span></div>
+          <div class="step-head"><span class="step-num">4</span><span class="step-title"><span class="step-icon" aria-hidden="true">🚀</span>Mulai permainan</span></div>
           <button class="btn-primary btn-start-big" id="startBtn">Kocok &amp; Mulai</button>
           <div class="status" id="statusMsg"></div>
           <button class="btn-secondary" id="resetBtn" style="display:none;">Reset sesi</button>
@@ -638,8 +669,9 @@
     <div class="rounds-col">
       <div class="card" id="mainCard">
         <div class="empty-state" id="emptyState">
-          <div class="ball-dot"></div>
+          <div class="ball-dot" aria-hidden="true"></div>
           Isi daftar pemain di atas lalu tekan <strong>Kocok &amp; Mulai</strong> untuk mengacak ronde pertama.
+          <div class="empty-guide"><span><b>1</b>Isi pemain</span><span><b>2</b>Pilih format</span><span><b>3</b>Kocok &amp; Mulai</span></div>
         </div>
 
         <div id="roundArea" style="display:none;">
@@ -952,6 +984,7 @@
       courtsInput.value = suggested;
       courtsHint.textContent = n + ' pemain terdeteksi → ' + suggested +
         ' lapangan disarankan (' + (suggested*4) + ' bermain' + (n - suggested*4 > 0 ? ', ' + (n - suggested*4) + ' istirahat per ronde' : '') + ').';
+      if (n < 4) courtsHint.textContent = 'Tambah minimal 4 pemain dulu.';
     }
     updateRotationHint();
   }
