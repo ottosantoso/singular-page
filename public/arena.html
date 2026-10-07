@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>OTTOPLAY ARENA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -426,6 +426,50 @@
   #customHint{ display:none !important; }
   @media (max-width:480px){ .sport-deco span{ display:none; } }
   @media (prefers-reduced-motion:reduce){ .sport-deco span,.empty-state .ball-dot{ animation:none !important; } }
+
+  /* ===== Responsif lintas perangkat (CSS fluid saja) ===== */
+  html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+  html,body{ max-width:100%; overflow-x:hidden; }
+  body{ min-height:100vh; min-height:100dvh; }
+  #welcomeScreen{ min-height:100vh; min-height:100dvh; }
+  button,a,select,input,label,summary{ touch-action:manipulation; }
+  button,.btn,.btn-primary,.btn-secondary{ min-height:44px; }
+  input,select,textarea{ font-size:16px !important; max-width:100%; min-width:0; }
+  #playerGenderInput{ width:100%; }
+  .wrap{ max-width:1440px; width:100%;
+    padding-top:max(clamp(16px,3vw,30px), env(safe-area-inset-top));
+    padding-bottom:max(70px, calc(env(safe-area-inset-bottom) + 40px));
+    padding-left:max(clamp(12px,3vw,24px), env(safe-area-inset-left));
+    padding-right:max(clamp(12px,3vw,24px), env(safe-area-inset-right)); }
+  header,.brand{ flex-wrap:wrap; min-width:0; }
+  header > *, .brand > *{ min-width:0; }
+  .brand-banner-sm{ max-width:min(100%,560px); height:auto; }
+  .layout > *, .card, .court-card, .choice-card, .runner-card{ min-width:0; }
+  .card, .court-card, .choice-card, h1, h2, h3, p, label, td, th{ overflow-wrap:anywhere; word-break:normal; -webkit-hyphens:auto; hyphens:auto; }
+  .card{ padding:clamp(14px,2.5vw,20px); }
+  .choice-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) !important; gap:10px; }
+  .choice-name{ font-size:clamp(12px,1.6vw,13.5px); white-space:normal; line-height:1.25; }
+  .choice-desc{ font-size:13px; }
+  table{ max-width:100%; }
+  #standings, #historyBody, .table-wrap, .card:has(> table), div:has(> table){ overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+  img,svg,video{ max-width:100%; }
+  @media (max-width:639px){
+    .add-player-field{ grid-column:1 / -1; width:100%; }
+    .add-player-field:has(#playerNameInput), .add-player-field:has(#playerGenderInput){ flex-basis:100%; }
+    div:has(> .add-player-field){ grid-template-columns:1fr !important; flex-direction:column; }
+    .layout{ grid-template-columns:1fr !important; }
+    .btn-primary, .btn-start-big, #startBtn{ width:100%; }
+  }
+  @media (min-width:640px) and (max-width:1023px){
+    .layout{ grid-template-columns:1fr !important; max-width:720px; margin-left:auto; margin-right:auto; }
+  }
+  @media (min-width:1024px){
+    .layout{ grid-template-columns:clamp(420px,34vw,480px) minmax(0,1fr) !important; }
+  }
+  @media (orientation:landscape) and (max-height:500px){
+    .wrap{ padding-top:max(12px, env(safe-area-inset-top)); }
+    header{ padding-bottom:12px; margin-bottom:16px; }
+  }
 </style>
 </head>
 <body class="welcome-active">
