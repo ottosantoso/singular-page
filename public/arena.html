@@ -443,7 +443,7 @@
     padding-right:max(clamp(12px,3vw,24px), env(safe-area-inset-right)); }
   header,.brand{ flex-wrap:wrap; min-width:0; }
   header > *, .brand > *{ min-width:0; }
-  .brand-banner-sm{ max-width:100%; height:auto; }
+  .brand-banner-sm{ max-width:min(100%,560px); height:auto; }
   .layout > *, .card, .court-card, .choice-card, .runner-card{ min-width:0; }
   .card, .court-card, .choice-card, h1, h2, h3, p, label, td, th{ overflow-wrap:anywhere; word-break:normal; -webkit-hyphens:auto; hyphens:auto; }
   .card{ padding:clamp(14px,2.5vw,20px); }
