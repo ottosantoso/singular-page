@@ -7,6 +7,29 @@ Format tiap bagian: tanggal, judul singkat, lalu daftar **Ditambah / Diubah / Di
 
 ---
 
+## 2026-10-07 — Tampilan arena: lapangan di atas pada layar HP
+
+Branch: `fix/tampilan-arena` (dibuat dari `main` terbaru, sudah memuat perubahan Lovable hari ini)
+
+### Dari Lovable (sudah di `main`, dicek ulang di rilis ini)
+- Tata letak responsif lintas perangkat: kartu Mode/Format fluid (tidak terpotong lagi), kolom kiri desktop lebih lebar, 1 kolom di bawah 1024px, area sentuh minimal 44px, aman untuk layar berponi.
+- Ikon langkah, latar dan hiasan tematik per olahraga, panduan 3 langkah di layar kosong.
+- Catatan: teks petunjuk mode Custom (`#customHint`) sekarang disembunyikan lewat CSS; keterangannya tetap ada di kartu "Custom".
+
+### Diubah
+- **Layar HP/tablet (<1024px):** saat turnamen berjalan, papan "Sedang bermain" tampil paling atas; Pengaturan, Klasemen, dan Kelola pemain pindah ke bawahnya. Dulu papan lapangan baru terlihat setelah scroll sekitar 3.400 px.
+- Setelah menekan "Kocok & Mulai" di layar kecil, halaman otomatis menggulir ke papan lapangan.
+- Teks status di langkah 4 diringkas menjadi "Rotasi lapangan: Mandiri (otomatis)." (keterangan lengkapnya sudah ada di bawah pilihan Rotasi).
+- Footer dilengkapi: "...jadi tinggal main aja."
+
+### Diperbaiki
+- Nomor peringkat 10, 11, 12 di Klasemen sementara tidak lagi pecah jadi dua baris.
+
+### Belum dikerjakan (daftar sisa)
+- Gambar logo dan ikon memakai alamat khusus Lovable (`/__l5e/assets-v1/...`); rusak di luar hosting Lovable.
+- Keamanan data: tabel arena terbuka untuk baca/ubah lewat kunci publik, fungsi `kocok_*` tidak ada di migrasi repo, PIN 4 angka tanpa pembatasan percobaan yang bisa diverifikasi.
+- Bagikan klasemen ke WhatsApp, ekspor/cetak hasil, tampilan layar besar, bisa dipasang sebagai aplikasi (PWA).
+
 ## 2026-10-06 — Americano lebih adil + pilihan Rotasi lapangan
 
 Branch: `feat/americano-rotasi-fleksibel`

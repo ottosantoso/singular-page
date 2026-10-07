@@ -470,6 +470,14 @@
     .wrap{ padding-top:max(12px, env(safe-area-inset-top)); }
     header{ padding-bottom:12px; margin-bottom:16px; }
   }
+
+  /* ===== Saat turnamen berjalan di layar 1 kolom (HP/tablet): papan lapangan tampil PALING ATAS,
+     Pengaturan, Klasemen, dan Kelola pemain pindah ke bawahnya. Di desktop 2 kolom tidak berubah. ===== */
+  @media (max-width:1023px){
+    body.session-live .rounds-col{ order:-1; }
+  }
+  /* Nomor peringkat 10, 11, 12 jangan pecah jadi dua baris (td memakai overflow-wrap:anywhere). */
+  td.rank{ white-space:nowrap; overflow-wrap:normal; word-break:normal; width:1%; padding-right:10px; }
 </style>
 </head>
 <body class="welcome-active">
@@ -798,7 +806,7 @@
 
   <footer>
     <span class="foot-brand">OTTOPLAY ARENA</span><br>
-    Dibuat buat yang capek itung giliran manual dan males dengerin drama "gue udah main mulu" jadi .
+    Dibuat buat yang capek itung giliran manual dan males dengerin drama "gue udah main mulu" jadi tinggal main aja.
     <br><br>
     @2026.peternakkoding.shn
   </footer>
@@ -1211,9 +1219,8 @@
     if (setupMode === 'custom') rotation = 'independent';
     else if (format === 'americano' && courts > 1) rotation = rotationChoice === 'auto' ? rotationRec.mode : rotationChoice;
     if (rotationApplies() && courts > 1){
-      const unitWord = setupMode === 'pairs' ? 'pasangan' : 'pemain';
       statusMsg.textContent = (statusMsg.textContent ? statusMsg.textContent + ' ' : '') +
-        'Rotasi lapangan: ' + (rotation === 'independent' ? 'Mandiri' : 'Serentak') + '. ' + rotationHintText(rotationChoice, rotationRec, unitWord);
+        'Rotasi lapangan: ' + (rotation === 'independent' ? 'Mandiri' : 'Serentak') + (rotationChoice === 'auto' ? ' (otomatis).' : '.');
     }
 
     const durMin = parseInt(roundDurationInput.value, 10);
@@ -3260,6 +3267,22 @@
     html += '</tbody></table>';
     leaderboardEl.innerHTML = html;
   }
+
+  // body.session-live = ada ronde yang sedang berjalan (papan lapangan tampil). Dipakai CSS untuk memindahkan
+  // papan lapangan ke atas di layar kecil. Diamati dari style #roundArea supaya tidak perlu menyentuh render()/reset.
+  let wasSessionLive = false;
+  function syncSessionLive(){
+    const live = roundArea.style.display === 'block';
+    document.body.classList.toggle('session-live', live);
+    // Baru saja mulai: di layar 1 kolom, langsung bawa pengguna ke papan lapangan (bukan tertinggal di tombol Mulai).
+    if (live && !wasSessionLive && window.matchMedia('(max-width: 1023px)').matches){
+      const board = document.getElementById('mainCard');
+      if (board) requestAnimationFrame(() => board.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    }
+    wasSessionLive = live;
+  }
+  new MutationObserver(syncSessionLive).observe(roundArea, { attributes: true, attributeFilter: ['style'] });
+  syncSessionLive();
 
   function renderFinal(){
     roundArea.style.display = 'none';
