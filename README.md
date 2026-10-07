@@ -22,3 +22,8 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Dokumentasi
+
+- [Tentang aplikasi](docs/TENTANG-APLIKASI.md)
+- [Catatan perubahan](CHANGELOG.md) — baca bagian paling atas untuk perbaikan terakhir
