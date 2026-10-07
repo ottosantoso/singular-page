@@ -454,6 +454,9 @@
   #standings, #historyBody, .table-wrap, .card:has(> table), div:has(> table){ overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
   img,svg,video{ max-width:100%; }
   @media (max-width:639px){
+    .add-player-field{ grid-column:1 / -1; width:100%; }
+    .add-player-field:has(#playerNameInput), .add-player-field:has(#playerGenderInput){ flex-basis:100%; }
+    div:has(> .add-player-field){ grid-template-columns:1fr !important; flex-direction:column; }
     .layout{ grid-template-columns:1fr !important; }
     .btn-primary, .btn-start-big, #startBtn{ width:100%; }
   }
