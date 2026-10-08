@@ -19,7 +19,7 @@ body:not(.welcome-active):has(#arenaScreen:not([style*='display: none'])) {
   background: color-mix(in srgb, var(--sport-wash) 34%, #F1F5F1);
 }
 body:not(.welcome-active)::before { opacity: .25; }
-#arenaScreen::before { opacity: .035; }
+body:not(.welcome-active) #arenaScreen::before { opacity: .035; }
 #arenaScreen .sport-deco span { opacity: .1; }
 #arenaScreen header {
   display: grid;
@@ -142,11 +142,12 @@ body:not(.welcome-active)::before { opacity: .25; }
 }
 #arenaScreen .sync-mode-status.on { border-color: var(--sport-color); background: var(--sport-wash); }
 #arenaScreen .setup-step { padding: 22px 0; border-top: 1px solid var(--arena-border); }
-#arenaScreen .setup-step:first-of-type { padding-top: 0; border-top: 0; }
+#arenaScreen .setup-card-heading + .setup-step { padding-top: 0; border-top: 0; }
 #arenaScreen .step-head { gap: 10px; margin-bottom: 16px; align-items: center; }
 #arenaScreen .step-num { width: 28px; height: 28px; color: var(--line); font-size: 13px; }
 #arenaScreen .step-title { min-width: 0; line-height: 1.5; font-size: 13px; letter-spacing: 0; }
 #arenaScreen .step-icon { display: inline-block; width: 22px; text-align: center; vertical-align: middle; }
+#arenaScreen .step-icon svg { display: block; width: 18px; height: 18px; }
 #arenaScreen label { color: var(--arena-quiet); font-weight: 600; font-size: 12px; line-height: 1.5; }
 #arenaScreen .hint, #arenaScreen .sync-sub, #arenaScreen .empty-lb { font-size: 13px; color: var(--arena-quiet); line-height: 1.6; }
 #arenaScreen input, #arenaScreen select, #arenaScreen textarea {
