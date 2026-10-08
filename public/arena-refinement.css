@@ -212,6 +212,8 @@ body:not(.welcome-active) #arenaScreen::before { opacity: .035; }
 #arenaScreen .courts-grid { grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); }
 #arenaScreen .court-card { border-radius: 12px; box-shadow: none; }
 #arenaScreen .court-head { background: var(--arena-soft); color: var(--arena-quiet); letter-spacing: 0; }
+#arenaScreen table { min-width: 460px; }
+#arenaScreen th { white-space: nowrap; overflow-wrap: normal; hyphens: none; }
 #arenaScreen .match-row-teams span:first-child, #arenaScreen .match-row-teams span:last-child { white-space: normal; overflow-wrap: anywhere; }
 @media (min-width: 640px) and (max-width: 1023px) {
   #arenaScreen header { max-width: 720px; margin-left: auto; margin-right: auto; }
