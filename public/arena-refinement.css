@@ -1,0 +1,239 @@
+/* Neon Sport Pro: presentation only, scoped to the existing Arena screen. */
+#arenaScreen {
+  --font-display: 'Sora', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+  --arena-surface: #ffffff;
+  --arena-neutral: #F1F5F1;
+  --arena-soft: #f8fafc;
+  --arena-border: #e2e8f0;
+  --arena-banner: #0f172a;
+  --arena-quiet: #475569;
+  --arena-shadow: 0 12px 32px -24px #172033;
+  --arena-button-shadow: 0 4px 0 color-mix(in srgb, var(--sport-color) 30%, transparent);
+  color: var(--line);
+  font-family: var(--font-body);
+  letter-spacing: 0;
+}
+body:not(.welcome-active):has(#arenaScreen:not([style*='display: none'])) {
+  background: var(--bg-2);
+  background: color-mix(in srgb, var(--sport-wash) 34%, #F1F5F1);
+}
+body:not(.welcome-active)::before { opacity: .25; }
+body:not(.welcome-active) #arenaScreen::before { opacity: .035; }
+#arenaScreen .sport-deco span { opacity: .1; }
+#arenaScreen header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 0 0 24px;
+  margin: 0 0 24px;
+  border-color: var(--arena-border);
+}
+#arenaScreen header .back-btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 44px;
+  padding: 10px 16px;
+  font-family: var(--font-body);
+  letter-spacing: 0;
+  border-color: var(--arena-border);
+  border-radius: 999px;
+  box-shadow: var(--arena-shadow);
+}
+#arenaScreen .brand {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px auto;
+  gap: 16px;
+  align-items: center;
+  max-width: 760px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--arena-banner);
+  border-radius: 16px;
+  background: var(--arena-banner);
+  box-shadow: var(--arena-shadow);
+}
+#arenaScreen .brand-banner-sm {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  border-radius: 8px;
+}
+#arenaScreen .arena-icon-frame {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--sport-color);
+  background: var(--arena-surface);
+}
+#arenaScreen .arena-sport-icon {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  object-fit: contain;
+  transform: scale(1.55);
+}
+#arenaScreen .sport-chip {
+  color: var(--line);
+  background: var(--sport-wash);
+  border-color: var(--sport-color);
+  font-size: 12px;
+  letter-spacing: 0;
+  padding: 7px 12px;
+  text-align: center;
+}
+#arenaScreen .round-badge {
+  justify-self: end;
+  align-self: center;
+  max-width: 100%;
+  min-height: 38px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--line);
+  border: 1px solid var(--sport-color);
+  background: var(--sport-wash);
+  box-shadow: none;
+  font-size: 12px;
+  padding: 9px 14px;
+  letter-spacing: 0;
+}
+#arenaScreen .layout { gap: 24px; align-items: start; }
+#arenaScreen .card {
+  border: 1px solid var(--arena-border);
+  background: var(--arena-surface);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: var(--arena-shadow);
+}
+#arenaScreen .setup-card-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin: -20px -20px 20px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--arena-border);
+  background: var(--arena-soft);
+  border-radius: 24px 24px 0 0;
+}
+#arenaScreen .setup-card-heading h2 { margin: 0; font-size: 12px; color: var(--arena-quiet); }
+#arenaScreen .sync-mode-status {
+  margin: 0;
+  padding: 7px 10px;
+  max-width: 210px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--arena-quiet);
+  background: var(--arena-surface);
+  border-color: var(--arena-border);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+#arenaScreen .sync-mode-status.on { border-color: var(--sport-color); background: var(--sport-wash); }
+#arenaScreen .setup-step { padding: 22px 0; border-top: 1px solid var(--arena-border); }
+#arenaScreen .setup-card-heading + .setup-step { padding-top: 0; border-top: 0; }
+#arenaScreen .step-head { gap: 10px; margin-bottom: 16px; align-items: center; }
+#arenaScreen .step-num { width: 28px; height: 28px; color: var(--line); font-size: 13px; }
+#arenaScreen .step-title { min-width: 0; line-height: 1.5; font-size: 13px; letter-spacing: 0; }
+#arenaScreen .step-icon { display: inline-block; width: 22px; text-align: center; vertical-align: middle; }
+#arenaScreen .step-icon svg { display: block; width: 18px; height: 18px; }
+#arenaScreen label { color: var(--arena-quiet); font-weight: 600; font-size: 12px; line-height: 1.5; }
+#arenaScreen .hint, #arenaScreen .sync-sub, #arenaScreen .empty-lb { font-size: 13px; color: var(--arena-quiet); line-height: 1.6; }
+#arenaScreen input, #arenaScreen select, #arenaScreen textarea {
+  min-height: 48px;
+  padding: 12px;
+  border-color: var(--arena-border);
+  border-radius: 12px;
+  background: var(--arena-soft);
+  font-family: var(--font-body);
+}
+#arenaScreen .add-player-form { padding: 0; background: transparent; border: 0; border-radius: 0; margin-bottom: 20px; }
+#arenaScreen .add-player-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+#arenaScreen .add-player-field-sm { max-width: 100%; }
+#arenaScreen .btn-primary {
+  color: var(--line);
+  background: var(--sport-color);
+  border-radius: 12px;
+  min-height: 48px;
+  box-shadow: var(--arena-button-shadow);
+  letter-spacing: 0;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+#arenaScreen .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 0 color-mix(in srgb, var(--sport-color) 30%, transparent); }
+#arenaScreen .btn-primary:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+#arenaScreen .btn-secondary { min-height: 48px; border-radius: 12px; background: var(--arena-soft); letter-spacing: 0; }
+#arenaScreen .btn-start-big { min-height: 56px; font-size: 16px; }
+#arenaScreen .choice-grid { grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)) !important; gap: 10px; }
+#arenaScreen .choice-card {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--arena-border);
+  gap: 8px;
+  min-height: 110px;
+  background: var(--arena-soft);
+  text-transform: none;
+  letter-spacing: 0;
+  transition: border-color .15s ease, background .15s ease;
+}
+#arenaScreen .choice-card.active { border-color: var(--sport-color); background: var(--sport-wash); box-shadow: inset 0 0 0 1px var(--sport-color); }
+#arenaScreen .choice-name { font-size: 13px; line-height: 1.5; letter-spacing: 0; hyphens: none; overflow-wrap: normal; }
+#arenaScreen .choice-desc { color: var(--arena-quiet); font-family: var(--font-body); font-size: 13px; font-weight: 500; line-height: 1.5; text-transform: none; }
+#arenaScreen .choice-tag { margin-top: auto; border-radius: 6px; padding: 4px 6px; font-size: 10px; line-height: 1.5; color: var(--line); background: var(--arena-surface); }
+#arenaScreen .advanced-settings { border-color: var(--arena-border); border-radius: 12px; background: var(--arena-soft); }
+#arenaScreen .advanced-settings > summary { min-height: 44px; text-transform: none; letter-spacing: 0; line-height: 1.5; }
+#arenaScreen #syncCard { background: var(--arena-surface); border-color: var(--arena-border); }
+#arenaScreen #syncCard h2 { line-height: 1.6; letter-spacing: 0; text-transform: none; color: var(--line); }
+#arenaScreen #mainCard { padding: 20px; }
+#arenaScreen .empty-state {
+  min-height: 340px;
+  padding: 60px 24px;
+  border: 2px dashed var(--arena-border);
+  border-radius: 16px;
+  background: var(--arena-soft);
+  color: var(--arena-quiet);
+  line-height: 1.7;
+  font-size: 14px;
+}
+#arenaScreen .empty-state .ball-dot { width: 72px; height: 72px; margin-bottom: 24px; }
+#arenaScreen .empty-guide { margin-top: 24px; gap: 8px; font-size: 11px; }
+#arenaScreen .empty-guide span { padding: 6px 9px; background: var(--arena-surface); border-color: var(--arena-border); }
+#arenaScreen .empty-guide b { width: 16px; height: 16px; font-size: 10px; margin-right: 4px; }
+#arenaScreen .courts-grid { grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); }
+#arenaScreen .court-card { border-radius: 12px; box-shadow: none; }
+#arenaScreen .court-head { background: var(--arena-soft); color: var(--arena-quiet); letter-spacing: 0; }
+#arenaScreen table { min-width: 460px; }
+#arenaScreen th { white-space: nowrap; overflow-wrap: normal; hyphens: none; }
+#arenaScreen .match-row-teams span:first-child, #arenaScreen .match-row-teams span:last-child { white-space: normal; overflow-wrap: anywhere; }
+@media (min-width: 640px) and (max-width: 1023px) {
+  #arenaScreen header { max-width: 720px; margin-left: auto; margin-right: auto; }
+}
+@media (max-width: 639px) {
+  #arenaScreen header { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  #arenaScreen .brand { grid-template-columns: 52px minmax(0, 1fr); padding: 12px; gap: 12px; width: 100%; }
+  #arenaScreen .brand-banner-sm { grid-column: 1 / -1; max-width: 100%; }
+  #arenaScreen .sport-chip { justify-self: start; }
+  #arenaScreen .round-badge { justify-self: start; }
+  #arenaScreen .card, #arenaScreen #mainCard { padding: 16px; border-radius: 20px; }
+  #arenaScreen .setup-card-heading { margin: -16px -16px 20px; padding: 16px; border-radius: 20px 20px 0 0; grid-template-columns: 1fr; gap: 8px; }
+  #arenaScreen .sync-mode-status { justify-self: start; max-width: 100%; }
+  #arenaScreen .add-player-row { grid-template-columns: 1fr; }
+  #arenaScreen .choice-grid { grid-template-columns: 1fr !important; }
+  #arenaScreen .choice-card { min-height: 0; }
+  #arenaScreen .empty-state { padding: 36px 16px; min-height: 300px; }
+  #arenaScreen .action-stack > .btn-row { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #arenaScreen *, #arenaScreen *::before, #arenaScreen *::after { animation: none !important; transition: none !important; }
+  #arenaScreen .court-card { opacity: 1; transform: none; }
+}

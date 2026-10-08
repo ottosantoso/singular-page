@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep Arena visual refinements in a scoped static stylesheet loaded by `public/arena.html`; this isolates presentation from existing gameplay scripts and other pages.
