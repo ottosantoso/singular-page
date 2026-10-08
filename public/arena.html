@@ -471,6 +471,7 @@
     header{ padding-bottom:12px; margin-bottom:16px; }
   }
 </style>
+<link rel="stylesheet" href="/arena-refinement.css">
 </head>
 <body class="welcome-active">
 <div class="score-toast-wrap" id="scoreToastWrap" aria-live="polite"></div>
@@ -523,7 +524,7 @@
     <button type="button" class="back-btn" id="backFromArenaBtn">← Beranda</button>
     <div class="brand">
       <img class="brand-banner-sm" src="/__l5e/assets-v1/e6a4dcaf-af23-4b34-bc2a-e98be81d1b1b/otto-play-arena-banner.png" alt="Otto Play Arena">
-      <img class="arena-sport-icon" id="arenaSportIcon" src="/__l5e/assets-v1/f2dfac12-7301-4cbd-a714-abc9c864f2c8/padel.png" alt="Ikon Padel">
+      <span class="arena-icon-frame"><img class="arena-sport-icon" id="arenaSportIcon" src="/__l5e/assets-v1/f2dfac12-7301-4cbd-a714-abc9c864f2c8/padel.png" alt="Ikon Padel"></span>
       <span class="sport-chip" id="arenaSportChip">Padel</span>
     </div>
     <div class="round-badge" id="roundBadge"><span class="live-dot" style="display:none;"></span>belum mulai</div>
@@ -532,10 +533,12 @@
   <div class="layout">
 
     <div class="setup-col">
-      <div class="sync-mode-status" id="syncModeStatus">Mode: Lokal (belum tersambung)</div>
 
       <div class="card" id="setupCard">
-        <h2>Pengaturan</h2>
+        <div class="setup-card-heading">
+          <h2>Pengaturan</h2>
+          <div class="sync-mode-status" id="syncModeStatus">Mode: Lokal (belum tersambung)</div>
+        </div>
 
         <div class="setup-step">
           <div class="step-head"><span class="step-num">1</span><span class="step-title"><span class="step-icon" aria-hidden="true">👥</span>Isi nama pemain</span></div>

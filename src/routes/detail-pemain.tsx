@@ -25,6 +25,10 @@ export const Route = createFileRoute("/detail-pemain")({
         content:
           "Breakdown detail performa tiap pejuang: total poin, win rate, tren per ronde, kompatibilitas partner, dan head-to-head.",
       },
+      { property: "og:title", content: "Report Detail Pemain — OTTOPLAY ARENA" },
+      { property: "og:description", content: "Analisis performa pemain, tren poin, partner, dan head-to-head pertandingan OTTOPLAY ARENA." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: DetailPemain,
