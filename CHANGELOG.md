@@ -7,6 +7,27 @@ Format tiap bagian: tanggal, judul singkat, lalu daftar **Ditambah / Diubah / Di
 
 ---
 
+## 2026-10-08 — Gabung perubahan Lovable + klasemen muat di layar HP
+
+Branch: `fix/tampilan-arena` (sudah digabung dengan `main` terbaru, 11 commit Lovable tanggal 7–8 Oktober)
+
+### Diperbaiki
+- **Tabel Klasemen di HP:** kolom "Menang" dan "Poin" dulu terpotong dan baru terlihat kalau digeser, karena `table { min-width: 460px }` di `arena-refinement.css`. Sekarang tabel selebar layar dengan sel lebih rapat (≤ 639px). Sudah diukur muat di lebar 320, 360, dan 390px, dan tabel di layar "Turnamen selesai" (7 kolom) muat di 360px. Tablet dan desktop tidak berubah.
+
+### Hasil pengecekan ulang (12 pemain, 2 lapangan, Chromium)
+| Masalah | `main` Lovable saja | Branch ini |
+|---|---|---|
+| Papan lapangan di HP | 4.089 px dari atas (terkubur) | sekitar 480 px |
+| Teks status langkah 4 | 152 karakter, panjang | 36 karakter |
+| Footer | masih menggantung ("jadi .") | lengkap |
+| Kartu Mode/Format desktop | tidak meluber | tidak meluber |
+| Klasemen di HP | Poin terpotong | muat |
+| Error JavaScript | 0 | 0 |
+
+### Catatan
+- Perbaikan tampilan ditaruh di `public/arena-refinement.css` sesuai aturan di `AGENTS.md` (tampilan terpisah dari skrip permainan).
+- Belum dikerjakan: lihat daftar sisa pada bagian 2026-10-07 di bawah (gambar berbasis alamat Lovable, keamanan data/PIN, teks "@2026.peternakkoding.shn" yang tampak seperti placeholder).
+
 ## 2026-10-07 — Tampilan arena: lapangan di atas pada layar HP
 
 Branch: `fix/tampilan-arena` (dibuat dari `main` terbaru, sudah memuat perubahan Lovable hari ini)

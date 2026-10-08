@@ -237,3 +237,10 @@ body:not(.welcome-active) #arenaScreen::before { opacity: .035; }
   #arenaScreen *, #arenaScreen *::before, #arenaScreen *::after { animation: none !important; transition: none !important; }
   #arenaScreen .court-card { opacity: 1; transform: none; }
 }
+/* Tabel klasemen di HP: min-width 460px memaksa geser samping sehingga kolom Menang & Poin tersembunyi.
+   Di layar sempit tabel dibuat selebar wadahnya dengan sel yang lebih rapat. */
+@media (max-width: 639px) {
+  #arenaScreen table { min-width: 0; width: 100%; }
+  #arenaScreen th, #arenaScreen td { padding-left: 3px; padding-right: 3px; }
+  #arenaScreen td { overflow-wrap: anywhere; }
+}
