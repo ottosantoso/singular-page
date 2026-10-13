@@ -24,6 +24,11 @@
 .home-nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 84px; }
 .home-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--home-ink); flex-shrink: 0; }
 .home-logo img { width: 48px; height: 48px; object-fit: contain; }
+.home-logo-mark { width: 44px; height: 44px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--home-wash); border: 1px solid var(--home-border); }
+.home-logo-mark img { transform: scale(2.1); }
+.sports-home.court-lines::before { display: none; }
+.sports-home .home-sport { padding: 0; }
+.home-hero-copy { position: relative; z-index: 2; }
 .home-wordmark { font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 900; line-height: 1; }
 .home-wordmark em { font-style: normal; color: var(--home-red); }
 .home-wordmark small { display: block; text-align: center; font-size: 10px; margin-top: 6px; }

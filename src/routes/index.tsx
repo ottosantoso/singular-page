@@ -48,7 +48,7 @@ function Home() {
       <nav className="home-nav" aria-label="Navigasi utama">
         <div className="home-width home-nav-inner">
           <Link to="/" className="home-logo" aria-label="OTTO PLAY ARENA Beranda">
-            <img src={padelAsset.url} alt="" width={48} height={48} />
+            <span className="home-logo-mark"><img src={padelAsset.url} alt="" width={48} height={48} /></span>
             <span className="home-wordmark">OTTO <em>PLAY</em><small>A R E N A</small></span>
           </Link>
           <div className="home-badges">
