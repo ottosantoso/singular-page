@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -24,7 +24,9 @@ export type Database = {
           round: number
           score_a: number
           score_b: number
+          slot_key: string | null
           sport: string
+          status: string
           team_a: string[]
           team_b: string[]
           updated_at: string
@@ -38,7 +40,9 @@ export type Database = {
           round?: number
           score_a?: number
           score_b?: number
+          slot_key?: string | null
           sport?: string
+          status?: string
           team_a?: string[]
           team_b?: string[]
           updated_at?: string
@@ -52,7 +56,9 @@ export type Database = {
           round?: number
           score_a?: number
           score_b?: number
+          slot_key?: string | null
           sport?: string
+          status?: string
           team_a?: string[]
           team_b?: string[]
           updated_at?: string
@@ -243,6 +249,41 @@ export type Database = {
           },
         ]
       }
+      kocok_arena_meta: {
+        Row: {
+          access_key: string
+          code: string | null
+          first_seen: string
+          last_seen: string
+          owner_id: string | null
+          sport: string | null
+        }
+        Insert: {
+          access_key: string
+          code?: string | null
+          first_seen?: string
+          last_seen?: string
+          owner_id?: string | null
+          sport?: string | null
+        }
+        Update: {
+          access_key?: string
+          code?: string | null
+          first_seen?: string
+          last_seen?: string
+          owner_id?: string | null
+          sport?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kocok_arena_meta_access_key_fkey"
+            columns: ["access_key"]
+            isOneToOne: true
+            referencedRelation: "kocok_arena_venues"
+            referencedColumns: ["access_key"]
+          },
+        ]
+      }
       kocok_arena_venues: {
         Row: {
           access_key: string
@@ -261,11 +302,95 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          is_active?: boolean
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      roles: {
+        Row: {
+          code: string
+          description: string | null
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          description?: string | null
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          description?: string | null
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          role_code: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role_code: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role_code?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_get_game: { Args: { p_game_key: string }; Returns: Json }
+      admin_list_games: {
+        Args: { p_limit?: number; p_search?: string; p_status?: string }
+        Returns: Json
+      }
+      close_abandoned_arena_sessions: {
+        Args: { p_idle?: string; p_lookback?: string }
+        Returns: Json
+      }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       kocok_access_key: {
         Args: { p_code: string; p_pin: string }
         Returns: string
