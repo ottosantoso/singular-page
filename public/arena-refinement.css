@@ -237,3 +237,100 @@ body:not(.welcome-active) #arenaScreen::before { opacity: .035; }
   #arenaScreen *, #arenaScreen *::before, #arenaScreen *::after { animation: none !important; transition: none !important; }
   #arenaScreen .court-card { opacity: 1; transform: none; }
 }
+/* Penjaga sesi: dialog keluar / selamat datang kembali dan chip pengingat.
+   Dipasang di <body> (bukan di #arenaScreen), jadi tidak bergantung pada variabel layar arena. */
+.arena-guard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, .55);
+  font-family: var(--font-body, 'Manrope', sans-serif);
+}
+.arena-guard-box {
+  width: min(440px, 100%);
+  padding: 22px 20px 18px;
+  border-radius: 20px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 24px 60px -20px rgba(15, 23, 42, .6);
+}
+.arena-guard-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display, 'Sora', sans-serif);
+  font-size: 20px;
+  line-height: 1.25;
+}
+.arena-guard-text {
+  margin: 0 0 18px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #475569;
+}
+.arena-guard-actions {
+  display: grid;
+  gap: 10px;
+}
+.arena-guard-btn {
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.arena-guard-btn.primary {
+  border-color: var(--sport-color, #16a34a);
+  background: var(--sport-color, #16a34a);
+  color: #ffffff;
+}
+.arena-guard-btn.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: #475569;
+}
+.arena-guard-btn:focus-visible,
+.arena-reminder-chip button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--sport-color, #16a34a) 45%, transparent);
+  outline-offset: 2px;
+}
+.arena-reminder-chip {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 9000;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #ffffff;
+  font: 600 13px/1.4 var(--font-body, 'Manrope', sans-serif);
+  box-shadow: 0 12px 32px -16px rgba(15, 23, 42, .7);
+}
+.arena-reminder-chip span { flex: 1 1 200px; }
+.arena-reminder-chip button {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sport-color, #16a34a);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.arena-reminder-chip button.ghost { background: transparent; color: #cbd5e1; }
+@media (prefers-reduced-motion: reduce) {
+  .arena-guard-overlay, .arena-guard-box, .arena-reminder-chip { animation: none !important; transition: none !important; }
+}

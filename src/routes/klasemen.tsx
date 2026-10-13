@@ -48,6 +48,7 @@ type MatchRow = {
   score_a: number;
   score_b: number;
   created_at: string;
+  status?: string;
 };
 
 type Standing = {
@@ -192,7 +193,7 @@ function Klasemen() {
         supabase.from("arena_players").select("name").eq("arena_code", code),
         supabase
           .from("arena_matches")
-          .select("id, round, court, team_a, team_b, score_a, score_b, created_at")
+          .select("id, round, court, team_a, team_b, score_a, score_b, created_at, status")
           .eq("arena_code", code)
           .order("round", { ascending: true })
           .order("court", { ascending: true }),
@@ -205,10 +206,14 @@ function Klasemen() {
       if (matchesRes.error) throw matchesRes.error;
       if (statsRes.error) throw statsRes.error;
       const players = (playersRes.data ?? []).map((p) => p.name);
-      const matches = (matchesRes.data ?? []) as MatchRow[];
+      const allRows = (matchesRes.data ?? []) as MatchRow[];
+      // Skor yang masih berjalan (status 'live') ditampilkan, tapi belum dihitung ke klasemen
+      // sampai ronde ditutup, supaya skor setengah jalan tidak mengubah peringkat.
+      const matches = allRows.filter((m) => m.status !== "live");
+      const liveMatches = allRows.filter((m) => m.status === "live");
       const statRows = (statsRes.data ?? []) as PlayerStatRow[];
       const standings = buildStandings(players, matches);
-      return { players, matches, standings, playerReport: buildPlayerReport(standings, statRows) };
+      return { players, matches, liveMatches, standings, playerReport: buildPlayerReport(standings, statRows) };
     },
   });
 
@@ -489,14 +494,22 @@ function Klasemen() {
                 </div>
                 <span className="rounded-full border border-arena-ink/10 bg-card/70 px-3 py-1.5 text-xs font-semibold text-arena-dim">{data.matches.length} laga</span>
               </div>
-              {data.matches.length === 0 ? (
+              {data.matches.length + data.liveMatches.length === 0 ? (
                 <p className="text-sm text-arena-dim">Belum ada pertandingan tercatat.</p>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {data.matches.map((match) => (
+                  {[...data.liveMatches, ...data.matches].map((match) => (
                     <article key={match.id} className="rounded-lg border border-arena-ink/10 bg-card/85 p-4 shadow-sm">
                       <div className="flex items-center justify-between gap-3 border-b border-arena-ink/10 pb-3">
-                        <span className="font-display text-[10px] font-bold uppercase tracking-wider text-arena-lime">Ronde {match.round}</span>
+                        <span className="font-display text-[10px] font-bold uppercase tracking-wider text-arena-lime">
+                          Ronde {match.round}
+                          {match.status === "live" && (
+                            <span className="ml-2 rounded-full bg-arena-ink px-2 py-0.5 text-[9px] text-background" title="Skor berjalan, belum dihitung ke klasemen">LIVE</span>
+                          )}
+                          {match.status === "auto_closed" && (
+                            <span className="ml-2 rounded-full border border-arena-ink/20 px-2 py-0.5 text-[9px] text-arena-dim" title="Sesi ditinggal, ditutup otomatis dengan skor terakhir">Ditutup otomatis</span>
+                          )}
+                        </span>
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-arena-dim">Lapangan {match.court}</span>
                       </div>
                       <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">

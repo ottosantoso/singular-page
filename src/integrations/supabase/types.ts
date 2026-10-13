@@ -24,7 +24,9 @@ export type Database = {
           round: number
           score_a: number
           score_b: number
+          slot_key: string | null
           sport: string
+          status: string
           team_a: string[]
           team_b: string[]
           updated_at: string
@@ -38,7 +40,9 @@ export type Database = {
           round?: number
           score_a?: number
           score_b?: number
+          slot_key?: string | null
           sport?: string
+          status?: string
           team_a?: string[]
           team_b?: string[]
           updated_at?: string
@@ -52,7 +56,9 @@ export type Database = {
           round?: number
           score_a?: number
           score_b?: number
+          slot_key?: string | null
           sport?: string
+          status?: string
           team_a?: string[]
           team_b?: string[]
           updated_at?: string
