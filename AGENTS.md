@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep Arena visual refinements in a scoped static stylesheet loaded by `public/arena.html`; this isolates presentation from existing gameplay scripts and other pages.
+- Scope homepage campaign styles and tokens under `.sports-home` in `src/home.css` to avoid changing Arena and report presentation.
