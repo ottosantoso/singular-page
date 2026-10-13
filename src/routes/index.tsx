@@ -1,197 +1,122 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import bannerAsset from "@/assets/otto-play-arena-banner.png.asset.json";
-import padelAsset from "@/assets/padel.png.asset.json";
-import badmintonAsset from "@/assets/badminton.png.asset.json";
-import pingpongAsset from "@/assets/pingpong.png.asset.json";
-import tennisAsset from "@/assets/tennis.png.asset.json";
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { ArrowRight, ChevronRight, Trophy, UserRound, CalendarDays, RefreshCw, Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import bannerAsset from '@/assets/otto-play-arena-banner.png.asset.json';
+import padelAsset from '@/assets/padel.png.asset.json';
+import hero from '@/assets/sports-hero.jpg';
+import padelCourt from '@/assets/padel-court.jpg';
+import badmintonCourt from '@/assets/badminton-court.jpg';
+import pingpongCourt from '@/assets/pingpong-court.jpg';
+import tennisCourt from '@/assets/tennis-court.jpg';
+import dice from '@/assets/dice.jpg';
+import trophy from '@/assets/trophy.jpg';
+import stopwatch from '@/assets/stopwatch.jpg';
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "OTTOPLAY ARENA — Rotasi Otomatis Padel, Badminton, Tenis" },
-      {
-        name: "description",
-        content:
-          "Atur rotasi pemain otomatis untuk padel, badminton, tenis meja, dan tenis. Kocok pasangan, catat skor, dan lihat klasemen real-time.",
-      },
-      { property: "og:title", content: "OTTOPLAY ARENA — Rotasi Otomatis Olahraga Raket" },
-      {
-        property: "og:description",
-        content:
-          "Pilih cabang olahraga, kocok pasangan, dan biarkan rotasi berjalan otomatis dari ronde pertama sampai terakhir.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+export const Route = createFileRoute('/')({
+  head: () => ({ meta: [
+    { title: 'OTTO PLAY ARENA — Sports • Strategy • Together' },
+    { name: 'description', content: 'Mainkan strategi, biarkan Otto bereaksi. Rotasi otomatis untuk padel, badminton, tenis meja, dan tenis, lengkap dengan skor dan klasemen.' },
+    { property: 'og:title', content: 'OTTO PLAY ARENA — Sports • Strategy • Together' },
+    { property: 'og:description', content: 'Pilih olahraga, kocok pasangan, dan catat skor. Main bersama dengan rotasi otomatis OTTOPLAY ARENA.' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+  ] }),
   component: Home,
 });
 
 const sports = [
-  {
-    logo: padelAsset.url,
-    name: "Padel",
-    desc: "4 pemain per lapangan",
-    accent: "oklch(0.62 0.19 143 / 0.55)",
-    soft: "oklch(0.93 0.09 150)",
-  },
-  {
-    logo: badmintonAsset.url,
-    name: "Badminton",
-    desc: "Ganda & rotasi adil",
-    accent: "oklch(0.62 0.17 235 / 0.55)",
-    soft: "oklch(0.93 0.07 235)",
-  },
-  {
-    logo: pingpongAsset.url,
-    name: "Tenis Meja",
-    desc: "Ronde cepat, skor instan",
-    accent: "oklch(0.65 0.22 15 / 0.55)",
-    soft: "oklch(0.94 0.06 15)",
-  },
-  {
-    logo: tennisAsset.url,
-    name: "Tenis",
-    desc: "Rotasi partner otomatis",
-    accent: "oklch(0.75 0.17 85 / 0.6)",
-    soft: "oklch(0.95 0.09 90)",
-  },
+  { name: 'PADEL', desc: '4 pemain per lapangan.', image: padelCourt, type: 'padel' },
+  { name: 'BADMINTON', desc: 'Ganda & rotasi adil.', image: badmintonCourt, type: 'badminton' },
+  { name: 'TENIS MEJA', desc: 'Ronde cepat, skor instan.', image: pingpongCourt, type: 'pingpong' },
+  { name: 'TENIS', desc: 'Rotasi partner otomatis.', image: tennisCourt, type: 'tennis' },
 ];
-
 const features = [
-  { icon: "🎲", title: "Kocok Otomatis", desc: "Partner & lawan diacak tiap ronde, tetap adil buat semua." },
-  { icon: "🏆", title: "Skor & Klasemen", desc: "Catat skor per match, klasemen langsung terupdate." },
-  { icon: "⏱️", title: "Timer Ronde", desc: "Atur durasi ronde, dapat peringatan sebelum ganti." },
+  { title: 'KOCOK OTOMATIS', desc: 'Partner & lawan diacak tiap ronde, tetap adil buat semua.', image: dice, type: 'dice', href: '/arena.html' },
+  { title: 'SKOR & KLASEMEN', desc: 'Catat skor per match, klasemen langsung ter-update.', image: trophy, type: 'trophy', href: '/klasemen' },
+  { title: 'TIMER RONDE', desc: 'Atur durasi ronde, dapat peringatan sebelum ganti.', image: stopwatch, type: 'stopwatch', href: '/arena.html' },
 ];
-
 const steps = [
-  { n: "01", title: "Isi Pejuang", desc: "Masukkan nama pemain yang hadir hari ini." },
-  { n: "02", title: "Kocok Ronde", desc: "Otto menyusun pasangan & lawan secara adil." },
-  { n: "03", title: "Catat Skor", desc: "Skor tersimpan, klasemen otomatis tersusun." },
+  { n: '01', title: 'Isi Pejuang', desc: 'Masukkan nama pemain yang hadir hari ini.' },
+  { n: '02', title: 'Kocok Ronde', desc: 'Otto menyusun pasangan & lawan secara adil.' },
+  { n: '03', title: 'Catat Skor', desc: 'Skor tersimpan, klasemen otomatis tersusun.' },
 ];
 
 function Home() {
   return (
-    <main className="arena-home court-lines min-h-screen">
-      <div className="relative mx-auto w-full max-w-5xl px-5 pb-20 pt-10">
-        <nav className="mb-8 flex items-center justify-between">
-          <span className="font-display text-sm font-bold uppercase tracking-[0.2em] text-arena-lime">
-            Otto Play
-          </span>
-          <Link
-            to="/klasemen"
-            className="rounded-full border border-arena-lime/40 bg-white/70 px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-arena-ink transition hover:border-arena-lime hover:bg-white"
-          >
-            Klasemen
+    <main className="sports-home arena-home court-lines">
+      <nav className="home-nav" aria-label="Navigasi utama">
+        <div className="home-width home-nav-inner">
+          <Link to="/" className="home-logo" aria-label="OTTO PLAY ARENA Beranda">
+            <img src={padelAsset.url} alt="" width={48} height={48} />
+            <span className="home-wordmark">OTTO <em>PLAY</em><small>A R E N A</small></span>
           </Link>
-        </nav>
-
-        <section className="flex flex-col items-center text-center">
-          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-arena-lime/40 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-arena-lime">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-arena-lime" />
-            Rotasi otomatis olahraga raket
-          </span>
-
-          <div className="relative w-full max-w-xl">
-            <span className="float-slow absolute -left-6 -top-6 text-4xl md:-left-12">🎾</span>
-            <span
-              className="float-slow absolute -right-4 top-4 text-4xl md:-right-12"
-              style={{ animationDelay: "1.4s" }}
-            >
-              🏸
-            </span>
-            <img
-              src={bannerAsset.url}
-              alt="OTTO PLAY ARENA"
-              className="w-full rounded-2xl shadow-[0_24px_60px_-30px_rgba(20,40,30,0.6)]"
-            />
+          <div className="home-badges">
+            <span className="home-badge"><span className="home-pulse" />OTTO PLAY</span>
+            <span className="home-badge"><RefreshCw /> ROTASI OTOMATIS OLAHRAGA RAKET</span>
           </div>
-
-          <p className="mt-8 max-w-xl text-base leading-relaxed text-arena-dim">
-            Pilih cabang olahraga, kocok pasangan, dan biarkan rotasi berjalan otomatis dari ronde
-            pertama sampai terakhir.
-          </p>
-
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <a href="/arena.html" className="btn-arena">
-              Mulai Sekarang
-            </a>
-            <Link
-              to="/klasemen"
-              className="rounded-full border border-arena-ink/15 bg-white/80 px-7 py-4 font-display text-sm font-bold uppercase tracking-wider text-arena-ink transition hover:-translate-y-0.5 hover:border-arena-lime hover:shadow-lg"
-            >
-              Lihat Klasemen
-            </Link>
+          <div className="home-nav-actions">
+            <Button asChild variant="outline" className="home-button"><Link to="/klasemen"><Trophy />Klasemen</Link></Button>
+            <Dialog>
+              <DialogTrigger asChild><Button className="home-button home-button-red home-event"><CalendarDays />Event & Promo<span className="home-new">NEW</span></Button></DialogTrigger>
+              <DialogContent>
+                <DialogTitle>Event & Promo</DialogTitle>
+                <DialogDescription>Belum ada event atau promo yang diumumkan.</DialogDescription>
+                <Button asChild><a href="/arena.html">Mulai bermain <ArrowRight /></a></Button>
+              </DialogContent>
+            </Dialog>
+            <Dialog>
+              <DialogTrigger asChild><Button variant="outline" className="home-button"><UserRound />Login</Button></DialogTrigger>
+              <DialogContent>
+                <DialogTitle>Masuk ke Arena</DialogTitle>
+                <DialogDescription>Main lokal tanpa akun, atau sambungkan arena dengan kode dan PIN melalui “Main bareng di beberapa HP” di halaman Arena.</DialogDescription>
+                <Button asChild><a href="/arena.html">Buka Arena <ArrowRight /></a></Button>
+              </DialogContent>
+            </Dialog>
           </div>
-        </section>
-
-        <section className="mt-20">
-          <h2 className="text-arena-heading mb-6 text-center">Cabang Olahraga</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {sports.map((s) => (
-              <div
-                key={s.name}
-                className="arena-card-static text-center"
-                style={
-                  {
-                    "--sport-accent": s.accent,
-                    "--sport-soft": s.soft,
-                  } as React.CSSProperties
-                }
-              >
-                <span className="sport-badge mx-auto">
-                  <img
-                    src={s.logo}
-                    alt={`Logo ${s.name}`}
-                    loading="lazy"
-                    width={512}
-                    height={512}
-                    className="h-11 w-11 object-contain"
-                  />
-                </span>
-                <span className="mt-3 block font-display text-lg font-bold uppercase tracking-wide">
-                  {s.name}
-                </span>
-                <span className="mt-1 block text-xs text-arena-dim">{s.desc}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-16 grid gap-4 md:grid-cols-3">
-          {features.map((f) => (
-            <div key={f.title} className="arena-card-static">
-              <span className="text-2xl">{f.icon}</span>
-              <h3 className="mt-2 font-display text-base font-bold uppercase tracking-wide text-arena-ink">
-                {f.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-arena-dim">{f.desc}</p>
+        </div>
+      </nav>
+      <section className="home-hero">
+        <img src={hero} className="home-hero-image" width={1920} height={1024} alt="Atlet padel, badminton, tenis meja, dan tenis beraksi dengan semangat merah putih" fetchPriority="high" />
+        <div className="home-width">
+          <div className="home-hero-copy">
+            <p className="home-eyebrow">SPORTS • STRATEGY • TOGETHER</p>
+            <h1>OTTO <span>PLAY</span> ARENA</h1>
+            <p className="home-subtitle">Mainkan strategi, biarkan Otto bereaksi. Rotasi otomatis penuh strategi sampai game berakhir.</p>
+            <p className="home-description">Pilih cabang olahraga, kocok pasangan, dan biarkan rotasi berjalan otomatis dari ronde pertama sampai terakhir.</p>
+            <div className="home-hero-actions">
+              <Button asChild className="home-button home-button-red home-cta btn-arena"><a href="/arena.html"><Play fill="currentColor" /> MULAI SEKARANG <ChevronRight /></a></Button>
+              <Button asChild variant="outline" className="home-button home-cta"><Link to="/klasemen"><Trophy /> LIHAT KLASEMEN</Link></Button>
             </div>
-          ))}
-        </section>
-
-        <section className="mt-16">
-          <h2 className="text-arena-heading mb-6 text-center">Cara Main</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {steps.map((s) => (
-              <div key={s.n} className="arena-card-static flex items-start gap-4">
-                <span className="font-display text-3xl font-bold text-arena-lime">{s.n}</span>
-                <span>
-                  <span className="block font-display text-sm font-bold uppercase tracking-wide">
-                    {s.title}
-                  </span>
-                  <span className="mt-1 block text-sm text-arena-dim">{s.desc}</span>
-                </span>
-              </div>
-            ))}
+          </div>
+        </div>
+        <p className="home-slogan">Strategi<br />Bertemu<br /><span>Peluang!</span></p>
+      </section>
+      <span className="home-dots" aria-hidden="true" /><span className="home-dots home-dots-right" aria-hidden="true" />
+      <div className="home-width home-content">
+        <section aria-labelledby="sports-title">
+          <h2 id="sports-title" className="home-section-title">CABANG OLAHRAGA</h2>
+          <div className="home-sport-grid">
+            {sports.map(s => <a href="/arena.html" key={s.name} className={`home-sport home-sport-${s.type} arena-card-static`} aria-label={`Buka Arena ${s.name}`}>
+              <img src={s.image} alt={`Raket dan perlengkapan ${s.name.toLowerCase()}`} className="home-sport-image" width={480} height={768} loading="lazy" />
+              <div className="home-sport-body"><h3>{s.name}</h3><p>{s.desc}</p><span className="home-arrow" aria-hidden="true"><ArrowRight /></span></div>
+            </a>)}
           </div>
         </section>
-
-        <footer className="mt-16 text-center text-xs text-arena-dim">
-          <span className="font-display uppercase tracking-wider text-arena-lime">
-            Ottoplay Arena
-          </span>{" "}
-          — mainkan strategi, biarkan Otto beraksi.
+        <section className="home-feature-grid" aria-label="Fitur Arena">
+          {features.map(f => <a key={f.title} href={f.href} className={`home-feature home-feature-${f.type}`}>
+            <img src={f.image} alt="" width={512} height={512} loading="lazy" />
+            <div><h3>{f.title}</h3><p>{f.desc}</p></div>
+            <span className="home-arrow" aria-hidden="true"><ArrowRight /></span>
+          </a>)}
+        </section>
+        <section className="home-how">
+          <h2>CARA MAIN</h2>
+          <div className="home-step-grid">{steps.map(s => <div className="home-step" key={s.n}><strong>{s.n}</strong><div><h3>{s.title}</h3><p>{s.desc}</p></div></div>)}</div>
+        </section>
+        <footer className="home-footer">
+          <img src={bannerAsset.url} alt="OTTO PLAY ARENA" width={140} height={48} className="mx-auto mb-3 h-auto w-28 rounded" loading="lazy" />
+          Ottoplay Arena — mainkan strategi, biarkan Otto beraksi.
         </footer>
       </div>
     </main>
