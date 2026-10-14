@@ -42,6 +42,7 @@ type MatchRow = {
   score_a: number;
   score_b: number;
   created_at: string;
+  status?: string;
 };
 
 type PlayerStatRow = {
@@ -426,7 +427,7 @@ function DetailPemain() {
         supabase.from("arena_players").select("name").eq("arena_code", code),
         supabase
           .from("arena_matches")
-          .select("id, round, team_a, team_b, score_a, score_b, created_at")
+          .select("id, round, team_a, team_b, score_a, score_b, created_at, status")
           .eq("arena_code", code)
           .order("round", { ascending: true })
           .order("created_at", { ascending: true }),
@@ -443,7 +444,10 @@ function DetailPemain() {
       // pas ronde mulai, skornya belum diisi) — jangan ikut dihitung di statistik
       // apapun (podium, MVP, jumlah game, tren, dst), biar nggak nampilin ronde
       // yang masih kosong seolah-olah sudah selesai.
-      const matches = allMatches.filter((m) => (m.score_a ?? 0) !== 0 || (m.score_b ?? 0) !== 0);
+      // Skor yang masih berjalan (status 'live') belum dihitung ke statistik sampai ronde ditutup.
+      const matches = allMatches.filter(
+        (m) => m.status !== "live" && ((m.score_a ?? 0) !== 0 || (m.score_b ?? 0) !== 0),
+      );
       const statRows = statsRes.error ? [] : ((statsRes.data ?? []) as PlayerStatRow[]);
 
       const standings = buildStandings(players, matches);

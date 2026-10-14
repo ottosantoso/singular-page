@@ -968,7 +968,11 @@
   });
 
   openHistoryMenuBtn.addEventListener('click', () => showScreen('history'));
-  backFromArenaBtn.addEventListener('click', () => showScreen('welcome'));
+  backFromArenaBtn.addEventListener('click', () => {
+    // Kalau pertandingan sedang berjalan, tanya dulu: masih berlanjut atau diselesaikan.
+    if (sessionHasProgress()) openLeaveDialog(() => showScreen('welcome'));
+    else showScreen('welcome');
+  });
   backFromHistoryBtn.addEventListener('click', () => showScreen('welcome'));
 
 
@@ -1654,6 +1658,8 @@
 
   function saveSessionToCloud(){
     saveLocalSnapshot();
+    markSessionActivity();
+    if (!isApplyingRemote) scheduleLiveSave();
     if (!isConnected() || isApplyingRemote) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
@@ -1882,8 +1888,14 @@
     const snap = findLatestUnfinishedSnapshot();
     if (!snap) return false;
     const label = (sportMeta[snap.sport] && sportMeta[snap.sport].label) || snap.sport || 'turnamen';
+    const idleMs = snap.savedAt ? Date.now() - snap.savedAt : 0;
+    const idleNote = idleMs >= AWAY_REMIND_MS ? ' (terakhir aktif sekitar ' + minutesLabel(idleMs) + ' lalu)' : '';
     const ok = window.confirm(
-      'Ada turnamen ' + label + ' ronde ' + snap.state.round + ' yang belum selesai tersimpan di device ini. Lanjutkan turnamen itu?'
+      'Selamat datang kembali! 👋\n\n' +
+      'Ada turnamen ' + label + ' ronde ' + snap.state.round + ' yang belum diselesaikan' + idleNote + '. ' +
+      'Skornya aman tersimpan di perangkat ini.\n\n' +
+      'OK = lanjutkan pertandingan itu.\n' +
+      'Batal = tutup sesi itu dan mulai dari awal.'
     );
     if (!ok){ clearLocalSnapshot(snap.sport); return false; }
     selectedSport = snap.sport;
@@ -1926,7 +1938,29 @@
 
   refreshKlasemenLink();
 
-  async function persistRoundToDb(round, matches){
+  // Semua tulisan ke database Otto antre satu per satu. Tanpa antrean, simpan skor live yang
+  // masih di jalan bisa tiba SETELAH simpan final dan menimpa status 'final' jadi 'live' lagi.
+  let ottoDbQueue = Promise.resolve();
+  function enqueueOttoDbWrite(task){
+    const run = ottoDbQueue.then(task, task);
+    ottoDbQueue = run.catch(() => {});
+    return run;
+  }
+
+  // Kunci idempoten per slot "ronde-lapangan": penyimpanan ulang (live, final, atau edit skor)
+  // menimpa baris yang sama. Cara lama "hapus lalu insert" tidak bekerja karena role anon memang
+  // tidak punya hak DELETE di arena_matches (RLS Langkah 10), jadi hapusnya diam-diam gagal
+  // dan bikin baris dobel.
+  function slotKeyOf(round, court){ return round + '-' + court; }
+  const liveSavedKeys = new Set();
+
+  // opts.status: 'final' (default, ronde ditutup) atau 'live' (skor berjalan, belum ditutup).
+  function persistRoundToDb(round, matches, opts){
+    const status = (opts && opts.status) === 'live' ? 'live' : 'final';
+    return enqueueOttoDbWrite(() => persistRoundToDbNow(round, matches, status));
+  }
+
+  async function persistRoundToDbNow(round, matches, status){
     if (!ottoDb || !state || !matches || !matches.length) return;
     const code = ottoKlasemenCode(selectedSport);
     const sport = selectedSport || 'padel';
@@ -1941,25 +1975,31 @@
       const players = playerNames().map(name => ({ arena_code: code, name }));
       if (players.length) await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
 
-      // Hapus dulu data ronde ini yang lama (kalau ada — misal ini penyimpanan ulang
-      // setelah diedit), baru insert versi terbaru. Biar aman dipanggil berkali-kali
-      // buat ronde yang sama tanpa bikin data dobel.
-      await ottoDb.from('arena_matches').delete().eq('arena_code', code).eq('round', round);
+      const rows = matches.map((m, i) => {
+        const court = Number(m.court) || (i + 1);
+        return {
+          arena_code: code,
+          sport: sport,
+          round: round,
+          court: court,
+          team_a: m.teamA || [],
+          team_b: m.teamB || [],
+          score_a: parseInt(m.scoreA, 10) || 0,
+          score_b: parseInt(m.scoreB, 10) || 0,
+          events: Array.isArray(m.events) ? m.events : [],
+          status: status,
+          slot_key: slotKeyOf(round, court)
+        };
+      });
+
+      const up = await ottoDb.from('arena_matches').upsert(rows, { onConflict: 'arena_code,slot_key' });
+      if (up.error) throw up.error;
+      rows.forEach(r => { if (status === 'live') liveSavedKeys.add(r.slot_key); else liveSavedKeys.delete(r.slot_key); });
+
+      // Statistik per pemain hanya dihitung saat ronde ditutup (final). Selama live, rally log
+      // sudah ikut tersimpan di kolom events baris pertandingannya.
+      if (status !== 'final'){ refreshKlasemenLink(); return; }
       await ottoDb.from('arena_player_stats').delete().eq('arena_code', code).eq('round', round);
-
-      const rows = matches.map((m, i) => ({
-        arena_code: code,
-        sport: sport,
-        round: round,
-        court: i + 1,
-        team_a: m.teamA || [],
-        team_b: m.teamB || [],
-        score_a: parseInt(m.scoreA, 10) || 0,
-        score_b: parseInt(m.scoreB, 10) || 0,
-        events: Array.isArray(m.events) ? m.events : []
-      }));
-
-      await ottoDb.from('arena_matches').insert(rows);
 
       try {
         const agg = {};
@@ -1986,7 +2026,315 @@
       } catch (e2){ /* agregat statistik gagal, ronde tetap tersimpan */ }
 
       refreshKlasemenLink();
-    } catch (e){ /* gagal simpan klasemen online, turnamen tetap jalan */ }
+    } catch (e){
+      // Gagal simpan klasemen online: turnamen tetap jalan, tapi jejaknya dicatat biar bisa dicek.
+      try { console.warn('[arena] gagal simpan ke database klasemen', e && (e.message || e)); } catch (e3) {}
+    }
+  }
+
+  /* --- Simpan skor LIVE ke database (poin 2) ---
+     Skor ronde yang sedang berjalan ikut disimpan (status 'live') tiap ada perubahan,
+     ditahan 2,5 detik supaya tap beruntun tidak membanjiri database, dan paling lambat
+     15 detik sekali selama skor terus berubah. Saat ronde ditutup, baris yang sama
+     ditimpa jadi 'final'. */
+  const LIVE_SAVE_DEBOUNCE_MS = 2500;
+  const LIVE_SAVE_MAX_WAIT_MS = 15000;
+  let liveSaveTimer = null;
+  let liveSaveFirstPendingAt = 0;
+
+  // Nomor ronde yang dipakai untuk menyimpan sebuah pertandingan. Di alur serentak, properti `round`
+  // pada objek pertandingan bisa tertinggal di angka ronde sebelumnya (objeknya dibuat saat ronde
+  // lalu masih berjalan), jadi yang berlaku nomor ronde sesi. Di alur lapangan mandiri dan mode
+  // Custom, tiap lapangan punya nomor rondenya sendiri, jadi yang dipakai nomor pada pertandingannya.
+  function liveRoundOf(m){
+    if (!state) return (m && m.round) || 1;
+    if (isIndependentCourts() || state.mode === 'custom') return (m && m.round) || state.round;
+    return state.round;
+  }
+
+  function collectLiveMatches(){
+    if (!state || state.finished || !Array.isArray(state.current)) return [];
+    return state.current.filter(m => {
+      if (!m || m.finished || m.manualPending) return false;
+      if (!isMatchUntouched(m)) return true;
+      // Kalau skor sempat tersimpan lalu direset ke 0-0, tetap ditimpa supaya tidak tertinggal skor lama.
+      return liveSavedKeys.has(slotKeyOf(liveRoundOf(m), Number(m.court) || 0));
+    });
+  }
+
+  function flushLiveSave(){
+    clearTimeout(liveSaveTimer);
+    liveSaveTimer = null;
+    liveSaveFirstPendingAt = 0;
+    if (!ottoDb) return Promise.resolve();
+    // Dikumpulkan saat giliran antrean tiba, bukan saat dijadwalkan, supaya yang ditulis
+    // selalu keadaan terbaru (dan tidak menimpa ronde yang barusan ditutup).
+    return enqueueOttoDbWrite(async () => {
+      const live = collectLiveMatches();
+      if (!live.length) return;
+      const byRound = new Map();
+      live.forEach(m => {
+        const r = liveRoundOf(m);
+        if (!byRound.has(r)) byRound.set(r, []);
+        byRound.get(r).push(m);
+      });
+      for (const [r, ms] of byRound) await persistRoundToDbNow(r, ms, 'live');
+    }).catch(() => {});
+  }
+
+  function scheduleLiveSave(){
+    if (!ottoDb || !state || state.finished) return;
+    const now = Date.now();
+    if (!liveSaveFirstPendingAt) liveSaveFirstPendingAt = now;
+    clearTimeout(liveSaveTimer);
+    const wait = Math.min(LIVE_SAVE_DEBOUNCE_MS, Math.max(0, LIVE_SAVE_MAX_WAIT_MS - (now - liveSaveFirstPendingAt)));
+    liveSaveTimer = setTimeout(flushLiveSave, wait);
+  }
+
+  /* --- Penjaga sesi (poin 3) ---
+     Skor live sudah aman di localStorage + database, jadi yang dijaga di sini adalah KEPUTUSANNYA:
+     pertandingan mau diselesaikan atau masih berlanjut. Tiga lapis:
+     1) Keluar lewat tombol/link di halaman -> dialog "Masih berlanjut / Selesaikan sekarang".
+     2) Pindah tab/aplikasi (buka WA, dsb) -> dicatat; kalau balik setelah >= 15 menit, ditanya ramah.
+        Kalau browser masih hidup dan izin notifikasi diberikan, pengingat muncul di menit ke-15.
+     3) Tutup tab/refresh -> peringatan bawaan browser (teksnya memang tidak bisa diganti), data tetap disimpan. */
+  const AWAY_REMIND_MS = 15 * 60 * 1000;
+  const GUARD_KEY = 'ottoSessionGuard';
+  const REMINDER_OPTIN_KEY = 'ottoReminderOptInDismissed';
+  let awayTimer = null;
+  let awaySince = 0;
+  let guardDialogEl = null;
+  let skipBeforeUnload = false;
+  let titleBeforeAway = null;
+
+  function hasActiveSession(){
+    return !!(state && !state.finished && Array.isArray(state.current) && state.current.length > 0);
+  }
+
+  function sessionHasProgress(){
+    if (!hasActiveSession()) return false;
+    if (Array.isArray(state.matchHistory) && state.matchHistory.length) return true;
+    return state.current.some(m => !isMatchUntouched(m));
+  }
+
+  function minutesLabel(ms){
+    const min = Math.max(1, Math.round(ms / 60000));
+    if (min < 60) return min + ' menit';
+    const h = Math.floor(min / 60), r = min % 60;
+    return h + ' jam' + (r ? ' ' + r + ' menit' : '');
+  }
+
+  function guardStore(patch){
+    try {
+      let cur = {};
+      try { cur = JSON.parse(localStorage.getItem(GUARD_KEY) || '{}') || {}; } catch (e0) {}
+      localStorage.setItem(GUARD_KEY, JSON.stringify(Object.assign(cur, patch)));
+    } catch (e) {}
+  }
+
+  // Dipanggil tiap sesi tersimpan: tandai masih aktif dan tawarkan pengingat (sekali) kalau perlu.
+  function markSessionActivity(){
+    guardStore({ lastActiveAt: Date.now() });
+    maybeShowReminderOptIn();
+  }
+
+  function closeGuardDialog(){
+    if (guardDialogEl){
+      guardDialogEl.remove();
+      guardDialogEl = null;
+    }
+  }
+
+  function openGuardDialog(cfg){
+    closeGuardDialog();
+    const overlay = document.createElement('div');
+    overlay.className = 'arena-guard-overlay';
+    const box = document.createElement('div');
+    box.className = 'arena-guard-box';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', cfg.title);
+
+    const h = document.createElement('h2');
+    h.className = 'arena-guard-title';
+    h.textContent = cfg.title;
+    const p = document.createElement('p');
+    p.className = 'arena-guard-text';
+    p.textContent = cfg.message;
+    box.appendChild(h);
+    box.appendChild(p);
+
+    const row = document.createElement('div');
+    row.className = 'arena-guard-actions';
+    cfg.actions.forEach(a => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'arena-guard-btn ' + (a.kind || 'secondary');
+      b.textContent = a.label;
+      b.addEventListener('click', () => {
+        closeGuardDialog();
+        if (a.onClick) a.onClick();
+      });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+    overlay.appendChild(box);
+    overlay.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape' && cfg.onEscape){ closeGuardDialog(); cfg.onEscape(); }
+    });
+    document.body.appendChild(overlay);
+    guardDialogEl = overlay;
+    const first = row.querySelector('button');
+    if (first) first.focus();
+  }
+
+  // "Selesaikan" memakai tombol selesai yang sudah ada, jadi konfirmasi dan alur arsipnya tetap sama.
+  function requestFinishFromGuard(){
+    const multi = finishAllBtn && getComputedStyle(finishAllBtn).display !== 'none';
+    const btn = multi ? finishAllBtn : finishBtn;
+    if (!btn) return;
+    try { btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    btn.click();
+  }
+
+  function saveEverythingNow(){
+    try { saveLocalSnapshot(); } catch (e) {}
+    return flushLiveSave();
+  }
+
+  // Dialog saat pengguna sengaja keluar dari layar pertandingan (tombol kembali / link beranda).
+  function openLeaveDialog(onLeave){
+    const round = state && state.round ? ' ronde ' + state.round : '';
+    openGuardDialog({
+      title: 'Mau rehat sebentar? ☕',
+      message: 'Pertandingan' + round + ' masih berjalan dan skornya sudah kami simpan. ' +
+        'Mau diselesaikan sekarang, atau dilanjutkan nanti? Kalau dilanjutkan, tinggal buka lagi di perangkat ini.',
+      actions: [
+        { label: 'Masih berlanjut, simpan dulu', kind: 'primary', onClick: () => { saveEverythingNow(); onLeave(); } },
+        { label: 'Selesaikan sekarang', kind: 'secondary', onClick: requestFinishFromGuard },
+        { label: 'Batal, tetap di sini', kind: 'ghost' }
+      ],
+      onEscape: () => {}
+    });
+  }
+
+  // Dialog sambutan kalau balik ke halaman setelah lama di luar.
+  function openWelcomeBackDialog(awayMs){
+    const round = state && state.round ? ' ronde ' + state.round : '';
+    openGuardDialog({
+      title: 'Selamat datang kembali! 👋',
+      message: 'Kamu sudah sekitar ' + minutesLabel(awayMs) + ' di luar. Pertandingan' + round +
+        ' sudah selesai atau masih berlanjut? Tenang, skor terakhir aman tersimpan.',
+      actions: [
+        { label: 'Masih berlanjut', kind: 'primary' },
+        { label: 'Sudah selesai, tutup sekarang', kind: 'secondary', onClick: requestFinishFromGuard }
+      ],
+      onEscape: () => {}
+    });
+  }
+
+  function notifyAwayReminder(){
+    if (!hasActiveSession()) return;
+    try {
+      if (titleBeforeAway === null) titleBeforeAway = document.title;
+      document.title = '⏰ Pertandingan masih jalan? — ' + titleBeforeAway;
+    } catch (e) {}
+    try {
+      if ('Notification' in window && Notification.permission === 'granted'){
+        const n = new Notification('Pertandingan masih berjalan?', {
+          body: 'Sudah sekitar ' + minutesLabel(AWAY_REMIND_MS) + ' kamu di luar Ottoplay Arena. ' +
+            'Yuk cek: sudah selesai atau masih berlanjut? Skor terakhir sudah tersimpan 👍',
+          tag: 'arena-away-reminder'
+        });
+        n.onclick = () => { try { window.focus(); n.close(); } catch (e) {} };
+      }
+    } catch (e) {}
+  }
+
+  function markLeft(){
+    if (!hasActiveSession() || awaySince) return;
+    awaySince = Date.now();
+    guardStore({ leftAt: awaySince });
+    saveEverythingNow();
+    clearTimeout(awayTimer);
+    awayTimer = setTimeout(notifyAwayReminder, AWAY_REMIND_MS);
+  }
+
+  function markBack(){
+    clearTimeout(awayTimer);
+    awayTimer = null;
+    if (titleBeforeAway !== null){
+      try { document.title = titleBeforeAway; } catch (e) {}
+      titleBeforeAway = null;
+    }
+    if (!awaySince) return;
+    const awayMs = Date.now() - awaySince;
+    awaySince = 0;
+    guardStore({ leftAt: 0 });
+    if (hasActiveSession() && sessionHasProgress() && awayMs >= AWAY_REMIND_MS && !guardDialogEl){
+      openWelcomeBackDialog(awayMs);
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) markLeft(); else markBack();
+  });
+  window.addEventListener('blur', markLeft);
+  window.addEventListener('focus', markBack);
+  window.addEventListener('pagehide', () => { if (hasActiveSession()) saveEverythingNow(); });
+
+  // Tutup tab / refresh: hanya peringatan bawaan browser (teksnya tidak bisa diubah). Datanya tetap disimpan.
+  window.addEventListener('beforeunload', ev => {
+    if (skipBeforeUnload || !sessionHasProgress()) return;
+    saveEverythingNow();
+    ev.preventDefault();
+    ev.returnValue = '';
+  });
+
+  // Link di halaman yang membawa keluar dari tab ini (mis. "← Beranda") juga ditanya dulu.
+  document.addEventListener('click', ev => {
+    const a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+    if (!a || ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+    if (a.target && a.target !== '_self') return;
+    const rawHref = a.getAttribute('href') || '';
+    if (rawHref.charAt(0) === '#' || /^(javascript|mailto|tel):/i.test(rawHref)) return;
+    if (!sessionHasProgress()) return;
+    ev.preventDefault();
+    const href = a.href;
+    openLeaveDialog(() => { skipBeforeUnload = true; window.location.href = href; });
+  }, true);
+
+  // Tawaran notifikasi (sekali, bisa ditolak). Izin hanya diminta setelah pengguna menekan tombol.
+  function maybeShowReminderOptIn(){
+    try {
+      if (!hasActiveSession() || !('Notification' in window) || Notification.permission !== 'default') return;
+      if (localStorage.getItem(REMINDER_OPTIN_KEY) === '1' || document.getElementById('arenaReminderChip')) return;
+    } catch (e) { return; }
+    const chip = document.createElement('div');
+    chip.id = 'arenaReminderChip';
+    chip.className = 'arena-reminder-chip';
+    const txt = document.createElement('span');
+    txt.textContent = '🔔 Mau diingatkan kalau pertandingan ditinggal lama?';
+    const yes = document.createElement('button');
+    yes.type = 'button';
+    yes.textContent = 'Aktifkan';
+    yes.addEventListener('click', () => {
+      try { Notification.requestPermission(); } catch (e) {}
+      try { localStorage.setItem(REMINDER_OPTIN_KEY, '1'); } catch (e) {}
+      chip.remove();
+    });
+    const no = document.createElement('button');
+    no.type = 'button';
+    no.className = 'ghost';
+    no.textContent = 'Nanti';
+    no.addEventListener('click', () => {
+      try { localStorage.setItem(REMINDER_OPTIN_KEY, '1'); } catch (e) {}
+      chip.remove();
+    });
+    chip.appendChild(txt);
+    chip.appendChild(yes);
+    chip.appendChild(no);
+    document.body.appendChild(chip);
   }
 
 
