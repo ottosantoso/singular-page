@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ArrowRight, ChevronRight, Trophy, UserRound, CalendarDays, RefreshCw, Play } from 'lucide-react';
+import { ArrowRight, ChevronRight, Trophy, UserRound, CalendarDays, RefreshCw, Play, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import bannerAsset from '@/assets/otto-play-arena-banner.png.asset.json';
@@ -73,6 +73,7 @@ function Home() {
                 <Button asChild><a href="/arena.html">Buka Arena <ArrowRight /></a></Button>
               </DialogContent>
             </Dialog>
+            <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin</Link></Button>
           </div>
         </div>
       </nav>

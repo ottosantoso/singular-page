@@ -1224,7 +1224,7 @@
     const unitIds = setupMode === 'pairs' ? pairs : players.map(player => player.name);
 
     const freshState = {
-      mode: setupMode, format,
+      mode: setupMode, format, sport: selectedSport,
       rotation, rotationChoice,
       gamesBase: {}, // titik awal jumlah main untuk pemain yang masuk / kembali di tengah sesi (khusus rotasi Mandiri)
       players, pairs, pairMembers,
@@ -1674,6 +1674,7 @@
       // Jaga kompatibilitas data lama (sebelum fitur mode pasangan & wins ditambahkan)
       if (!state.mode) state.mode = 'individual';
       if (!state.format) state.format = 'americano';
+      if (!state.sport) state.sport = selectedSport; // dipakai panel admin untuk menampilkan olahraga
       formatSelect.value = state.format;
       // Sesi lama (sebelum ada pilihan rotasi): lapangan >1 selalu jalan mandiri, jadi itu yang dipertahankan.
       if (!state.gamesBase) state.gamesBase = {};
