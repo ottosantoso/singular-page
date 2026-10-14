@@ -336,7 +336,7 @@ body:not(.welcome-active) #arenaScreen::before { opacity: .035; }
 }
 
 /* Reference screens 3–6: presentation only. All gameplay DOM and scripts are untouched. */
-body:not(.welcome-active) {
+body:not(.welcome-active):has(#arenaScreen) {
   --arena-surface: oklch(1 0 0);
   --arena-neutral: oklch(.96 .016 240);
   --arena-soft: oklch(.98 .01 240);
@@ -433,7 +433,7 @@ body:not(.welcome-active)::before {
 #arenaScreen .timer-clock { color: var(--arena-blue); font-size: 36px; letter-spacing: 0; }
 #arenaScreen .timer-clock.over-time { color: var(--arena-red); }
 #arenaScreen .timer-target, #arenaScreen .timer-prev { font-size: 12px; }
-#arenaScreen .court-card { background: var(--arena-surface); border-color: var(--arena-border); border-radius: 14px; }
+#arenaScreen .court-card { background: var(--arena-surface); border-color: var(--arena-border); border-radius: 14px; opacity: 1; transform: none; animation: none; }
 #arenaScreen .court-head { gap: 10px; background: var(--arena-blue-wash); color: var(--arena-banner); min-height: 46px; padding: 12px 14px; font-size: 12px; }
 #arenaScreen #courtsGrid .court-card .court-head::after { content: 'MANUAL'; color: var(--arena-red); background: var(--arena-red-wash); padding: 5px 8px; border-radius: 999px; font-size: 9px; }
 #arenaScreen #courtsGrid .court-card:has([data-setmode="cepat"].active) .court-head::after { content: 'CEPAT'; color: var(--arena-blue); background: var(--arena-surface); }
