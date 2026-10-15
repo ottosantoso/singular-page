@@ -540,7 +540,9 @@
           <div class="sync-mode-status" id="syncModeStatus">Mode: Lokal (belum tersambung)</div>
         </div>
 
-        <div class="setup-step">
+        <div class="wizard-progress" id="setupWizardProgress" aria-label="Progress pengaturan"></div>
+
+        <div class="wizard-step setup-step" data-wizard-step="1">
           <div class="step-head"><span class="step-num">1</span><span class="step-title"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 13a5 5 0 0 1 3 5v3"/></svg></span>Isi nama pemain</span></div>
           <div class="add-player-form">
             <div class="add-player-row">
@@ -564,18 +566,25 @@
             <label id="playersLabel">Daftar Pemain Terdaftar</label>
             <div id="registeredPlayersList" class="player-manage-list"><div class="empty-lb">Belum ada pemain.</div></div>
           </div>
+          <div class="wizard-actions">
+            <button type="button" class="btn-primary wizard-next" data-wizard-next="2">Lanjutkan</button>
+          </div>
         </div>
 
-        <div class="setup-step">
+        <div class="wizard-step setup-step" data-wizard-step="2" hidden>
           <div class="step-head"><span class="step-num">2</span><span class="step-title"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18M12 4v16M3 8h18M3 16h18"/></svg></span>Pilih jumlah lapangan</span></div>
           <div class="field">
             <label for="courtsInput">Jumlah lapangan</label>
             <input type="number" id="courtsInput" min="1" value="1">
             <div class="hint" id="courtsHint">1 lapangan = 4 pemain per ronde.</div>
           </div>
+          <div class="wizard-actions">
+            <button type="button" class="btn-secondary wizard-back" data-wizard-back="1">Kembali</button>
+            <button type="button" class="btn-primary wizard-next" data-wizard-next="3">Lanjutkan</button>
+          </div>
         </div>
 
-        <div class="setup-step">
+        <div class="wizard-step setup-step" data-wizard-step="3" hidden>
           <div class="step-head"><span class="step-num">3</span><span class="step-title"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1"/><circle cx="16" cy="8" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/></svg></span>Pilih format permainan</span></div>
           <div class="field">
             <label>Mode rotasi</label>
@@ -610,10 +619,19 @@
             </select>
             <div class="hint" id="rotationHint"></div>
           </div>
+          <div class="wizard-actions">
+            <button type="button" class="btn-secondary wizard-back" data-wizard-back="2">Kembali</button>
+            <button type="button" class="btn-primary wizard-next" data-wizard-next="4">Lanjutkan</button>
+          </div>
         </div>
 
-        <details class="advanced-settings" id="advancedSettings">
-          <summary>Pengaturan lanjutan (opsional)</summary>
+        <div class="wizard-step" data-wizard-step="4" hidden>
+          <div class="wizard-step-heading">
+            <span class="step-num">4</span>
+            <div><strong>Pengaturan lanjutan</strong><span>Opsional - bisa langsung dilewati.</span></div>
+          </div>
+          <details class="advanced-settings" id="advancedSettings" open>
+            <summary>Atur durasi ronde dan sesi</summary>
           <div class="field">
             <label for="roundDurationInput">Durasi per ronde (menit)</label>
             <input type="number" id="roundDurationInput" min="1" placeholder="cth. 15">
@@ -624,19 +642,18 @@
             <input type="number" id="sessionDurationInput" min="1" placeholder="cth. 120">
             <div class="hint">Sebelum habis: selesaikan pertandingan, 1 ronde lagi, tambah waktu, atau free time.</div>
           </div>
-        </details>
-
-        <div class="setup-step">
-          <div class="step-head"><span class="step-num">4</span><span class="step-title"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 4c3-2 6-1 6-1s1 3-1 6l-7 7-5-5 7-7ZM7 11l-4 1 4-5h4M12 16l-1 5 5-5v-4M6 16l-3 5 5-3"/><circle cx="16" cy="7" r="1.5"/></svg></span>Mulai permainan</span></div>
-          <button class="btn-primary btn-start-big" id="startBtn">Kocok &amp; Mulai</button>
-          <div class="status" id="statusMsg"></div>
-          <button class="btn-secondary" id="resetBtn" style="display:none;">Reset sesi</button>
+          </details>
+          <div class="wizard-actions">
+            <button type="button" class="btn-secondary wizard-back" data-wizard-back="3">Kembali</button>
+            <button type="button" class="btn-primary wizard-next" data-wizard-next="5">Lewati / Lanjutkan</button>
+          </div>
         </div>
+
       </div>
 
-      <div class="card" id="syncCard">
+      <div class="wizard-step card" id="syncCard" data-wizard-step="5" hidden>
         <details id="syncDetails">
-        <summary><h2>Main bareng di beberapa HP (opsional)</h2><span class="sync-sub">Tidak wajib. Aktifkan kalau panitia lain mau ikut memantau dari HP masing-masing.</span></summary>
+        <summary><h2><span class="step-num">5</span>Main bareng di beberapa HP</h2><span class="sync-sub">Opsional - aktifkan kalau panitia lain mau ikut memantau dari HP masing-masing.</span></summary>
         <div class="sync-fields">
           <div class="field">
             <label for="arenaCodeInput">Kode arena</label>
@@ -657,7 +674,24 @@
         <a class="btn-secondary" id="klasemenLink" href="/klasemen" target="_blank" rel="noopener">Buka Klasemen Online</a>
         <div class="status" id="syncStatus"></div>
         </details>
+        <div class="wizard-actions">
+          <button type="button" class="btn-secondary wizard-back" data-wizard-back="4">Kembali</button>
+          <button type="button" class="btn-primary wizard-next" data-wizard-next="6">Lanjutkan</button>
+        </div>
+      </div>
 
+      <div class="wizard-step card" data-wizard-step="6" hidden>
+        <div class="wizard-step-heading">
+          <span class="step-num">6</span>
+          <div><strong>Konfirmasi &amp; mulai</strong><span>Pastikan pengaturanmu sudah benar.</span></div>
+        </div>
+        <div class="wizard-summary" id="wizardSummary"></div>
+        <button type="button" class="btn-primary btn-start-big" id="startBtn">Kocok &amp; Mulai</button>
+        <div class="status" id="statusMsg"></div>
+        <button type="button" class="btn-secondary" id="resetBtn" style="display:none;">Reset sesi</button>
+        <div class="wizard-actions">
+          <button type="button" class="btn-secondary wizard-back" data-wizard-back="5">Kembali</button>
+        </div>
       </div>
       <div class="card">
         <h2>Klasemen sementara</h2>
@@ -3741,6 +3775,94 @@
       renderFinal();
     });
   }
+})();
+</script>
+<script>
+// UI-only wizard navigation. Existing arena state and event handlers remain untouched.
+(function(){
+  const steps = Array.from(document.querySelectorAll('[data-wizard-step]'));
+  const progress = document.getElementById('setupWizardProgress');
+  const summary = document.getElementById('wizardSummary');
+  const labels = ['Pemain', 'Lapangan', 'Format', 'Konfigurasi', 'Sync', 'Mulai'];
+  let currentStep = 1;
+
+  if (!steps.length) return;
+
+  function renderProgress(){
+    if (!progress) return;
+    progress.innerHTML = labels.map((label, index) => {
+      const step = index + 1;
+      const state = step === currentStep ? 'is-active' : (step < currentStep ? 'is-done' : '');
+      return '<div class="wizard-progress-item ' + state + '" aria-current="' + (step === currentStep ? 'step' : 'false') + '"><span>' + step + '</span><span>' + label + '</span></div>';
+    }).join('');
+  }
+
+  function updateSummary(){
+    if (!summary) return;
+    const activeMode = document.querySelector('.mode-btn.active .choice-name');
+    const format = document.querySelector('[data-format-card].active .choice-name');
+    const rotation = document.getElementById('rotationSelect');
+    const roundDuration = document.getElementById('roundDurationInput');
+    const sessionDuration = document.getElementById('sessionDurationInput');
+    const playerCount = document.querySelectorAll('#registeredPlayersList [data-id]').length;
+    const sync = document.getElementById('arenaCodeInput');
+    summary.innerHTML = [
+      '<div><strong>Pemain:</strong> ' + playerCount + ' terdaftar</div>',
+      '<div><strong>Lapangan:</strong> ' + (document.getElementById('courtsInput').value || '1') + '</div>',
+      '<div><strong>Mode:</strong> ' + (activeMode ? activeMode.textContent.trim() : 'Individu') + '</div>',
+      '<div><strong>Format:</strong> ' + (format ? format.textContent.trim() : 'Americano') + '</div>',
+      '<div><strong>Durasi:</strong> ' + (roundDuration.value || 'Tanpa batas') + ' menit per ronde / ' + (sessionDuration.value || 'Tanpa batas') + ' menit total</div>',
+      '<div><strong>Sync:</strong> ' + (sync && sync.value ? 'Kode arena ' + sync.value.toUpperCase() : 'Lokal di perangkat ini') + '</div>'
+    ].join('');
+  }
+
+  function showStep(step){
+    currentStep = Math.max(1, Math.min(6, step));
+    steps.forEach(el => { el.hidden = Number(el.dataset.wizardStep) !== currentStep; });
+    renderProgress();
+    if (currentStep === 6) updateSummary();
+    const active = steps.find(el => Number(el.dataset.wizardStep) === currentStep);
+    if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function canLeaveStep(step){
+    if (step === 1){
+      const count = document.querySelectorAll('#registeredPlayersList [data-id]').length;
+      if (!count){
+        const status = document.getElementById('playerEntryStatus');
+        if (status) status.textContent = 'Tambahkan minimal satu pemain dulu.';
+        return false;
+      }
+    }
+    if (step === 2){
+      const courts = Number(document.getElementById('courtsInput').value);
+      if (!Number.isInteger(courts) || courts < 1){
+        const hint = document.getElementById('courtsHint');
+        if (hint) hint.textContent = 'Jumlah lapangan minimal 1.';
+        return false;
+      }
+    }
+    return true;
+  }
+
+  document.querySelectorAll('.wizard-next').forEach(button => {
+    button.addEventListener('click', () => {
+      if (canLeaveStep(currentStep)) showStep(Number(button.dataset.wizardNext));
+    });
+  });
+  document.querySelectorAll('.wizard-back').forEach(button => {
+    button.addEventListener('click', () => showStep(Number(button.dataset.wizardBack)));
+  });
+
+  ['courtsInput', 'roundDurationInput', 'sessionDurationInput', 'arenaCodeInput', 'arenaPinInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => { if (currentStep === 6) updateSummary(); });
+  });
+  document.querySelectorAll('.mode-btn, [data-format-card]').forEach(el => el.addEventListener('click', () => {
+    if (currentStep === 6) updateSummary();
+  }));
+
+  showStep(1);
 })();
 </script>
 </body>
