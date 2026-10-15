@@ -88,12 +88,15 @@
 .home-dots { position: absolute; width: 90px; height: 300px; top: 480px; z-index: -1; opacity: .4; background: radial-gradient(circle, var(--home-border) 2px, transparent 3px) 0 0 / 12px 12px; }
 .home-dots-right { right: 0; }
 @keyframes home-pulse { 50% { opacity: .45; } }
-/* Layar lebar / zoom kecil: tinggi hero dikunci 700px, gambar ditampilkan UTUH (1312x700 = rasio asli)
-   di tengah, tepi kiri-kanan memudar ke putih sehingga tidak ada bagian gambar yang terpotong. */
+/* Layar lebar / zoom kecil: tinggi hero dikunci 700px dan gambar ditampilkan UTUH (1312x700 = rasio asli),
+   menempel di tepi kanan layar. Sisi kirinya (langit pucat) diperpanjang memakai warna tepi gambar itu sendiri
+   (hero-flank-left.jpg), jadi tidak ada area kosong dan tidak ada bagian gambar yang terpotong. */
 @media (min-width: 1313px) {
-  .home-hero { height: 700px; min-height: 0; }
-  .home-hero-image { inset: 0 auto 0 50%; width: 1312px; max-width: none; transform: translateX(-50%); object-position: center; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 96%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 96%, transparent 100%); }
-  .home-slogan { right: calc((100% - 1312px) / 2 + 40px); }
+  .home-hero { height: 700px; min-height: 0; isolation: isolate; background: #e9f1fb url('./assets/hero-flank-left.jpg') no-repeat right 1312px top / auto 100%; }
+  .home-hero-image { inset: 0 0 0 auto; width: 1312px; max-width: none; object-position: center; }
+  .home-hero { margin-bottom: 18px; }
+  .home-hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 44px; background: linear-gradient(transparent, var(--home-white)); pointer-events: none; }
+  .home-slogan { right: 40px; bottom: 70px; }
 }
 @media (max-width: 1199px) { .home-badges .home-badge:first-child { display: none; } .home-badge { font-size: 8px; padding-inline: 12px; } .home-nav-actions { gap: 7px; } .sports-home .home-nav-actions .home-button { padding-inline: 13px; } .home-hero h1 { font-size: 44px; } .home-hero-copy { max-width: 53%; } .home-feature { grid-template-columns: 72px minmax(0,1fr); gap: 10px; } .home-feature img { width: 72px; height: 72px; } .home-feature .home-arrow { display: none; } }
 @media (max-width: 900px) { .home-width { width: calc(100% - 40px); } .home-badges { display: none; } .home-hero { min-height: clamp(450px, 53.33vw, 700px); } .home-hero h1 { font-size: 38px; } .home-subtitle { font-size: 15px; } .home-hero-copy { max-width: 57%; } .home-hero-actions { flex-direction: column; align-items: start; gap: 10px; } .home-slogan { font-size: 24px; right: 2%; bottom: 60px; } .home-sport-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .home-sport-image { height: 175px; } .home-feature-grid { grid-template-columns: 1fr; } .home-feature { grid-template-columns: 76px minmax(0,1fr) 30px; } .home-feature .home-arrow { display: grid; } .home-feature h3 { font-size: 13px; } .home-feature p { font-size: 12px; } }
