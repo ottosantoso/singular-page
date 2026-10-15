@@ -1,0 +1,587 @@
+/* Arena sport themes: badminton, tenis, tenis meja.
+   Presentation only. Scoped to #arenaScreen[data-sport=...] (set by applyArenaSportTheme in arena.html),
+   so padel, the homepage and all gameplay scripts stay untouched.
+   Loaded after arena-refinement.css, so rules here intentionally win over the base Arena look.
+
+   To retune a theme, change the tokens in the three "Theme tokens" blocks below. */
+
+/* ---------- Theme tokens ---------- */
+#arenaScreen[data-sport='badminton'] {
+  --th-accent: #78b415;
+  --th-accent-deep: #5d9a0b;
+  --th-accent-wash: #f0f9dc;
+  --th-bubble: #0b2a5c;
+  --th-bubble-ink: #ffffff;
+  --th-disabled: #6a8fbf;
+  --th-stripe-a: #78b415;
+  --th-stripe-b: #ffffff;
+  --th-ball-bg: #ffffff;
+  --th-ball-ring: rgba(255, 255, 255, .9);
+  --th-ball-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M20 7h24l-7 27H27z' fill='rgb(11,42,92)'/%3E%3Cpath d='M26 7l3.5 27M32 7v27M38 7l-3.5 27' stroke='white' stroke-width='1.8' fill='none'/%3E%3Ccircle cx='32' cy='46' r='10' fill='rgb(11,42,92)'/%3E%3C/svg%3E");
+  --th-mini-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M20 7h24l-7 27H27z' fill='white'/%3E%3Cpath d='M26 7l3.5 27M32 7v27M38 7l-3.5 27' stroke='rgb(11,42,92)' stroke-width='1.8' fill='none'/%3E%3Ccircle cx='32' cy='46' r='10' fill='white'/%3E%3C/svg%3E");
+  --sport-color: var(--th-accent);
+  --sport-wash: var(--th-accent-wash);
+}
+#arenaScreen[data-sport='tennis'] {
+  --th-accent: #80c312;
+  --th-accent-deep: #62a008;
+  --th-accent-wash: #f0f9dc;
+  --th-bubble: #0b2a5c;
+  --th-bubble-ink: #ffffff;
+  --th-disabled: #7ba3c9;
+  --th-stripe-a: #80c312;
+  --th-stripe-b: #ffffff;
+  --th-ball-bg: #0a2a5e;
+  --th-ball-ring: rgba(255, 255, 255, .85);
+  --th-ball-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='white' stroke-width='3' stroke-linecap='round'%3E%3Cellipse cx='21' cy='20' rx='10' ry='13' transform='rotate(-40 21 20)'/%3E%3Cellipse cx='43' cy='20' rx='10' ry='13' transform='rotate(40 43 20)'/%3E%3Cpath d='M29 30L47 56M35 30L17 56'/%3E%3C/g%3E%3C/svg%3E");
+  --th-mini-icon: var(--th-ball-icon);
+  --sport-color: var(--th-accent);
+  --sport-wash: var(--th-accent-wash);
+}
+#arenaScreen[data-sport='tenismeja'] {
+  --th-accent: #ee0a3f;
+  --th-accent-deep: #c8062f;
+  --th-accent-wash: #fff0f3;
+  --th-bubble: #ee0a3f;
+  --th-bubble-ink: #ffffff;
+  --th-disabled: #8da2cb;
+  --th-stripe-a: #ee0a3f;
+  --th-stripe-b: #ffffff;
+  --th-ball-bg: #0a2a5e;
+  --th-ball-ring: rgba(255, 255, 255, .85);
+  --th-ball-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='27' cy='25' rx='17' ry='17' fill='white'/%3E%3Crect x='34' y='38' width='9' height='22' rx='4' transform='rotate(-38 38 49)' fill='white'/%3E%3Ccircle cx='49' cy='15' r='7' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E");
+  --th-mini-icon: var(--th-ball-icon);
+  --sport-color: var(--th-accent);
+  --sport-wash: var(--th-accent-wash);
+}
+
+/* Shared (non-sport-specific) icons, defined once. */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) {
+  --th-navy: #0b2250;
+  --th-ico-users: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='8' r='3.5'/%3E%3Cpath d='M2.5 20c0-4 3-6 6.5-6s6.5 2 6.5 6'/%3E%3Ccircle cx='17' cy='9' r='2.5'/%3E%3Cpath d='M17 14c3 0 5 1.8 5 5'/%3E%3C/svg%3E");
+  --th-ico-trophy: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4h10v5a5 5 0 0 1-10 0z'/%3E%3Cpath d='M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 21h8M10 18h4'/%3E%3C/svg%3E");
+  --th-ico-pin: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgb(11,42,92)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z'/%3E%3Ccircle cx='12' cy='9.5' r='2.5'/%3E%3C/svg%3E");
+}
+
+/* ---------- Page background (photo per sport) ---------- */
+/* The body must be transparent: its own background would paint over the ::before photo (z-index -1). */
+body:not(.welcome-active):has(#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']):not([style*='none'])) {
+  background: transparent;
+}
+html:has(body:not(.welcome-active) #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']):not([style*='none'])) {
+  background: #07183a;
+}
+body:not(.welcome-active):has(#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']):not([style*='none']))::before {
+  inset: 0;
+  opacity: 1;
+  filter: none;
+  background-color: #07183a;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+body:not(.welcome-active):has(#arenaScreen[data-sport='badminton']:not([style*='none']))::before {
+  background-image: linear-gradient(180deg, rgba(4, 14, 40, .08), rgba(4, 14, 40, .42)), url('/arena-bg/badminton.jpg');
+}
+body:not(.welcome-active):has(#arenaScreen[data-sport='tennis']:not([style*='none']))::before {
+  background-image: linear-gradient(180deg, rgba(4, 14, 40, .06), rgba(4, 14, 40, .38)), url('/arena-bg/tennis.jpg');
+}
+body:not(.welcome-active):has(#arenaScreen[data-sport='tenismeja']:not([style*='none']))::before {
+  background-image: linear-gradient(180deg, rgba(4, 14, 40, .06), rgba(4, 14, 40, .4)), url('/arena-bg/tenismeja.jpg');
+}
+@media (max-width: 760px) {
+  body:not(.welcome-active):has(#arenaScreen[data-sport='badminton']:not([style*='none']))::before {
+    background-image: linear-gradient(180deg, rgba(4, 14, 40, .08), rgba(4, 14, 40, .45)), url('/arena-bg/badminton-sm.jpg');
+  }
+  body:not(.welcome-active):has(#arenaScreen[data-sport='tennis']:not([style*='none']))::before {
+    background-image: linear-gradient(180deg, rgba(4, 14, 40, .06), rgba(4, 14, 40, .4)), url('/arena-bg/tennis-sm.jpg');
+  }
+  body:not(.welcome-active):has(#arenaScreen[data-sport='tenismeja']:not([style*='none']))::before {
+    background-image: linear-gradient(180deg, rgba(4, 14, 40, .06), rgba(4, 14, 40, .42)), url('/arena-bg/tenismeja-sm.jpg');
+  }
+}
+
+/* The photo already carries the atmosphere: drop the faint court drawing and floating icons. */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja'])::before,
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .sport-deco {
+  display: none;
+}
+
+/* ---------- Layout: centered column like the reference screens ---------- */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) {
+  max-width: 1240px;
+}
+@media (min-width: 1024px) {
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .layout {
+    max-width: 1240px;
+    grid-template-columns: minmax(440px, 520px) minmax(0, 1fr);
+  }
+}
+
+/* ---------- Header ---------- */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) header {
+  border-bottom-color: rgba(255, 255, 255, .22);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .back-btn {
+  color: #1458d6;
+  background: rgba(255, 255, 255, .94);
+  border: 1px solid rgba(255, 255, 255, .8);
+  box-shadow: 0 10px 24px -12px rgba(0, 10, 40, .7);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .brand {
+  max-width: 740px;
+  background: linear-gradient(135deg, rgba(5, 16, 43, .93), rgba(9, 28, 68, .84));
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 22px;
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 22px 50px -22px rgba(0, 10, 40, .8), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+/* The banner PNG has a near-black plate; "lighten" lets the navy glass show through it. */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .brand-banner-sm {
+  mix-blend-mode: lighten;
+  border-radius: 0;
+}
+/* The banner is lime. Shift it to the table-tennis red (hue only; black and white stay as they are). */
+#arenaScreen[data-sport='tenismeja'] .brand-banner-sm {
+  filter: hue-rotate(262deg) saturate(1.15);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .arena-icon-frame {
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, .6);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .sport-chip {
+  color: #1458d6;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, .9);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tenismeja']) .round-badge {
+  color: #ffffff;
+  background: rgba(6, 20, 52, .72);
+  border: 1.5px solid var(--th-accent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--th-accent) 70%, transparent);
+}
+#arenaScreen[data-sport='tennis'] .round-badge {
+  color: var(--th-navy);
+  background: rgba(255, 255, 255, .94);
+  border: 1px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 10px 24px -12px rgba(0, 10, 40, .6);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .round-badge:has(.live-dot[style*='none'])::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 50%;
+  border: 2.5px solid var(--th-accent);
+  box-sizing: border-box;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .live-dot {
+  background: var(--th-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--th-accent) 28%, transparent);
+}
+
+/* ---------- Setup card (glass) ---------- */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .card {
+  background: rgba(255, 255, 255, .94);
+  border: 1px solid rgba(255, 255, 255, .75);
+  border-radius: 24px;
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  box-shadow: 0 26px 60px -30px rgba(0, 12, 48, .85);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-card-heading {
+  border-radius: 24px 24px 0 0;
+  background: rgba(222, 238, 253, .85);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-card-heading h2 {
+  background: var(--th-navy);
+  color: #fff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  padding: 8px 14px;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-card-heading h2::before {
+  content: '';
+  width: 15px;
+  height: 15px;
+  background: var(--th-mini-icon) center / contain no-repeat;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .sync-mode-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  white-space: nowrap;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--th-navy);
+  font-weight: 600;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .sync-mode-status::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  background: var(--th-ico-pin) center / contain no-repeat;
+}
+
+/* ---------- Stepper: numbered bubbles joined by a thin line ---------- */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0 0 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--arena-border);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  text-align: left;
+  color: var(--arena-quiet);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  line-height: 1.1;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item::after {
+  content: '';
+  flex: 1 1 6px;
+  width: 6px;
+  min-width: 4px;
+  height: 1px;
+  margin: 0 3px 0 2px;
+  background: rgba(70, 110, 180, .35);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item:last-child {
+  flex: 0 0 auto;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item:last-child::after {
+  display: none;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item span:first-child {
+  display: grid;
+  place-items: center;
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #d5e4fa;
+  color: #2d5aa8;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item span:last-child {
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item.is-active {
+  color: var(--th-navy);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item.is-active span:first-child {
+  background: var(--th-accent);
+  color: #fff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--th-accent) 26%, transparent);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item.is-done span:first-child {
+  background: color-mix(in srgb, var(--th-accent) 72%, #fff);
+  color: #fff;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item.is-done {
+  color: var(--th-navy);
+}
+@media (max-width: 639px) {
+  /* Phones: bubbles only, the current step keeps its label. */
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item {
+    font-size: 10px;
+  }
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item:not(.is-active) span:last-child {
+    display: none;
+  }
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item:not(:last-child) {
+    flex: 1 1 auto;
+  }
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-progress-item.is-active:not(:last-child) {
+    flex: 2 1 auto;
+  }
+}
+
+/* ---------- Step heading, fields ---------- */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .step-num {
+  background: var(--th-bubble);
+  color: var(--th-bubble-ink);
+  border-color: color-mix(in srgb, var(--th-bubble) 18%, #fff);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .step-title {
+  color: var(--th-navy);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) input:focus,
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) select:focus {
+  outline-color: var(--th-accent);
+  border-color: var(--th-accent);
+}
+
+/* ---------- Buttons ---------- */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--th-accent) 88%, #fff), var(--th-accent));
+  border: 0;
+  border-radius: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  text-shadow: 0 1px 2px rgba(0, 20, 30, .35);
+  box-shadow: 0 12px 22px -12px color-mix(in srgb, var(--th-accent) 85%, #000);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--th-accent), var(--th-accent-deep));
+  box-shadow: 0 14px 24px -12px color-mix(in srgb, var(--th-accent) 90%, #000);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) #registerPlayerBtn::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background: var(--th-ico-users) center / contain no-repeat;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-next::after {
+  content: '\2192';
+  font-size: 16px;
+  line-height: 1;
+}
+/* Nothing to continue with yet: look inactive (the click still explains why, via existing validation). */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .wizard-step[data-wizard-step='1']:has(#registeredPlayersList .empty-lb) .wizard-next {
+  background: var(--th-disabled);
+  box-shadow: none;
+  text-shadow: none;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .btn-secondary,
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .mode-btn {
+  border-radius: 12px;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .choice-card.active {
+  border-color: var(--th-accent);
+  background: var(--th-accent-wash);
+  box-shadow: inset 0 0 0 1px var(--th-accent);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .choice-card.active .choice-name {
+  color: var(--th-navy);
+}
+
+/* ---------- "Klasemen sementara" card: trophy, title, chevron ---------- */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard) {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 16px 20px;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard)::before {
+  content: '';
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--th-navy) var(--th-ico-trophy) center / 22px no-repeat;
+  box-shadow: 0 8px 18px -8px rgba(5, 20, 60, .8);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard)::after {
+  content: '\203A';
+  grid-column: 3;
+  grid-row: 1 / 3;
+  color: #4a6fa5;
+  font-size: 28px;
+  line-height: 1;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard) > h2 {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  color: var(--th-navy);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard) > #leaderboard {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard) .empty-lb {
+  padding: 0;
+  text-align: left;
+  font-size: 12px;
+}
+/* Once standings exist the table needs the full width. */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard table) {
+  display: block;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard table)::before,
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard table)::after {
+  display: none;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-col > .card:has(> #leaderboard table) > h2 {
+  margin-bottom: 12px;
+}
+
+/* ---------- Right panel: dark glass while the empty-state guide is showing ---------- */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) #mainCard:has(#emptyState:not([style*='none'])) {
+  position: relative;
+  background: linear-gradient(160deg, rgba(8, 30, 76, .84), rgba(5, 20, 56, .74));
+  border: 2px solid rgba(255, 255, 255, .88);
+  border-radius: 20px;
+  box-shadow: 0 0 0 1px rgba(120, 170, 255, .35), 0 0 34px -6px rgba(60, 130, 255, .45), 0 26px 60px -30px rgba(0, 12, 48, .9);
+}
+/* Corner stripes, top-right and bottom-left. */
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) #mainCard:has(#emptyState:not([style*='none']))::before,
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) #mainCard:has(#emptyState:not([style*='none']))::after {
+  content: '';
+  position: absolute;
+  width: 190px;
+  height: 120px;
+  pointer-events: none;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) #mainCard:has(#emptyState:not([style*='none']))::before {
+  top: 0;
+  right: 0;
+  background: linear-gradient(225deg, var(--th-stripe-a) 0 16%, var(--th-stripe-b) 16% 21%, transparent 21%);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) #mainCard:has(#emptyState:not([style*='none']))::after {
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(45deg, var(--th-stripe-a) 0 16%, var(--th-stripe-b) 16% 21%, transparent 21%);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .empty-state {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, .94);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .empty-state strong {
+  color: #fff;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .empty-state .ball-dot {
+  width: 88px;
+  height: 88px;
+  padding: 15px;
+  border-radius: 50%;
+  background-color: var(--th-ball-bg);
+  background-image: var(--th-ball-icon);
+  background-origin: content-box;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 2px solid var(--th-ball-ring);
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, .1), 0 14px 30px -10px rgba(0, 0, 0, .7);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .empty-guide span {
+  display: inline-flex;
+  align-items: center;
+  color: #fff;
+  background: rgba(8, 32, 82, .78);
+  border: 1px solid rgba(110, 165, 255, .75);
+  padding: 6px 14px 6px 7px;
+  font-size: 12px;
+  font-weight: 700;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .empty-guide b {
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  background: #1f6bff;
+  color: #fff;
+  font-size: 12px;
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .empty-guide span:first-child {
+  border-color: var(--th-accent);
+  box-shadow: 0 0 16px -4px color-mix(in srgb, var(--th-accent) 75%, transparent);
+}
+#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .empty-guide span:first-child b {
+  background: var(--th-accent);
+}
+
+/* ---------- Footer ----------
+   <footer> lives in .wrap next to the screens (not inside #arenaScreen), so it is scoped through body:has(). */
+body:has(#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']):not([style*='none'])) footer {
+  color: rgba(255, 255, 255, .82);
+  font-size: 11px;
+  text-shadow: 0 1px 8px rgba(0, 10, 40, .75);
+}
+body:has(#arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']):not([style*='none'])) footer .foot-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+body:has(#arenaScreen[data-sport='tennis']:not([style*='none'])) footer .foot-brand::before,
+body:has(#arenaScreen[data-sport='tennis']:not([style*='none'])) footer .foot-brand::after {
+  content: '';
+  width: 90px;
+  height: 1px;
+  background: rgba(255, 255, 255, .55);
+}
+/* Tenis has its own closing line; the original text lives in .foot-line so it can be swapped here. */
+body:has(#arenaScreen[data-sport='tennis']:not([style*='none'])) footer .foot-line {
+  font-size: 0;
+}
+body:has(#arenaScreen[data-sport='tennis']:not([style*='none'])) footer .foot-line::after {
+  content: '\2022  Turnamen bukan hanya tentang menang, tapi tentang bagaimana kita bermain bersama.  \2022';
+  font-size: 11px;
+}
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 639px) {
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .brand {
+    border-radius: 18px;
+  }
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .card {
+    border-radius: 20px;
+  }
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .setup-card-heading {
+    border-radius: 20px 20px 0 0;
+  }
+  body:has(#arenaScreen[data-sport='tennis']:not([style*='none'])) footer .foot-brand::before,
+  body:has(#arenaScreen[data-sport='tennis']:not([style*='none'])) footer .foot-brand::after {
+    width: 36px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #arenaScreen:is([data-sport='badminton'], [data-sport='tennis'], [data-sport='tenismeja']) .empty-state .ball-dot {
+    animation: none !important;
+  }
+}
