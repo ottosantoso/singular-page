@@ -1,0 +1,255 @@
+/* ==========================================================================
+   OTTO PLAY ARENA — redesign layar "Pilih Arena Kamu"
+   Cakupan: HANYA #welcomeScreen (menu pilih olahraga). Layar Arena, Riwayat,
+   dan seluruh script gameplay tidak disentuh.
+   Dimuat setelah arena-refinement.css & arena-sport-themes.css.
+   ========================================================================== */
+
+body.welcome-active #welcomeScreen {
+  --navy: #0e2250;
+  --navy-deep: #07162f;
+  --lime: #a6e22e;
+  --muted: #4c5f7f;
+  --font-head: 'Montserrat', 'Sora', system-ui, sans-serif;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(24px, 5.2vh, 46px) clamp(16px, 4vw, 40px) clamp(32px, 6vh, 58px);
+  overflow: hidden;
+  font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+  color: var(--navy);
+  background: #cfe6f7 url('/arena-bg/menu.jpg') center / cover no-repeat;
+}
+
+/* matikan dekorasi lama (grid garis & lingkaran) */
+body.welcome-active #welcomeScreen::before,
+body.welcome-active #welcomeScreen::after { content: none; display: none; }
+
+body.welcome-active #welcomeScreen .welcome-shell {
+  width: min(100%, 980px);
+  margin: 0 auto;
+}
+
+/* ---------- Topbar ---------- */
+body.welcome-active #welcomeScreen .welcome-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; margin: 0 0 clamp(14px, 3vh, 26px);
+}
+body.welcome-active #welcomeScreen .welcome-home-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 0; padding: 9px 16px;
+  border: 1px solid rgba(255, 255, 255, .7); border-radius: 999px;
+  background: rgba(255, 255, 255, .78);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px -8px rgba(20, 70, 140, .35);
+  color: #2563c9; font: 800 11px/1 var(--font-head); letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+body.welcome-active #welcomeScreen .welcome-home-link:hover { color: #1b4fa8; transform: translateX(-3px); box-shadow: 0 10px 24px -8px rgba(20, 70, 140, .45); }
+body.welcome-active #welcomeScreen .welcome-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px;
+  background: rgba(255, 255, 255, .78);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px -8px rgba(20, 70, 140, .3);
+  color: var(--navy); font: 800 10px/1 var(--font-head); letter-spacing: .08em; text-transform: uppercase;
+}
+body.welcome-active #welcomeScreen .welcome-kicker::before {
+  width: 8px; height: 8px; background: #8fd21b; box-shadow: 0 0 0 4px rgba(143, 210, 27, .28);
+}
+
+/* ---------- Head: judul + banner ---------- */
+body.welcome-active #welcomeScreen .welcome-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 468px);
+  align-items: center; gap: clamp(20px, 4vw, 44px);
+  margin: 0 0 clamp(18px, 3.4vh, 30px);
+}
+body.welcome-active #welcomeScreen .welcome-title {
+  margin: 0; max-width: none;
+  font: 900 clamp(34px, 4.6vw, 58px)/1.04 var(--font-head);
+  letter-spacing: -.01em; text-transform: uppercase; color: var(--navy);
+  text-shadow: 0 2px 18px rgba(255, 255, 255, .55);
+}
+body.welcome-active #welcomeScreen .welcome-title em { display: block; color: #8fd21b; font-style: normal; }
+body.welcome-active #welcomeScreen .welcome-rule {
+  display: block; width: 44px; height: 5px; margin: 14px 0 0; border-radius: 999px; background: #8fd21b;
+}
+body.welcome-active #welcomeScreen .welcome-copy {
+  margin: 14px 0 0; max-width: 400px;
+  color: var(--muted); font: 600 14px/1.65 'Manrope', sans-serif;
+}
+
+/* Banner navy */
+body.welcome-active #welcomeScreen .welcome-logo-wrap {
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: auto 1px minmax(0, 1fr); align-items: center; gap: 18px;
+  margin: 0; padding: 18px 96px 18px 18px; transform: none;
+  border: 1px solid rgba(143, 210, 27, .22); border-radius: 14px;
+  background: linear-gradient(120deg, #0a1d45 0%, #0d2a5e 60%, #0a2250 100%);
+  box-shadow: 0 22px 44px -22px rgba(7, 22, 47, .75);
+}
+body.welcome-active #welcomeScreen .welcome-logo-wrap::before { content: none; }
+body.welcome-active #welcomeScreen .welcome-badge {
+  width: 78px; height: 78px; display: block;
+  filter: drop-shadow(0 0 8px rgba(166, 226, 46, .55));
+}
+body.welcome-active #welcomeScreen .welcome-divider { width: 1px; height: 62px; background: rgba(255, 255, 255, .22); }
+body.welcome-active #welcomeScreen .welcome-banner-copy strong {
+  display: block; color: #fff; font: 900 clamp(17px, 2vw, 22px)/1.1 var(--font-head); letter-spacing: .01em; text-transform: uppercase;
+}
+body.welcome-active #welcomeScreen .welcome-banner-copy strong em { color: #b8f23d; font-style: normal; }
+body.welcome-active #welcomeScreen .welcome-banner-copy p {
+  margin: 7px 0 0; color: #cdd9f0; font: 600 11.5px/1.5 'Manrope', sans-serif;
+}
+body.welcome-active #welcomeScreen .welcome-ball { position: absolute; display: block; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .45)); }
+body.welcome-active #welcomeScreen .welcome-ball-1 { width: 38px; height: 38px; right: 14px; top: 14px; }
+body.welcome-active #welcomeScreen .welcome-ball-2 { width: 34px; height: 34px; right: 30px; bottom: 12px; }
+
+/* ---------- Grid kartu ---------- */
+body.welcome-active #welcomeScreen .menu-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: auto; gap: 16px;
+}
+body.welcome-active #welcomeScreen .menu-card,
+body.welcome-active #welcomeScreen .menu-card:nth-child(n) {
+  --sport-color: #8fd21b; --arrow-bg: #17331a; --arrow-fg: #b8f23d; --ico-from: #a3e035; --ico-to: #6fb90f;
+  grid-column: auto; grid-row: auto;
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px;
+  min-height: 156px; min-width: 0; padding: 22px 26px;
+  border: 1.5px solid rgba(255, 255, 255, .85); border-radius: 18px;
+  background: linear-gradient(100deg, rgba(255, 255, 255, .96) 0%, rgba(255, 255, 255, .92) 45%, color-mix(in srgb, var(--sport-color) 12%, rgba(255, 255, 255, .9)) 100%);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: 0 18px 38px -22px rgba(14, 50, 110, .55), 0 2px 0 rgba(255, 255, 255, .6) inset;
+  color: var(--navy); text-align: left; cursor: pointer; font-family: var(--font-head);
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+body.welcome-active #welcomeScreen .menu-card[data-sport="padel"]     { --sport-color: #8fd21b; --arrow-bg: #17331a; --arrow-fg: #b8f23d; --ico-from: #a3e035; --ico-to: #6fb90f; }
+body.welcome-active #welcomeScreen .menu-card[data-sport="badminton"] { --sport-color: #3b82f6; --arrow-bg: #3b82f6; --arrow-fg: #fff;    --ico-from: #5b9bff; --ico-to: #2f6fe0; }
+body.welcome-active #welcomeScreen .menu-card[data-sport="tennis"]    { --sport-color: #f2b32a; --arrow-bg: #f5b422; --arrow-fg: #172033; --ico-from: #f8cb4f; --ico-to: #eba10f; }
+body.welcome-active #welcomeScreen .menu-card[data-sport="tenismeja"] { --sport-color: #f0566b; --arrow-bg: #ef5a6f; --arrow-fg: #fff;    --ico-from: #ff7a8c; --ico-to: #e8445b; }
+
+/* foto olahraga di sisi kanan, memudar ke warna kartu */
+body.welcome-active #welcomeScreen .menu-card::before,
+body.welcome-active #welcomeScreen .menu-card:hover::before,
+body.welcome-active #welcomeScreen .menu-card:focus-visible::before {
+  content: ""; position: absolute; inset: 0 0 0 auto; width: 58%;
+  opacity: 1; transform: none; z-index: 0; pointer-events: none;
+  background-size: cover; background-repeat: no-repeat; background-position: 40% 50%;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .55) 28%, #000 62%);
+          mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .55) 28%, #000 62%);
+  transition: background-size .5s ease, filter .3s ease;
+}
+body.welcome-active #welcomeScreen .menu-card[data-sport="padel"]::before     { background-image: url('/menu-photos/padel.jpg'); }
+body.welcome-active #welcomeScreen .menu-card[data-sport="badminton"]::before { background-image: url('/menu-photos/badminton.jpg'); }
+body.welcome-active #welcomeScreen .menu-card[data-sport="tennis"]::before    { background-image: url('/menu-photos/tennis.jpg'); }
+body.welcome-active #welcomeScreen .menu-card[data-sport="tenismeja"]::before { background-image: url('/menu-photos/tenismeja.jpg'); }
+body.welcome-active #welcomeScreen .menu-card:hover::before { background-size: 112%; }
+
+/* tombol panah bulat */
+body.welcome-active #welcomeScreen .menu-card::after {
+  content: "→"; position: absolute; right: 20px; bottom: 18px; z-index: 2;
+  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--arrow-bg); color: var(--arrow-fg);
+  font: 800 19px/1 'Manrope', sans-serif; opacity: 1; transform: none;
+  box-shadow: 0 8px 16px -6px color-mix(in srgb, var(--arrow-bg) 70%, #000);
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+body.welcome-active #welcomeScreen .menu-card:hover,
+body.welcome-active #welcomeScreen .menu-card:focus-visible {
+  transform: translateY(-5px); border-color: var(--sport-color); outline: none;
+  box-shadow: 0 26px 44px -22px color-mix(in srgb, var(--sport-color) 70%, #0e2250), 0 0 0 3px color-mix(in srgb, var(--sport-color) 28%, transparent);
+}
+body.welcome-active #welcomeScreen .menu-card:hover::after,
+body.welcome-active #welcomeScreen .menu-card:focus-visible::after { background: var(--arrow-bg); color: var(--arrow-fg); transform: translateX(4px); }
+body.welcome-active #welcomeScreen .menu-card:active { transform: translateY(-1px) scale(.985); }
+
+/* ikon bulat berwarna */
+body.welcome-active #welcomeScreen .menu-icon,
+body.welcome-active #welcomeScreen .menu-card:hover .menu-icon {
+  position: relative; z-index: 1; flex: 0 0 auto;
+  display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, var(--ico-from), var(--ico-to));
+  color: #fff;
+  box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--ico-to) 90%, #000), inset 0 2px 0 rgba(255, 255, 255, .35);
+  transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+body.welcome-active #welcomeScreen .menu-card:hover .menu-icon { transform: translateY(-2px) rotate(-8deg) scale(1.07); }
+body.welcome-active #welcomeScreen .menu-icon svg { width: 38px; height: 38px; display: block; }
+body.welcome-active #welcomeScreen .menu-card[data-sport="tennis"] .menu-icon { color: #fff; }
+
+/* teks kartu */
+body.welcome-active #welcomeScreen .menu-copy { position: relative; z-index: 1; display: block; padding: 0; }
+body.welcome-active #welcomeScreen .menu-label {
+  display: block; color: var(--navy); font: 800 19px/1.15 var(--font-head); letter-spacing: .005em; text-transform: uppercase;
+}
+body.welcome-active #welcomeScreen .menu-sub {
+  display: block; margin-top: 6px; color: #465a7c; font: 600 13px/1.35 'Manrope', sans-serif; text-transform: none;
+}
+
+/* kartu riwayat (lebar penuh) */
+body.welcome-active #welcomeScreen .menu-card.menu-card-history,
+body.welcome-active #welcomeScreen .menu-card.menu-card-history:nth-child(n) {
+  --sport-color: #2f7de1; --arrow-bg: #3b82f6; --arrow-fg: #fff; --ico-from: #2f86e8; --ico-to: #1458b8;
+  grid-column: 1 / -1 !important;
+  flex-direction: row; align-items: center; justify-content: flex-start; gap: 20px;
+  min-height: 112px; padding: 20px 26px;
+  background: linear-gradient(100deg, rgba(255, 255, 255, .96) 0%, rgba(240, 247, 255, .9) 55%, rgba(206, 227, 250, .85) 100%);
+}
+body.welcome-active #welcomeScreen .menu-card-history::before,
+body.welcome-active #welcomeScreen .menu-card-history:hover::before,
+body.welcome-active #welcomeScreen .menu-card-history:focus-visible::before {
+  width: 36%; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 160'%3E%3Cg fill='none' stroke='%233b82f6' stroke-opacity='.32' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M118 24h64v38c0 24-14 40-32 40s-32-16-32-40V24z'/%3E%3Cpath d='M118 34H96c0 22 8 34 24 38M182 34h22c0 22-8 34-24 38'/%3E%3Cpath d='M150 102v22M126 136h48M134 124h32v12h-32z'/%3E%3Cpath d='M84 54c-14 12-18 38-4 58M216 54c14 12 18 38 4 58M74 66c-8 10-8 28 2 42M226 66c8 10 8 28-2 42'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: contain; background-position: 70% 50%;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 45%); mask-image: linear-gradient(90deg, transparent, #000 45%);
+}
+body.welcome-active #welcomeScreen .menu-card-history::after { top: 50%; bottom: auto; transform: translateY(-50%); }
+body.welcome-active #welcomeScreen .menu-card-history:hover::after { transform: translateY(-50%) translateX(4px); }
+body.welcome-active #welcomeScreen .menu-card-history .menu-icon { width: 58px; height: 58px; flex-basis: 58px; color: #fff; }
+body.welcome-active #welcomeScreen .menu-card-history .menu-label { font-size: 17px; }
+
+/* ---------- Responsif ---------- */
+@media (max-width: 860px) {
+  body.welcome-active #welcomeScreen .welcome-head { grid-template-columns: 1fr; gap: 20px; }
+  body.welcome-active #welcomeScreen .welcome-logo-wrap { max-width: 520px; }
+}
+@media (max-width: 600px) {
+  body.welcome-active #welcomeScreen .menu-grid { grid-template-columns: 1fr; gap: 12px; }
+  body.welcome-active #welcomeScreen .menu-card,
+  body.welcome-active #welcomeScreen .menu-card:nth-child(n) {
+    flex-direction: row; align-items: center; justify-content: flex-start; gap: 16px;
+    min-height: 104px; padding: 16px 18px;
+  }
+  body.welcome-active #welcomeScreen .menu-card::before,
+  body.welcome-active #welcomeScreen .menu-card:hover::before {
+    width: 40%;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 12%, rgba(0, 0, 0, .7) 45%, #000 75%);
+            mask-image: linear-gradient(90deg, transparent 0%, transparent 12%, rgba(0, 0, 0, .7) 45%, #000 75%);
+  }
+  body.welcome-active #welcomeScreen .menu-card-history::before,
+  body.welcome-active #welcomeScreen .menu-card-history:hover::before { width: 26%; }
+  body.welcome-active #welcomeScreen .menu-card::after { right: 14px; bottom: 14px; width: 34px; height: 34px; font-size: 17px; }
+  body.welcome-active #welcomeScreen .menu-card.menu-card-history,
+  body.welcome-active #welcomeScreen .menu-card.menu-card-history:nth-child(n) { min-height: 92px; }
+  body.welcome-active #welcomeScreen .menu-card-history::after { bottom: auto; }
+  body.welcome-active #welcomeScreen .menu-label { font-size: 16px; }
+  body.welcome-active #welcomeScreen .menu-sub { font-size: 12px; }
+  body.welcome-active #welcomeScreen .welcome-logo-wrap { padding-right: 70px; gap: 12px; }
+  body.welcome-active #welcomeScreen .welcome-badge { width: 60px; height: 60px; }
+  body.welcome-active #welcomeScreen .welcome-ball-1 { width: 30px; height: 30px; right: 10px; top: 10px; }
+  body.welcome-active #welcomeScreen .welcome-ball-2 { width: 26px; height: 26px; right: 22px; bottom: 10px; }
+}
+@media (max-width: 380px) {
+  body.welcome-active #welcomeScreen .welcome-banner-copy p { font-size: 10.5px; }
+  body.welcome-active #welcomeScreen .menu-icon { width: 48px; height: 48px; }
+  body.welcome-active #welcomeScreen .menu-icon svg { width: 32px; height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.welcome-active #welcomeScreen .menu-card,
+  body.welcome-active #welcomeScreen .menu-card::before,
+  body.welcome-active #welcomeScreen .menu-card::after,
+  body.welcome-active #welcomeScreen .menu-icon { transition: none !important; }
+}

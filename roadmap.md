@@ -11,3 +11,6 @@
 # Arena sport themes
 - [x] Padel, Badminton, Tenis, and Tenis Meja Arena themes with per-sport photo backgrounds, using scoped CSS only (`public/arena-sport-themes.css`); Padel and gameplay scripts untouched.
 - [x] Verify 390/1024/1440/1920px layouts and a full local flow (add players, Kocok & Mulai) in Chromium.
+
+# Redesign layar "Pilih Arena Kamu"
+- [x] Layar menu pilih olahraga (`#welcomeScreen` di `public/arena.html`) didesain ulang sesuai referensi: background foto lapangan, banner navy, kartu kaca dengan foto + ikon bulat berwarna, kartu Riwayat full-width. CSS terisolasi di `public/arena-menu-redesign.css`; script gameplay, layar Arena, dan Riwayat tidak diubah.
