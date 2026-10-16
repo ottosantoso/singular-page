@@ -1,0 +1,3 @@
+﻿# Keep generated route metadata stable across Windows branch switches.
+src/routeTree.gen.ts text eol=lf
+scripts/*.ps1 text eol=lf
