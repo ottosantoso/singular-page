@@ -19,6 +19,17 @@ function AuthCallbackPage() {
   useEffect(() => {
     let active = true;
     async function finishVerification() {
+      const query = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const providerError = query.get("error_description") || hash.get("error_description") || query.get("error") || hash.get("error");
+      if (providerError) {
+        setError(
+          providerError.toLowerCase().includes("expired") || providerError.toLowerCase().includes("invalid")
+            ? "Link verifikasi sudah kedaluwarsa atau sudah pernah digunakan. Daftar ulang untuk mendapatkan link baru."
+            : providerError.replace(/\+/g, " "),
+        );
+        return;
+      }
       const existing = await supabase.auth.getSession();
       let verificationError = existing.error;
       let hasSession = Boolean(existing.data.session);

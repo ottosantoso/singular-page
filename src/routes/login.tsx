@@ -29,6 +29,18 @@ function LoginPage() {
       : "/workspace";
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const authError = params.get("error_description") || params.get("error");
+    if (authError) {
+      const normalized = authError.toLowerCase();
+      setMode("login");
+      setError(
+        normalized.includes("expired") || normalized.includes("invalid")
+          ? "Link verifikasi sudah kedaluwarsa atau sudah pernah digunakan. Daftar ulang untuk mendapatkan link baru."
+          : authError.replace(/\+/g, " "),
+      );
+      window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
+    }
     if (!auth.loading && auth.session) navigate({ to: "/workspace" });
   }, [auth.loading, auth.session, navigate]);
 
@@ -60,7 +72,7 @@ function LoginPage() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth-callback?next=/workspace`,
+          emailRedirectTo: `${(import.meta.env.VITE_PUBLIC_APP_URL?.trim() || window.location.origin).replace(/\/$/, "")}/auth-callback?next=/workspace`,
           data: {
             username: username.trim().toLowerCase(),
             display_name: displayName.trim() || username.trim(),
@@ -74,7 +86,11 @@ function LoginPage() {
             : signUpError.message,
         );
       else if (data.session) window.location.assign(returnTo);
-      else setMessage("Akun berhasil dibuat. Cek email lalu klik link verifikasi sebelum masuk.");
+      else {
+        setMode("login");
+        setPassword("");
+        setMessage("Akun berhasil dibuat. Cek email, klik link verifikasi, lalu masuk dengan username dan password tadi.");
+      }
     } else {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: loginIdToEmail(username),
