@@ -73,8 +73,8 @@ function Home() {
                 <Button asChild><a href="/arena.html">Buka Arena <ArrowRight /></a></Button>
               </DialogContent>
             </Dialog>
-            <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button>
-             {/* <Dialog>
+            {/* <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button> */}
+             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" className="home-button opacity-60">
                   <ShieldCheck />Admin Platform
@@ -87,7 +87,7 @@ function Home() {
                 </DialogDescription>
                 <Button variant="outline" className="w-full mt-4">Tutup</Button>
               </DialogContent>
-            </Dialog> */}
+            </Dialog>
           </div>
         </div>
       </nav>
