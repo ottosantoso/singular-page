@@ -43,7 +43,7 @@ function AdminPage() {
 
   return (
     <main className="arena-home court-lines min-h-screen">
-      <div className="relative z-10 mx-auto w-full max-w-5xl px-4 pb-20 pt-6 sm:px-6 sm:pt-10">
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-20 pt-6 sm:px-6 sm:pt-10">
         <nav className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <Link
             to="/"

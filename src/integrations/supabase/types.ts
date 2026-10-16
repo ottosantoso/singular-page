@@ -819,7 +819,8 @@ export type Database = {
       admin_list_games: {
         Args: { p_limit?: number; p_search?: string; p_status?: string }
         Returns: Json
-      }      platform_list_users: {
+      }
+      platform_list_users: {
         Args: Record<PropertyKey, never>
         Returns: {
           user_id: string
