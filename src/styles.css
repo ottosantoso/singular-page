@@ -299,3 +299,110 @@
   animation: arena-float 6s ease-in-out infinite;
 }
 
+
+/* Login reference layout: intentionally scoped so other OTTOPLAY surfaces stay unchanged. */
+.login-page {
+  --login-ink: #102b46;
+  --login-lime: #52c52f;
+  --login-muted: #63809b;
+  position: relative;
+  overflow: hidden;
+  background: #dff4fc url('/icons/sports-hero.jpg') center / cover no-repeat;
+  color: var(--login-ink);
+  font-family: "Inter", sans-serif;
+}
+.login-page__wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(232, 249, 255, .92) 0%, rgba(238, 251, 255, .76) 43%, rgba(226, 246, 252, .36) 72%, rgba(214, 239, 249, .2) 100%);
+}
+.login-page__layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 540px);
+  gap: clamp(2rem, 6vw, 7rem);
+  align-items: center;
+  min-height: 100vh;
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 5rem) clamp(1.25rem, 6vw, 6rem);
+}
+.login-page__intro { max-width: 650px; padding: 1rem 0; }
+.login-page__brand { display: inline-flex; align-items: center; gap: 1rem; color: var(--login-ink); text-decoration: none; }
+.login-page__brand-mark { display: grid; place-items: center; width: 4rem; height: 4rem; border-radius: 999px; background: var(--login-lime); color: white; font: 800 1.1rem/1 "Chakra Petch", sans-serif; box-shadow: 0 10px 22px rgba(69, 169, 44, .25); }
+.login-page__brand strong { display: block; font: 800 clamp(1.3rem, 2vw, 2rem)/1 "Chakra Petch", sans-serif; letter-spacing: .02em; }
+.login-page__brand strong em { color: var(--login-lime); font-style: normal; }
+.login-page__brand small { display: block; margin-top: .45rem; color: #3e6688; font-size: .8rem; }
+.login-page__intro-copy { margin-top: clamp(3rem, 9vh, 7rem); }
+.login-page__eyebrow, .login-page__card-kicker { margin: 0; color: var(--login-lime); font: 800 .72rem/1 "Chakra Petch", sans-serif; letter-spacing: .24em; }
+.login-page__intro-copy h2 { margin: 1rem 0 1rem; font: 800 clamp(2.4rem, 5vw, 5rem)/.94 "Chakra Petch", sans-serif; letter-spacing: -.035em; }
+.login-page__intro-copy h2 span { color: var(--login-lime); }
+.login-page__intro-copy > p:last-child { max-width: 520px; color: #4b7190; font-size: clamp(.95rem, 1.4vw, 1.18rem); line-height: 1.6; }
+.login-page__sports { display: grid; grid-template-columns: repeat(4, minmax(80px, 1fr)); gap: 1rem; max-width: 560px; margin-top: 2.5rem; }
+.login-page__sport { display: flex; flex-direction: column; align-items: center; text-align: center; color: var(--login-ink); }
+.login-page__sport > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; margin-bottom: .55rem; border-radius: 50%; background: white; box-shadow: 0 8px 18px rgba(24, 88, 117, .12); }
+.login-page__sport svg { width: 1.65rem; height: 1.65rem; }
+.login-page__sport strong { font: 800 .9rem/1.1 "Chakra Petch", sans-serif; }
+.login-page__sport small { margin-top: .3rem; color: #62819a; font-size: .62rem; line-height: 1.2; }
+.login-page__sport--lime > span { color: #65bb35; background: #eaffdc; }
+.login-page__sport--blue > span { color: #2786dc; background: #dff2ff; }
+.login-page__sport--violet > span { color: #a455e8; background: #f0ddff; }
+.login-page__sport--gold > span { color: #91b820; background: #f2facb; }
+.login-page__tagline { margin: 2rem 0 0 5rem; color: var(--login-lime); font: italic 2rem/1.1 "Chakra Petch", sans-serif; transform: rotate(-5deg); }
+.login-page__card { width: 100%; border: 1px solid rgba(255,255,255,.75); border-radius: 28px; background: rgba(255,255,255,.88); padding: clamp(1.4rem, 3vw, 2.5rem); box-shadow: 0 26px 70px rgba(39, 99, 124, .2); backdrop-filter: blur(16px); }
+.login-page__card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.login-page__card-head h1 { margin: .6rem 0 .55rem; font: 800 clamp(1.7rem, 3vw, 2.4rem)/1 "Chakra Petch", sans-serif; letter-spacing: -.025em; }
+.login-page__card-head h1 span { color: var(--login-lime); }
+.login-page__card-head p:last-child { max-width: 360px; margin: 0; color: var(--login-muted); font-size: .82rem; line-height: 1.55; }
+.login-page__card-icon { display: grid; flex: 0 0 auto; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: 1rem; background: var(--login-ink); color: white; }
+.login-page__card-icon svg { width: 1.35rem; height: 1.35rem; }
+.login-page__tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem; margin-top: 1.5rem; padding: .25rem; border-radius: 999px; background: #eaf3f8; }
+.login-page__tabs button { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 2.75rem; border: 0; border-radius: 999px; background: transparent; color: #4d6c87; font: 800 .76rem/1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; transition: .2s ease; }
+.login-page__tabs button svg { width: 1rem; height: 1rem; }
+.login-page__tabs button.is-active { background: var(--login-lime); color: white; box-shadow: 0 8px 16px rgba(76, 188, 45, .25); }
+.login-page__form { margin-top: 1.5rem; }
+.login-page__form > label { display: block; margin-top: 1rem; }
+.login-page__form > label:first-child { margin-top: 0; }
+.login-page__form label > span { color: #42627e; font: 800 .68rem/1 "Chakra Petch", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.login-page__form .auth-input { width: 100%; min-height: 2.9rem; margin-top: .5rem; border: 1px solid #d9e8ef; border-radius: 13px; background: rgba(255,255,255,.7); padding: .75rem 1rem; color: var(--login-ink); outline: none; box-shadow: 0 5px 13px rgba(50, 108, 132, .05); }
+.login-page__form .auth-input:focus { border-color: var(--login-lime); box-shadow: 0 0 0 3px rgba(82, 197, 47, .14); }
+.login-page__input-wrap { position: relative; display: flex; align-items: center; }
+.login-page__input-wrap > svg, .login-page__input-icon { position: absolute; left: .9rem; z-index: 1; width: 1rem; height: 1rem; color: #4c7694; }
+.login-page__input-wrap .auth-input { padding-left: 2.55rem; }
+.login-page__input-wrap .login-page__eye { position: absolute; right: .25rem; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: 0; background: transparent; color: #55758e; cursor: pointer; }
+.login-page__eye svg { width: 1rem; height: 1rem; }
+.login-page__options { display: flex; justify-content: space-between; gap: 1rem; margin-top: .75rem; color: #4a6c86; font-size: .72rem; }
+.login-page__options label { display: inline-flex; align-items: center; gap: .35rem; }
+.login-page__options input { accent-color: var(--login-lime); }
+.login-page__options button { border: 0; background: transparent; color: #36a928; font-weight: 800; cursor: pointer; }
+.login-page__message { margin-top: 1rem; border-radius: 12px; padding: .75rem; font-size: .78rem; line-height: 1.4; }
+.login-page__message.is-success { border: 1px solid #bfe6b7; background: #effbea; color: #277621; }
+.login-page__message.is-error { border: 1px solid #f3b7b7; background: #fff1f1; color: #a22a2a; }
+.login-page__submit { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; width: 100%; min-height: 3rem; margin-top: 1.25rem; border: 0; border-radius: 999px; background: linear-gradient(135deg, #65d33b, #43b62d); color: white; font: 800 .9rem/1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .12em; cursor: pointer; box-shadow: 0 12px 24px rgba(67, 182, 45, .24); transition: .2s ease; }
+.login-page__submit:hover { transform: translateY(-1px); box-shadow: 0 15px 28px rgba(67, 182, 45, .32); }
+.login-page__submit:disabled { cursor: wait; opacity: .65; }
+.login-page__submit svg { width: 1.1rem; height: 1.1rem; }
+.login-page__legal { margin: 1.3rem auto 0; max-width: 340px; color: #7a96aa; font-size: .64rem; line-height: 1.6; text-align: center; }
+.login-page__legal span { color: #35a92a; font-weight: 700; }
+@media (max-width: 980px) {
+  .login-page { background-position: 68% center; }
+  .login-page__layout { grid-template-columns: minmax(0, 1fr) minmax(360px, 460px); gap: 2rem; padding-inline: 2rem; }
+  .login-page__intro-copy { margin-top: 4rem; }
+  .login-page__intro-copy h2 { font-size: clamp(2.2rem, 5vw, 3.6rem); }
+}
+@media (max-width: 760px) {
+  .login-page { background-position: 72% center; }
+  .login-page__wash { background: linear-gradient(180deg, rgba(232, 249, 255, .88), rgba(237, 251, 255, .96) 55%, rgba(226, 246, 252, .96)); }
+  .login-page__layout { display: block; min-height: auto; padding: 1.25rem; }
+  .login-page__intro { padding: .5rem 0 2rem; }
+  .login-page__intro-copy { margin-top: 3rem; }
+  .login-page__intro-copy h2 { font-size: clamp(2.65rem, 12vw, 4.3rem); }
+  .login-page__sports { gap: .45rem; margin-top: 2rem; }
+  .login-page__sport > span { width: 2.8rem; height: 2.8rem; }
+  .login-page__sport svg { width: 1.25rem; height: 1.25rem; }
+  .login-page__sport strong { font-size: .72rem; }
+  .login-page__sport small { font-size: .52rem; }
+  .login-page__tagline { margin-left: 2rem; }
+  .login-page__card { border-radius: 22px; }
+}

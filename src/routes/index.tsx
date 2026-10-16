@@ -73,7 +73,23 @@ function Home() {
                 <Button asChild><a href="/arena.html">Buka Arena <ArrowRight /></a></Button>
               </DialogContent>
             </Dialog>
-            <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button>
+            {/* <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button> */}
+            <Dialog>
+              <DialogTrigger asChild>
+                {/* Menambahkan opacity-60 agar terlihat redup/disabled, tapi tetap bisa diklik */}
+                <Button variant="outline" className="home-button opacity-60">
+                  <ShieldCheck />Admin Platform
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogTitle>Under Maintenance</DialogTitle>
+                <DialogDescription>
+                  Fitur Admin Platform sedang dalam masa pengembangan. Silakan kembali lagi nanti setelah pembaruan selesai.
+                </DialogDescription>
+                {/* Tombol tutup dialog opsional, Anda bisa menambahkan jika perlu */}
+                <Button variant="outline" className="w-full mt-4">Tutup</Button>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </nav>

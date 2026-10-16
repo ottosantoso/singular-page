@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Eye, EyeOff, Loader2, LogIn, UserPlus } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, LogIn, UserPlus, UserRound, Trophy, Table2, CircleDot, Goal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { loginIdToEmail, useAuth } from "@/lib/auth";
 
@@ -25,8 +25,8 @@ function LoginPage() {
   const [error, setError] = useState("");
   const returnTo =
     typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("returnTo") || "/workspace"
-      : "/workspace";
+      ? new URLSearchParams(window.location.search).get("returnTo") || ""
+      : "";
   const verified =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("verified") === "1";
 
@@ -114,129 +114,67 @@ function LoginPage() {
   }
 
   return (
-    <main className="arena-home court-lines flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="relative z-10 w-full max-w-md">
-        <Link
-          to="/"
-          className="mb-5 inline-flex items-center gap-2 font-display text-xs font-bold uppercase tracking-wider text-arena-dim transition hover:text-arena-ink"
-        >
-          <ArrowLeft className="size-4" /> Beranda
-        </Link>
-        <div className="rounded-[28px] border border-arena-ink/10 bg-white/90 p-6 shadow-[0_20px_50px_-28px] shadow-arena-ink/60 backdrop-blur sm:p-8">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-arena-lime">
-                OTTOPLAY WORKSPACE
-              </p>
-              <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">
-                {mode === "login" ? "Masuk ke arena." : "Buat akun baru."}
-              </h1>
-              <p className="mt-2 text-sm leading-6 text-arena-dim">
-                {mode === "login"
-                  ? "Kelola club, event, member, dan pertandingan live."
-                  : "Mulai workspace untuk organisasi olahraga kamu."}
-              </p>
-            </div>
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-arena-ink text-white">
-              {mode === "login" ? <LogIn className="size-5" /> : <UserPlus className="size-5" />}
+    <main className="login-page min-h-screen">
+      <div className="login-page__wash" aria-hidden="true" />
+      <div className="login-page__layout">
+        <section className="login-page__intro">
+          <Link to="/" className="login-page__brand" aria-label="Kembali ke OTTOPLAY ARENA">
+            <span className="login-page__brand-mark">OP</span>
+            <span>
+              <strong>OTTO <em>PLAY</em> ARENA</strong>
+              <small>Mainkan strategi, biarkan OTTO beraksi.</small>
             </span>
+          </Link>
+          <div className="login-page__intro-copy">
+            <p className="login-page__eyebrow">OTTOPLAY ARENA</p>
+            <h2>Lebih dari sekadar <span>bermain.</span><br />Ini tentang strategi!</h2>
+            <p>Bergabung dengan komunitas raket, tingkatkan skill, dan rasakan keseruan pertandingan dengan sistem live scoring real-time.</p>
           </div>
-          <div className="mt-7 grid grid-cols-2 rounded-full bg-slate-100 p-1">
-            <button
-              onClick={() => switchMode("login")}
-              className={`rounded-full px-4 py-2.5 text-xs font-bold uppercase tracking-wider ${mode === "login" ? "bg-white text-arena-ink shadow-sm" : "text-arena-dim"}`}
-            >
-              Masuk
-            </button>
-            <button
-              onClick={() => switchMode("register")}
-              className={`rounded-full px-4 py-2.5 text-xs font-bold uppercase tracking-wider ${mode === "register" ? "bg-white text-arena-ink shadow-sm" : "text-arena-dim"}`}
-            >
-              Registrasi
-            </button>
+          <div className="login-page__sports" aria-label="Cabang olahraga">
+            <SportBadge icon={<Trophy />} label="Padel" detail="Strategi & kerja sama" tone="lime" />
+            <SportBadge icon={<Table2 />} label="Tenis Meja" detail="Refleks & kecepatan" tone="blue" />
+            <SportBadge icon={<CircleDot />} label="Badminton" detail="Ketangkasan & fokus" tone="violet" />
+            <SportBadge icon={<Goal />} label="Tenis" detail="Presisi & konsistensi" tone="gold" />
           </div>
-          <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
-            <Field label="Username">
-              <input
-                required
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="mis. otto_admin"
-                autoComplete="username"
-                autoCapitalize="none"
-                className="auth-input"
-              />
+          <p className="login-page__tagline">Let's Play!</p>
+        </section>
+
+        <section className="login-page__card" aria-label="Form autentikasi">
+          <div className="login-page__card-head">
+            <div>
+              <p className="login-page__card-kicker">OTTOPLAY WORKSPACE</p>
+              <h1>{mode === "login" ? <>Masuk atau <span>Registrasi</span></> : <>Buat akun <span>OTTOPLAY</span></>}</h1>
+              <p>{mode === "login" ? "Bergabung dengan OTTO Play Arena untuk menikmati pengalaman bermain yang lebih seru." : "Daftar untuk menyimpan profil dan riwayat pertandinganmu."}</p>
+            </div>
+            <span className="login-page__card-icon">{mode === "login" ? <UserRound /> : <UserPlus />}</span>
+          </div>
+          <div className="login-page__tabs" role="tablist" aria-label="Mode autentikasi">
+            <button type="button" role="tab" aria-selected={mode === "login"} onClick={() => switchMode("login")} className={mode === "login" ? "is-active" : ""}><LogIn /> Masuk</button>
+            <button type="button" role="tab" aria-selected={mode === "register"} onClick={() => switchMode("register")} className={mode === "register" ? "is-active" : ""}><UserPlus /> Registrasi</button>
+          </div>
+          <form onSubmit={onSubmit} className="login-page__form" noValidate>
+            {mode === "register" && <Field label="Nama tampilan"><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Nama kamu" className="auth-input" /></Field>}
+            <Field label={mode === "register" ? "Username" : "Email / Username"}>
+              <div className="login-page__input-wrap"><UserRound /><input required value={username} onChange={(event) => setUsername(event.target.value)} placeholder={mode === "register" ? "mis. otto_player" : "Masukkan email atau username"} autoComplete="username" autoCapitalize="none" className="auth-input" /></div>
             </Field>
-            {mode === "register" && (
-              <>
-                <Field label="Nama tampilan">
-                  <input
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    placeholder="Nama kamu"
-                    className="auth-input"
-                  />
-                </Field>
-                <Field label="Email login & verifikasi" hint="Wajib untuk akun baru">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="kamu@club.com"
-                    required
-                    autoComplete="email"
-                    className="auth-input"
-                  />
-                </Field>
-              </>
-            )}
+            {mode === "register" && <Field label="Email verifikasi" hint="Wajib"><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="kamu@club.com" required autoComplete="email" className="auth-input" /></Field>}
             <Field label="Password">
-              <div className="relative">
-                <input
-                  required
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  className="auth-input pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((value) => !value)}
-                  aria-label="Tampilkan password"
-                  className="absolute inset-y-0 right-0 grid w-12 place-items-center text-arena-dim"
-                >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
+              <div className="login-page__input-wrap"><span className="login-page__input-icon"><Goal /></span><input required type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Masukkan password" autoComplete={mode === "login" ? "current-password" : "new-password"} className="auth-input" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label="Tampilkan password" className="login-page__eye">{showPassword ? <EyeOff /> : <Eye />}</button></div>
             </Field>
-            {message && (
-              <p className="rounded-2xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">
-                {message}
-              </p>
-            )}
-            {error && (
-              <p className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-                {error}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-arena inline-flex w-full items-center gap-2 disabled:opacity-60"
-            >
-              {submitting && <Loader2 className="size-4 animate-spin" />}
-              {mode === "login" ? "Masuk" : "Buat akun"}
-            </button>
+            {mode === "login" && <div className="login-page__options"><label><input type="checkbox" defaultChecked /> <span>Ingat saya</span></label><button type="button" onClick={() => setMessage("Gunakan link reset password dari Supabase untuk mengganti password.")}>Lupa password?</button></div>}
+            {message && <p className="login-page__message is-success">{message}</p>}
+            {error && <p className="login-page__message is-error">{error}</p>}
+            <button type="submit" disabled={submitting} className="login-page__submit">{submitting && <Loader2 className="animate-spin" />}{mode === "login" ? "Masuk" : "Buat akun"}<ArrowRight /></button>
           </form>
-          <p className="mt-5 text-center text-xs leading-5 text-arena-dim">
-            Verifikasi email dulu. Setelah aktif, kamu dapat memilih atau membuat workspace
-            club/venue.
-          </p>
-        </div>
+          <p className="login-page__legal">Dengan melanjutkan, Anda menyetujui <span>Syarat & Ketentuan</span> dan <span>Kebijakan Privasi</span> kami.</p>
+        </section>
       </div>
     </main>
   );
+}
+
+function SportBadge({ icon, label, detail, tone }: { icon: ReactNode; label: string; detail: string; tone: string }) {
+  return <div className={`login-page__sport login-page__sport--${tone}`}><span>{icon}</span><strong>{label}</strong><small>{detail}</small></div>;
 }
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
