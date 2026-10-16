@@ -16,6 +16,7 @@ import { Route as DetailPemainRouteImport } from './routes/detail-pemain'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as KlasemenRouteImport } from './routes/klasemen'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PlayerRouteImport } from './routes/player'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as EPublicCodeRouteImport } from './routes/e.$publicCode'
 
@@ -54,6 +55,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayerRoute = PlayerRouteImport.update({
+  id: '/player',
+  path: '/player',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceRoute = WorkspaceRouteImport.update({
   id: '/workspace',
   path: '/workspace',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/invite': typeof InviteRoute
   '/klasemen': typeof KlasemenRoute
   '/login': typeof LoginRoute
+  '/player': typeof PlayerRoute
   '/workspace': typeof WorkspaceRoute
   '/e/$publicCode': typeof EPublicCodeRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/invite': typeof InviteRoute
   '/klasemen': typeof KlasemenRoute
   '/login': typeof LoginRoute
+  '/player': typeof PlayerRoute
   '/workspace': typeof WorkspaceRoute
   '/e/$publicCode': typeof EPublicCodeRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/invite': typeof InviteRoute
   '/klasemen': typeof KlasemenRoute
   '/login': typeof LoginRoute
+  '/player': typeof PlayerRoute
   '/workspace': typeof WorkspaceRoute
   '/e/$publicCode': typeof EPublicCodeRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/klasemen'
     | '/login'
+    | '/player'
     | '/workspace'
     | '/e/$publicCode'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/klasemen'
     | '/login'
+    | '/player'
     | '/workspace'
     | '/e/$publicCode'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/klasemen'
     | '/login'
+    | '/player'
     | '/workspace'
     | '/e/$publicCode'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   InviteRoute: typeof InviteRoute
   KlasemenRoute: typeof KlasemenRoute
   LoginRoute: typeof LoginRoute
+  PlayerRoute: typeof PlayerRoute
   WorkspaceRoute: typeof WorkspaceRoute
   EPublicCodeRoute: typeof EPublicCodeRoute
 }
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/player': {
+      id: '/player'
+      path: '/player'
+      fullPath: '/player'
+      preLoaderRoute: typeof PlayerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace': {
       id: '/workspace'
       path: '/workspace'
@@ -223,6 +243,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteRoute: InviteRoute,
   KlasemenRoute: KlasemenRoute,
   LoginRoute: LoginRoute,
+  PlayerRoute: PlayerRoute,
   WorkspaceRoute: WorkspaceRoute,
   EPublicCodeRoute: EPublicCodeRoute,
 }

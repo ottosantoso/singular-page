@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowLeft, Eye, EyeOff, Loader2, LogIn, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,8 @@ function LoginPage() {
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("returnTo") || "/workspace"
       : "/workspace";
+  const verified =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("verified") === "1";
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -41,8 +43,9 @@ function LoginPage() {
       );
       window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
     }
-    if (!auth.loading && auth.session) navigate({ to: "/workspace" });
-  }, [auth.loading, auth.session, navigate]);
+    if (!auth.loading && auth.session) navigate({ to: auth.landingPath });
+    if (verified) setMessage("Email berhasil diverifikasi. Silakan masuk dengan akunmu.");
+  }, [auth.loading, auth.session, auth.landingPath, navigate, verified]);
 
   function switchMode(next: "login" | "register") {
     setMode(next);
@@ -72,7 +75,7 @@ function LoginPage() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${(import.meta.env.VITE_PUBLIC_APP_URL?.trim() || window.location.origin).replace(/\/$/, "")}/auth-callback?next=/workspace`,
+          emailRedirectTo: `${(import.meta.env.VITE_PUBLIC_APP_URL?.trim() || window.location.origin).replace(/\/$/, "")}/auth-callback?next=${encodeURIComponent("/login?verified=1")}`,
           data: {
             username: username.trim().toLowerCase(),
             display_name: displayName.trim() || username.trim(),
@@ -85,7 +88,7 @@ function LoginPage() {
             ? "Username atau email sudah dipakai."
             : signUpError.message,
         );
-      else if (data.session) window.location.assign(returnTo);
+      else if (data.session && returnTo) window.location.assign(returnTo);
       else {
         setMode("login");
         setPassword("");
@@ -105,7 +108,7 @@ function LoginPage() {
               ? "Email atau password salah."
               : signInError.message,
         );
-      } else window.location.assign(returnTo);
+      } else if (returnTo) window.location.assign(returnTo);
     }
     setSubmitting(false);
   }

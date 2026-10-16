@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -816,6 +816,35 @@ export type Database = {
       admin_list_games: {
         Args: { p_limit?: number; p_search?: string; p_status?: string }
         Returns: Json
+      }      platform_list_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          email: string | null
+          username: string | null
+          display_name: string | null
+          is_active: boolean
+          email_confirmed_at: string | null
+          created_at: string
+          global_roles: Json
+          memberships: Json
+        }[]
+      }
+      platform_list_organizations: {
+        Args: Record<PropertyKey, never>
+        Returns: { organization_id: string; organization_name: string; slug: string }[]
+      }
+      platform_set_user_status: {
+        Args: { p_user_id: string; p_is_active: boolean }
+        Returns: boolean
+      }
+      platform_set_user_role: {
+        Args: { p_user_id: string; p_role_code: string; p_enabled?: boolean }
+        Returns: boolean
+      }
+      platform_set_membership_role: {
+        Args: { p_user_id: string; p_organization_id: string; p_role_code: string; p_enabled?: boolean }
+        Returns: boolean
       }
       close_abandoned_arena_sessions: {
         Args: { p_idle?: string; p_lookback?: string }

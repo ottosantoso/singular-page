@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ChevronRight, Loader2, LogOut, Search, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ChevronRight, Loader2, LogOut, Search, ShieldAlert, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin-games";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { GamePreview } from "@/components/admin/game-preview";
+import { PlatformUsers } from "@/components/admin/platform-users";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -93,6 +94,7 @@ function AdminPage() {
 }
 
 function Dashboard() {
+  const [section, setSection] = useState<"games" | "users">("games");
   const [tab, setTab] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -129,9 +131,20 @@ function Dashboard() {
           Panel <span className="text-arena-lime">Admin</span>
         </h1>
         <p className="mt-2 text-sm text-arena-dim">
-          Pantau permainan yang sedang berjalan dan yang sudah selesai. Tampilan hanya baca.
+          Kelola akses platform, pengguna, dan pantau permainan dari satu panel.
         </p>
       </header>
+
+      <div className="mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Bagian panel admin">
+        <button type="button" role="tab" aria-selected={section === "games"} onClick={() => setSection("games")} className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-display text-xs font-bold uppercase tracking-wider transition ${section === "games" ? "border-arena-lime bg-arena-lime text-primary-foreground" : "border-arena-ink/15 bg-white/80 text-arena-ink hover:border-arena-lime"}`}>
+          <ChevronRight className="size-4" aria-hidden="true" /> Permainan
+        </button>
+        <button type="button" role="tab" aria-selected={section === "users"} onClick={() => setSection("users")} className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-display text-xs font-bold uppercase tracking-wider transition ${section === "users" ? "border-arena-lime bg-arena-lime text-primary-foreground" : "border-arena-ink/15 bg-white/80 text-arena-ink hover:border-arena-lime"}`}>
+          <Users className="size-4" aria-hidden="true" /> Pengguna
+        </button>
+      </div>
+
+      {section === "users" ? <PlatformUsers /> : <>
 
       <section className="mt-6 grid grid-cols-3 gap-3" aria-label="Ringkasan">
         <Metric label="Live sekarang" value={counts?.live} tone="live" />
@@ -200,6 +213,7 @@ function Dashboard() {
       </div>
 
       <GamePreview gameKey={openKey} onClose={() => setOpenKey(null)} />
+      </>}
     </>
   );
 }
