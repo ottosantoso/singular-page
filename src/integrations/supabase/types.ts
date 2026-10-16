@@ -251,6 +251,7 @@ export type Database = {
           registration_token_hash: string | null
           seed: number | null
           status: string
+          tier: string | null
         }
         Insert: {
           checked_in_at?: string | null
@@ -266,6 +267,7 @@ export type Database = {
           registration_token_hash?: string | null
           seed?: number | null
           status?: string
+          tier?: string | null
         }
         Update: {
           checked_in_at?: string | null
@@ -281,6 +283,7 @@ export type Database = {
           registration_token_hash?: string | null
           seed?: number | null
           status?: string
+          tier?: string | null
         }
         Relationships: [
           {
@@ -956,6 +959,7 @@ export type Database = {
           p_phone?: string
           p_photo_url?: string
           p_public_code: string
+          p_tier?: string
         }
         Returns: {
           display_name: string

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ArrowLeft, CheckCircle2, Copy, Loader2, Share2, Trophy, Users } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowLeft, CheckCircle2, Copy, Loader2, Share2, Trophy, Users, Medal, UserRound, Phone, Mail, Image, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/e/$publicCode")({
@@ -26,6 +26,7 @@ type PublicEvent = {
 
 type PublicPlayer = {
   display_name: string;
+  tier: string | null;
   status: string;
   seed: number | null;
   registered_at: string;
@@ -35,7 +36,7 @@ type PublicPlayer = {
 type PublicPayload = {
   event: PublicEvent | null;
   players: PublicPlayer[];
-  me: { display_name: string; status: string } | null;
+  me: { display_name: string; tier: string | null; status: string } | null;
   matches: Array<Record<string, unknown>>;
   history: Array<Record<string, unknown>>;
 };
@@ -47,6 +48,7 @@ function PublicEventPage() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [tier, setTier] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
@@ -90,6 +92,7 @@ function PublicEventPage() {
       ...(email ? { p_email: email } : {}),
       ...(photoUrl ? { p_photo_url: photoUrl } : {}),
       p_consent_to_show_name: consent,
+      p_tier: tier,
     });
     if (registerError || !data?.[0]) {
       setMessage(registerError?.message || "Pendaftaran belum berhasil.");
@@ -163,7 +166,7 @@ function PublicEventPage() {
   }
 
   return (
-    <main className="arena-home court-lines min-h-screen px-4 py-8 sm:px-6 sm:py-12">
+    <main className="public-event-page min-h-screen px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto w-full max-w-5xl">
         <Link
           to="/"
@@ -222,10 +225,11 @@ function PublicEventPage() {
               <Users className="size-7 text-arena-lime" />
             </div>
             <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              {payload.players.map((player) => (
-                <div key={`${player.display_name}-${player.registered_at}`} className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <p className="font-semibold text-arena-ink">{player.display_name}</p>
-                  <p className="mt-1 text-xs uppercase tracking-wider text-arena-dim">{player.status}</p>
+              {payload.players.map((player, index) => (
+                <div key={`${player.display_name}-${player.registered_at}`} className="public-event__player-row">
+                  <span className="public-event__player-number">{String(index + 1).padStart(2, "0")}</span>
+                  <div className="min-w-0 flex-1"><p className="truncate font-semibold text-arena-ink">{player.display_name}</p><p className="mt-1 text-[11px] uppercase tracking-wider text-arena-dim">{player.status}</p></div>
+                  <span className={`public-event__tier-badge public-event__tier-badge--${player.tier || "intermediate"}`}>{formatTier(player.tier)}</span>
                 </div>
               ))}
               {!payload.players.length && <p className="text-sm text-arena-dim">Belum ada pemain terdaftar.</p>}
@@ -254,19 +258,15 @@ function PublicEventPage() {
                   Tidak perlu membuat akun OTTOPLAY. Daftar sebagai guest, lalu simpan link ini.
                 </p>
                 {showForm ? (
-                  <form onSubmit={register} className="mt-5 space-y-3">
-                    <input required minLength={2} maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Nama tampil *" className="auth-input" />
-                    <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="WhatsApp (opsional)" className="auth-input" />
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (opsional)" className="auth-input" />
-                    <input type="url" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="URL foto/avatar (opsional)" className="auth-input" />
-                    <label className="flex gap-2 text-xs leading-5 text-arena-dim">
-                      <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-                      Nama saya boleh tampil di daftar peserta dan hasil event.
-                    </label>
-                    {message && <p className="rounded-xl bg-white/70 p-3 text-xs text-arena-dim">{message}</p>}
-                    <button disabled={submitting} className="btn-arena w-full justify-center gap-2">
-                      {submitting && <Loader2 className="size-4 animate-spin" />} Daftar event
-                    </button>
+                  <form onSubmit={register} className="public-event__form">
+                    <div className="public-event__form-intro"><span className="public-event__form-icon"><UserRound /></span><div><p className="public-event__form-kicker">Pendaftaran pemain</p><h3>Isi data kamu</h3><p>Nama dan tier akan tampil di daftar peserta event.</p></div></div>
+                    <Field label="Nama tampil" required icon={<UserRound />}><input required minLength={2} maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Contoh: Budi Santoso" className="public-event__input" /></Field>
+                    <Field label="Pilih tier" required icon={<Medal />} hint="Untuk penyeimbangan pertandingan"><div className="public-event__select-wrap"><select required value={tier} onChange={(e) => setTier(e.target.value)} className="public-event__input public-event__select"><option value="">Pilih level permainan</option><option value="newbie">Newbie</option><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option><option value="pro">Pro</option><option value="elite">Elite</option></select><ChevronDown /></div></Field>
+                    <div className="public-event__form-grid"><Field label="WhatsApp" hint="Opsional" icon={<Phone />}><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08xxxxxxxxxx" className="public-event__input" /></Field><Field label="Email" hint="Opsional" icon={<Mail />}><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kamu@email.com" className="public-event__input" /></Field></div>
+                    <Field hide label="URL foto/avatar" hint="Opsional" icon={<Image />}><input type="url" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://..." className="public-event__input" /></Field>
+                    <label className="public-event__consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>Nama saya boleh tampil di daftar peserta dan hasil event.</span></label>
+                    {message && <p className="public-event__message">{message}</p>}
+                    <button disabled={submitting} className="public-event__submit">{submitting && <Loader2 className="size-4 animate-spin" />} Daftar event <ArrowLeft className="size-4 rotate-180" /></button>
                   </form>
                 ) : (
                   <button type="button" onClick={() => setShowForm(true)} className="btn-arena mt-5 w-full justify-center">
@@ -308,4 +308,13 @@ function PublicEventPage() {
       </div>
     </main>
   );
+}
+
+function Field({ label, hint, required, icon, children }: { label: string; hint?: string; required?: boolean; icon: ReactNode; children: ReactNode }) {
+  return <label className="public-event__field"><span className="public-event__field-label"><span className="public-event__field-title">{icon}{label}{required && <b>*</b>}</span>{hint && <small>{hint}</small>}</span>{children}</label>;
+}
+
+function formatTier(value: string | null | undefined) {
+  if (!value) return "Intermediate";
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
