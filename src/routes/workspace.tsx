@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowRight,
   Building2,
@@ -73,7 +73,7 @@ async function copyToClipboard(value: string) {
 }
 
 function getPublicAppUrl() {
-  const configuredUrl = import.meta.env.VITE_PUBLIC_APP_URL?.trim();
+  const configuredUrl = import.meta.env["VITE_PUBLIC_APP_URL"]?.trim();
   if (configuredUrl) return configuredUrl.replace(/\/$/, "");
   return typeof window !== "undefined" ? window.location.origin : "";
 }
@@ -239,7 +239,7 @@ function WorkspaceShell({
   userId,
 }: {
   organization: Organization;
-  membership?: Membership;
+  membership?: Membership | undefined;
   organizations: Organization[];
   onSelect: (id: string) => void;
   onCreateOrganization: () => void;
@@ -748,12 +748,17 @@ function MembersPanel({
     const tokenHash = Array.from(new Uint8Array(digest), (byte) =>
       byte.toString(16).padStart(2, "0"),
     ).join("");
+    const invitedBy = (await supabase.auth.getUser()).data.user?.id;
+    if (!invitedBy) {
+      setMessage("Sesi login tidak ditemukan. Masuk ulang lalu coba lagi.");
+      return;
+    }
     const result = await supabase.from("organization_invites").insert({
       organization_id: organization.id,
       email: inviteEmail.trim() || null,
       role_code: inviteRole,
       token_hash: tokenHash,
-      invited_by: (await supabase.auth.getUser()).data.user?.id,
+      invited_by: invitedBy,
       expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
     });
     if (result.error) setMessage(result.error.message);
@@ -763,12 +768,11 @@ function MembersPanel({
       setMessage("Undangan dibuat. Kirim link ini ke member.");
       setInviteEmail("");
     }
-
+  }
   async function copyInviteLink() {
     const copied = await copyToClipboard(inviteLink);
     setInviteCopyMessage(copied ? "Tersalin" : "Gagal");
     window.setTimeout(() => setInviteCopyMessage(""), 2200);
-  }
   }
   return (
     <section className="mt-6 arena-card">

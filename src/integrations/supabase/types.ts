@@ -966,6 +966,10 @@ export type Database = {
           registration_token: string
         }[]
       }
+      withdraw_event_guest: {
+        Args: { p_public_code: string; p_registration_token: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

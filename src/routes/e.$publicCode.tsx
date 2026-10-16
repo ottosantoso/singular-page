@@ -61,7 +61,7 @@ function PublicEventPage() {
     const token = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
     const { data, error: loadError } = await supabase.rpc("get_public_event", {
       p_public_code: publicCode,
-      p_registration_token: token,
+      ...(token !== null ? { p_registration_token: token } : {}),
     });
     const row = data?.[0] as PublicPayload | undefined;
     if (loadError || !row?.event) {
@@ -86,9 +86,9 @@ function PublicEventPage() {
     const { data, error: registerError } = await supabase.rpc("register_event_guest", {
       p_public_code: publicCode,
       p_display_name: displayName,
-      p_phone: phone || null,
-      p_email: email || null,
-      p_photo_url: photoUrl || null,
+      ...(phone ? { p_phone: phone } : {}),
+      ...(email ? { p_email: email } : {}),
+      ...(photoUrl ? { p_photo_url: photoUrl } : {}),
       p_consent_to_show_name: consent,
     });
     if (registerError || !data?.[0]) {

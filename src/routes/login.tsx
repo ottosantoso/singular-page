@@ -75,7 +75,7 @@ function LoginPage() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${(import.meta.env.VITE_PUBLIC_APP_URL?.trim() || window.location.origin).replace(/\/$/, "")}/auth-callback?next=${encodeURIComponent("/login?verified=1")}`,
+          emailRedirectTo: `${(import.meta.env["VITE_PUBLIC_APP_URL"]?.trim() || window.location.origin).replace(/\/$/, "")}/auth-callback?next=${encodeURIComponent("/login?verified=1")}`,
           data: {
             username: username.trim().toLowerCase(),
             display_name: displayName.trim() || username.trim(),
