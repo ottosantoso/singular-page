@@ -11,9 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AuthCallbackRouteImport } from './routes/auth-callback'
 import { Route as DetailPemainRouteImport } from './routes/detail-pemain'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as KlasemenRouteImport } from './routes/klasemen'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as WorkspaceRouteImport } from './routes/workspace'
+import { Route as EPublicCodeRouteImport } from './routes/e.$publicCode'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -25,9 +29,19 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth-callback',
+  path: '/auth-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DetailPemainRoute = DetailPemainRouteImport.update({
   id: '/detail-pemain',
   path: '/detail-pemain',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KlasemenRoute = KlasemenRouteImport.update({
@@ -40,43 +54,97 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EPublicCodeRoute = EPublicCodeRouteImport.update({
+  id: '/e/$publicCode',
+  path: '/e/$publicCode',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/detail-pemain': typeof DetailPemainRoute
+  '/invite': typeof InviteRoute
   '/klasemen': typeof KlasemenRoute
   '/login': typeof LoginRoute
+  '/workspace': typeof WorkspaceRoute
+  '/e/$publicCode': typeof EPublicCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/detail-pemain': typeof DetailPemainRoute
+  '/invite': typeof InviteRoute
   '/klasemen': typeof KlasemenRoute
   '/login': typeof LoginRoute
+  '/workspace': typeof WorkspaceRoute
+  '/e/$publicCode': typeof EPublicCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/auth-callback': typeof AuthCallbackRoute
   '/detail-pemain': typeof DetailPemainRoute
+  '/invite': typeof InviteRoute
   '/klasemen': typeof KlasemenRoute
   '/login': typeof LoginRoute
+  '/workspace': typeof WorkspaceRoute
+  '/e/$publicCode': typeof EPublicCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/detail-pemain' | '/klasemen' | '/login'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/auth-callback'
+    | '/detail-pemain'
+    | '/invite'
+    | '/klasemen'
+    | '/login'
+    | '/workspace'
+    | '/e/$publicCode'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/detail-pemain' | '/klasemen' | '/login'
-  id: '__root__' | '/' | '/admin' | '/detail-pemain' | '/klasemen' | '/login'
+  to:
+    | '/'
+    | '/admin'
+    | '/auth-callback'
+    | '/detail-pemain'
+    | '/invite'
+    | '/klasemen'
+    | '/login'
+    | '/workspace'
+    | '/e/$publicCode'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/auth-callback'
+    | '/detail-pemain'
+    | '/invite'
+    | '/klasemen'
+    | '/login'
+    | '/workspace'
+    | '/e/$publicCode'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   DetailPemainRoute: typeof DetailPemainRoute
+  InviteRoute: typeof InviteRoute
   KlasemenRoute: typeof KlasemenRoute
   LoginRoute: typeof LoginRoute
+  WorkspaceRoute: typeof WorkspaceRoute
+  EPublicCodeRoute: typeof EPublicCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -95,11 +163,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth-callback': {
+      id: '/auth-callback'
+      path: '/auth-callback'
+      fullPath: '/auth-callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/detail-pemain': {
       id: '/detail-pemain'
       path: '/detail-pemain'
       fullPath: '/detail-pemain'
       preLoaderRoute: typeof DetailPemainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/klasemen': {
@@ -116,15 +198,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/e/$publicCode': {
+      id: '/e/$publicCode'
+      path: '/e/$publicCode'
+      fullPath: '/e/$publicCode'
+      preLoaderRoute: typeof EPublicCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   DetailPemainRoute: DetailPemainRoute,
+  InviteRoute: InviteRoute,
   KlasemenRoute: KlasemenRoute,
   LoginRoute: LoginRoute,
+  WorkspaceRoute: WorkspaceRoute,
+  EPublicCodeRoute: EPublicCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

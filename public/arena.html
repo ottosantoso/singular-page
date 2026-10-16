@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -995,6 +995,59 @@
     tenismeja: { label: 'Tenis Meja', icon: '/__l5e/assets-v1/ebe1b372-7329-4063-849d-0ddb148b5f62/pingpong.png' }
   };
   let selectedSport = 'padel';
+  const arenaLinkParams = new URLSearchParams(window.location.search);
+  const linkedOrganizationId = arenaLinkParams.get('organization_id') || null;
+  const linkedEventId = arenaLinkParams.get('event_id') || null;
+  const linkedPublicCode = arenaLinkParams.get('public_code') || null;
+  const requestedReturnTo = arenaLinkParams.get('return_to') || '';
+  const linkedReturnTo = requestedReturnTo.startsWith('/') && !requestedReturnTo.startsWith('//')
+    ? requestedReturnTo
+    : null;
+  const linkedSport = (arenaLinkParams.get('sport') || '').trim().toLowerCase();
+  if (sportMeta[linkedSport]) selectedSport = linkedSport;
+
+  function linkedEventCredentials(publicCode){
+    let hash = 2166136261;
+    for (let i = 0; i < publicCode.length; i++){
+      hash ^= publicCode.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    const unsigned = hash >>> 0;
+    const code = 'EVT' + unsigned.toString(36).toUpperCase().slice(-5).padStart(5, '0');
+    const pin = String((unsigned % 900000) + 100000);
+    return { code, pin };
+  }
+
+  async function preloadLinkedEvent(){
+    if (!linkedPublicCode || !sb) return;
+    const credentials = linkedEventCredentials(linkedPublicCode);
+    arenaCodeInput.value = credentials.code;
+    arenaPinInput.value = credentials.pin;
+    try {
+      const { data, error } = await sb.rpc('get_public_event', {
+        p_public_code: linkedPublicCode,
+        p_registration_token: null
+      });
+      if (error) throw error;
+      const payload = Array.isArray(data) ? data[0] : data;
+      if (!payload?.event) return;
+      if (sportMeta[payload.event.sport]) selectedSport = payload.event.sport;
+      if (payload.event.format && [...formatSelect.options].some(option => option.value === payload.event.format)){
+        formatSelect.value = payload.event.format;
+      }
+      registeredPlayers = (payload.players || []).map(player => ({
+        id: playerId(),
+        name: player.display_name,
+        gender: 'male'
+      }));
+      renderRegisteredPlayers();
+      syncStatus.textContent = registeredPlayers.length
+        ? registeredPlayers.length + ' pemain event dimuat.'
+        : 'Belum ada pemain terdaftar di event ini.';
+    } catch (error){
+      syncStatus.textContent = 'Pemain event belum dapat dimuat: ' + (error.message || error);
+    }
+  }
 
   function applyArenaSportTheme(){
     const meta = sportMeta[selectedSport] || sportMeta.padel;
@@ -1014,6 +1067,27 @@
     window.scrollTo(0, 0);
   }
 
+  function leaveArena(){
+    if (linkedReturnTo){
+      skipBeforeUnload = true;
+      window.location.href = linkedReturnTo;
+    } else {
+      showScreen('welcome');
+    }
+  }
+
+  if (linkedReturnTo){
+    document.querySelectorAll('.welcome-home-link').forEach(link => {
+      link.setAttribute('href', linkedReturnTo);
+    });
+  }
+
+  function openLinkedEvent(){
+    if (!linkedEventId) return;
+    applyArenaSportTheme();
+    showScreen('arena');
+  }
+
   document.querySelectorAll('.menu-card[data-sport]').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedSport = btn.dataset.sport;
@@ -1028,10 +1102,10 @@
   openHistoryMenuBtn.addEventListener('click', () => showScreen('history'));
   backFromArenaBtn.addEventListener('click', () => {
     // Kalau pertandingan sedang berjalan, tanya dulu: masih berlanjut atau diselesaikan.
-    if (sessionHasProgress()) openLeaveDialog(() => showScreen('welcome'));
-    else showScreen('welcome');
+    if (sessionHasProgress()) openLeaveDialog(leaveArena);
+    else leaveArena();
   });
-  backFromHistoryBtn.addEventListener('click', () => showScreen('welcome'));
+  backFromHistoryBtn.addEventListener('click', leaveArena);
 
 
   function setSetupMode(mode){
@@ -1287,6 +1361,7 @@
 
     const freshState = {
       mode: setupMode, format, sport: selectedSport,
+      organization_id: linkedOrganizationId, event_id: linkedEventId,
       rotation, rotationChoice,
       gamesBase: {}, // titik awal jumlah main untuk pemain yang masuk / kembali di tengah sesi (khusus rotasi Mandiri)
       players, pairs, pairMembers,
@@ -2575,7 +2650,17 @@
     }
   }
 
-  initSession();
+  async function bootstrapArena(){
+    if (linkedPublicCode){
+      await preloadLinkedEvent();
+      await connectArena({ silent: true });
+    } else {
+      initSession();
+    }
+    openLinkedEvent();
+  }
+
+  void bootstrapArena();
 
   // --- Kelola pemain di tengah turnamen (telat datang / belum hadir) ---
 

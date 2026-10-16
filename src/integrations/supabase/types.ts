@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.17"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -173,6 +198,202 @@ export type Database = {
         }
         Relationships: []
       }
+      courts: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sport: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sport: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sport?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courts_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_players: {
+        Row: {
+          checked_in_at: string | null
+          consent_to_show_name: boolean
+          created_at: string
+          display_name: string
+          email: string | null
+          event_id: string
+          phone: string | null
+          photo_url: string | null
+          player_user_id: string | null
+          registered_at: string
+          registration_token_hash: string | null
+          seed: number | null
+          status: string
+        }
+        Insert: {
+          checked_in_at?: string | null
+          consent_to_show_name?: boolean
+          created_at?: string
+          display_name: string
+          email?: string | null
+          event_id: string
+          phone?: string | null
+          photo_url?: string | null
+          player_user_id?: string | null
+          registered_at?: string
+          registration_token_hash?: string | null
+          seed?: number | null
+          status?: string
+        }
+        Update: {
+          checked_in_at?: string | null
+          consent_to_show_name?: boolean
+          created_at?: string
+          display_name?: string
+          email?: string | null
+          event_id?: string
+          phone?: string | null
+          photo_url?: string | null
+          player_user_id?: string | null
+          registered_at?: string
+          registration_token_hash?: string | null
+          seed?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_players_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_staff: {
+        Row: {
+          created_at: string
+          event_id: string
+          role_code: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          role_code?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          role_code?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_staff_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_staff_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_at: string | null
+          format: string
+          id: string
+          max_players: number | null
+          name: string
+          organization_id: string
+          public_code: string
+          public_results: boolean
+          sport: string
+          starts_at: string | null
+          status: string
+          updated_at: string
+          venue_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_at?: string | null
+          format?: string
+          id?: string
+          max_players?: number | null
+          name: string
+          organization_id: string
+          public_code?: string
+          public_results?: boolean
+          sport?: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          venue_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_at?: string | null
+          format?: string
+          id?: string
+          max_players?: number | null
+          name?: string
+          organization_id?: string
+          public_code?: string
+          public_results?: boolean
+          sport?: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kocok_arena_history: {
         Row: {
           access_key: string
@@ -253,24 +474,30 @@ export type Database = {
         Row: {
           access_key: string
           code: string | null
+          event_id: string | null
           first_seen: string
           last_seen: string
+          organization_id: string | null
           owner_id: string | null
           sport: string | null
         }
         Insert: {
           access_key: string
           code?: string | null
+          event_id?: string | null
           first_seen?: string
           last_seen?: string
+          organization_id?: string | null
           owner_id?: string | null
           sport?: string | null
         }
         Update: {
           access_key?: string
           code?: string | null
+          event_id?: string | null
           first_seen?: string
           last_seen?: string
+          organization_id?: string | null
           owner_id?: string | null
           sport?: string | null
         }
@@ -281,6 +508,20 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "kocok_arena_venues"
             referencedColumns: ["access_key"]
+          },
+          {
+            foreignKeyName: "kocok_arena_meta_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kocok_arena_meta_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -298,6 +539,147 @@ export type Database = {
         Update: {
           access_key?: string
           current_state?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      organization_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          invited_by: string
+          organization_id: string
+          role_code: string
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at: string
+          id?: string
+          invited_by: string
+          organization_id: string
+          role_code: string
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          organization_id?: string
+          role_code?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          invited_by: string | null
+          joined_at: string
+          organization_id: string
+          role_code: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          invited_by?: string | null
+          joined_at?: string
+          organization_id: string
+          role_code: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          invited_by?: string | null
+          joined_at?: string
+          organization_id?: string
+          role_code?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string
+          sport_label: string | null
+          subscription_plan: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug: string
+          sport_label?: string | null
+          subscription_plan?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string
+          sport_label?: string | null
+          subscription_plan?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
@@ -376,11 +758,60 @@ export type Database = {
           },
         ]
       }
+      venues: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venues_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      accept_organization_invite: {
+        Args: { p_token: string }
+        Returns: {
+          organization_id: string
+          organization_name: string
+          role_code: string
+        }[]
+      }
       admin_get_game: { Args: { p_game_key: string }; Returns: Json }
       admin_list_games: {
         Args: { p_limit?: number; p_search?: string; p_status?: string }
@@ -390,7 +821,49 @@ export type Database = {
         Args: { p_idle?: string; p_lookback?: string }
         Returns: Json
       }
+      create_organization: {
+        Args: { p_name: string; p_slug: string; p_timezone?: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string
+          sport_label: string | null
+          subscription_plan: string
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_public_event: {
+        Args: { p_public_code: string; p_registration_token?: string }
+        Returns: {
+          event: Json
+          history: Json
+          matches: Json
+          me: Json
+          players: Json
+        }[]
+      }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      is_organization_admin: {
+        Args: { p_organization_id: string }
+        Returns: boolean
+      }
+      is_organization_member: {
+        Args: { p_organization_id: string; p_roles?: string[] }
+        Returns: boolean
+      }
       kocok_access_key: {
         Args: { p_code: string; p_pin: string }
         Returns: string
@@ -441,6 +914,24 @@ export type Database = {
       kocok_save_state: {
         Args: { p_code: string; p_pin: string; p_state: Json }
         Returns: string
+      }
+      register_event_guest: {
+        Args: {
+          p_consent_to_show_name?: boolean
+          p_display_name: string
+          p_email?: string
+          p_phone?: string
+          p_photo_url?: string
+          p_public_code: string
+        }
+        Returns: {
+          display_name: string
+          event_id: string
+          event_name: string
+          player_id: string
+          public_code: string
+          registration_token: string
+        }[]
       }
     }
     Enums: {
@@ -570,6 +1061,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

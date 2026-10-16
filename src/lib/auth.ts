@@ -72,7 +72,7 @@ export function useAuth() {
     session,
     username: profile?.username ?? null,
     roles: profile?.roles ?? [],
-    isAdmin: !!profile?.roles.includes("admin"),
+    isAdmin: !!profile?.roles.some((role) => role === "admin" || role === "platform_admin"),
     signOut,
   };
 }

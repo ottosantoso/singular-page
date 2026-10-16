@@ -75,8 +75,14 @@ function AdminPage() {
             <ShieldAlert className="mx-auto size-10 text-amber-600" aria-hidden="true" />
             <h1 className="mt-3 font-display text-lg font-bold uppercase tracking-wider">Akses ditolak</h1>
             <p className="mt-2 text-sm text-arena-dim">
-              Akun ini tidak punya role admin. Hubungi admin untuk meminta akses.
+              Panel ini khusus role platform admin. Jika kamu mengelola club atau venue, gunakan Workspace organisasi.
             </p>
+            <Link
+              to="/workspace"
+              className="btn-arena mt-5 inline-flex items-center justify-center"
+            >
+              Buka Workspace
+            </Link>
           </div>
         ) : (
           <Dashboard />

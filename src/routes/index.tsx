@@ -73,7 +73,7 @@ function Home() {
                 <Button asChild><a href="/arena.html">Buka Arena <ArrowRight /></a></Button>
               </DialogContent>
             </Dialog>
-            <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin</Link></Button>
+            <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button>
           </div>
         </div>
       </nav>
