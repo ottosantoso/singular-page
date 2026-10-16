@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,12 +9,11 @@ export const Route = createFileRoute("/auth-callback")({
 });
 
 function AuthCallbackPage() {
-  const navigate = useNavigate();
   const [error, setError] = useState("");
   const next =
     typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("next") || "/workspace"
-      : "/workspace";
+      ? new URLSearchParams(window.location.search).get("next") || "/login?verified=1"
+      : "/login?verified=1";
 
   useEffect(() => {
     let active = true;
@@ -36,13 +35,18 @@ function AuthCallbackPage() {
         setError("Sesi verifikasi tidak ditemukan. Minta link baru jika diperlukan.");
         return;
       }
-      window.setTimeout(() => navigate({ to: "/workspace" }), 900);
+      await supabase.auth.signOut();
+      const target = next.startsWith("/") ? next : "/workspace";
+      window.setTimeout(() => window.location.replace(target), 900);
+      window.setTimeout(() => {
+        if (window.location.pathname === "/auth-callback") window.location.assign(target);
+      }, 4500);
     }
     void finishVerification();
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, [next]);
 
   return (
     <main className="arena-home court-lines grid min-h-screen place-items-center px-4 py-10">

@@ -153,6 +153,13 @@ function WorkspacePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.session?.user.id]);
 
+  useEffect(() => {
+    if (!auth.loading && auth.session && !loading && memberships.length === 0) {
+      const createMode = new URLSearchParams(window.location.search).get("create") === "1";
+      if (!createMode) navigate({ to: "/player" });
+    }
+  }, [auth.loading, auth.session, loading, memberships.length, navigate]);
+
   function selectOrganization(id: string) {
     setActiveId(id);
     localStorage.setItem("ottoplay.activeOrganization", id);

@@ -14,7 +14,7 @@ export function loginIdToEmail(input: string): string {
   return v.includes("@") ? v : `${v}@${LOGIN_EMAIL_DOMAIN}`;
 }
 
-type Profile = { username: string | null; roles: string[] };
+type Profile = { username: string | null; roles: string[]; organizationRoles: string[] };
 
 /**
  * Sesi + role user saat ini.
@@ -48,14 +48,20 @@ export function useAuth() {
     }
     let cancelled = false;
     (async () => {
-      const [roles, prof] = await Promise.all([
+      const [roles, prof, orgRoles] = await Promise.all([
         supabase.from("user_roles").select("role_code").eq("user_id", userId),
         supabase.from("profiles").select("username").eq("id", userId).maybeSingle(),
+        supabase
+          .from("organization_members")
+          .select("role_code")
+          .eq("user_id", userId)
+          .eq("status", "active"),
       ]);
       if (cancelled) return;
       setProfile({
         username: prof.data?.username ?? null,
         roles: (roles.data ?? []).map((r) => r.role_code),
+        organizationRoles: (orgRoles.data ?? []).map((r) => r.role_code),
       });
     })();
     return () => {
@@ -72,7 +78,14 @@ export function useAuth() {
     session,
     username: profile?.username ?? null,
     roles: profile?.roles ?? [],
+    organizationRoles: profile?.organizationRoles ?? [],
     isAdmin: !!profile?.roles.some((role) => role === "admin" || role === "platform_admin"),
+    hasWorkspace: (profile?.organizationRoles.length ?? 0) > 0,
+    landingPath: profile?.roles.some((role) => role === "admin" || role === "platform_admin")
+      ? "/admin"
+      : (profile?.organizationRoles.length ?? 0) > 0
+        ? "/workspace"
+        : "/player",
     signOut,
   };
 }
