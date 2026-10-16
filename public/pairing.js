@@ -15,6 +15,8 @@
  *      gamesOf(unit)               : jumlah main (untuk pair: rata-rata anggota)
  *      genderOf(name)              : 'male' | 'female'  (opsional, default 'male')
  *      pointsOf(unit), winsOf(unit): hanya untuk Mexicano (peringkat)
+ *      tierOf(name)                : skor tier 1..6 (opsional). HANYA dipakai kalau ctx.balanceTier === true
+ *                                    (format Ying Yang). Tanpa balanceTier, tier diabaikan -> Americano tidak berubah.
  *      rng()                       : opsional, default Math.random (berguna buat test)
  *    }
  *
@@ -23,6 +25,7 @@
  *  1b. planMexicanoRound() -> semua lapangan sekaligus berdasarkan peringkat (Mexicano / Super Mexicano)
  *  2. pickForCourt() -> isi 1 lapangan saja (lapangan mandiri / tombol Next Player)
  *  3. recordMatch()  -> catat (+1) atau batalkan (-1) efek sebuah match ke counts
+ *  3b. Ying Yang (ctx.balanceTier = true) memakai jalur 1 & 2 yang sama + biaya selisih tier antar tim
  *  4. recommendRotation() -> saran mode rotasi lapangan (mandiri / serentak) dari jumlah pemain
  *
  * Satu fungsi biaya untuk jalur 1 dan 2 (makin kecil makin bagus), urutan prioritasnya:
@@ -52,8 +55,23 @@
     opponent: 1,   // x jumlah pertemuan lawan sebelumnya
     wait: 3,       // dikurangi per giliran menunggu (yang lama menunggu didahulukan)
     fair: 15,      // x (total kelebihan jumlah main dari yang terkecil)^2
-    mix: 0.5       // bonus per tim campur gender
+    mix: 0.5,      // bonus per tim campur gender
+    tier: 120,     // Ying Yang: x (selisih total tier tim A vs tim B)^2, per lapangan
+    court: 20,     // Ying Yang: x (selisih total tier lapangan ini dari rata-rata lapangan)^2
+    gap: 8         // Ying Yang: bonus per poin jarak tier dua partner satu tim (Pro+Newbie lebih disukai dari Pro+Pro)
   };
+
+  // Skor tier untuk format Ying Yang. Pemain tanpa tier dianggap Intermediate (tengah).
+  var TIER_SCORE = { newbie: 1, beginner: 2, intermediate: 3, advanced: 4, pro: 5, elite: 6 };
+  var TIER_DEFAULT = 3;
+  function tierScore(tier) {
+    var k = String(tier || '').toLowerCase();
+    return TIER_SCORE[k] || TIER_DEFAULT;
+  }
+  // Skor tier satu pemain dari ctx (aman kalau tierOf tidak ada).
+  function tierOfName(ctx, name) {
+    return ctx && ctx.balanceTier && ctx.tierOf ? (ctx.tierOf(name) || TIER_DEFAULT) : TIER_DEFAULT;
+  }
   var FAIR_BAND = 1;        // pemain dengan jumlah main <= terkecil + band yang boleh dipilih
   var MAX_CANDIDATES = 14;  // batas kandidat per keputusan supaya perhitungan tetap ringan
   var WAIT_CAP = 6;         // batas pengaruh "lama menunggu" per pemain
@@ -116,7 +134,15 @@
     var mix = 0;
     if (gender(opt.teamA[0]) !== gender(opt.teamA[1])) mix += WEIGHTS.mix;
     if (gender(opt.teamB[0]) !== gender(opt.teamB[1])) mix += WEIGHTS.mix;
-    return WEIGHTS.partner * (pA * pA + pB * pB) + WEIGHTS.opponent * opp - mix;
+    var cost = WEIGHTS.partner * (pA * pA + pB * pB) + WEIGHTS.opponent * opp - mix;
+    if (ctx.balanceTier) {
+      var diff = tierOfName(ctx, opt.teamA[0]) + tierOfName(ctx, opt.teamA[1]) -
+                 tierOfName(ctx, opt.teamB[0]) - tierOfName(ctx, opt.teamB[1]);
+      cost += WEIGHTS.tier * diff * diff; // Ying Yang: kedua tim harus sama kuat (Pro+Newbie vs Pro+Newbie)
+      cost -= WEIGHTS.gap * (Math.abs(tierOfName(ctx, opt.teamA[0]) - tierOfName(ctx, opt.teamA[1])) +
+                             Math.abs(tierOfName(ctx, opt.teamB[0]) - tierOfName(ctx, opt.teamB[1])));
+    }
+    return cost;
   }
 
   // Dari 4 pemain, ada 3 cara membagi 2v2. Ambil yang skornya terendah.
@@ -170,21 +196,35 @@
     var size = perCourt(kind);
     var need = numCourts * size;
     var split = chooseSitOuts(units, need, ctx.sitOutCount, rng);
+    // Ying Yang: yang istirahat dipilih ulang di tiap percobaan (tetap hanya dari yang paling sedikit istirahat),
+    // supaya yang main punya campuran tier yang bisa dipasangkan (bukan 6 Pro + 2 Newbie).
+    var resplit = !!ctx.balanceTier && kind !== PAIRS && units.length > need;
 
-    var best = null, bestTotal = Infinity;
+    var best = null, bestTotal = Infinity, bestSplit = split;
     for (var t = 0; t < ROUND_TRIES; t++) {
+      if (resplit && t > 0) split = chooseSitOuts(units, need, ctx.sitOutCount, rng);
       var order = shuffle(split.playing, rng);
-      var total = 0, matches = [];
+      var total = 0, matches = [], courtSums = [];
       for (var c = 0; c < numCourts; c++) {
-        var r = evaluateGroup(order.slice(c * size, c * size + size), kind, ctx);
+        var grp = order.slice(c * size, c * size + size);
+        var r = evaluateGroup(grp, kind, ctx);
         total += r.cost;
         matches.push(r.match);
+        if (ctx.balanceTier && kind !== PAIRS) {
+          courtSums.push(grp.reduce(function (acc, u) { return acc + tierOfName(ctx, u); }, 0));
+        }
       }
-      if (total < bestTotal) { bestTotal = total; best = matches; }
-      if (bestTotal <= -numCourts * 2 * WEIGHTS.mix) break; // tidak ada yang berulang & semua tim campur: tidak mungkin lebih baik
+      // Ying Yang: sebarkan pemain kuat & lemah merata ke semua lapangan (jangan ada lapangan "isi Pro semua").
+      if (courtSums.length > 1) {
+        var avg = courtSums.reduce(function (a, b) { return a + b; }, 0) / courtSums.length;
+        courtSums.forEach(function (cs) { total += WEIGHTS.court * (cs - avg) * (cs - avg); });
+      }
+      if (total < bestTotal) { bestTotal = total; best = matches; bestSplit = split; }
+      // Batas bawah ini hanya berlaku tanpa Ying Yang (bonus jarak tier membuat biaya bisa lebih rendah lagi).
+      if (!ctx.balanceTier && bestTotal <= -numCourts * 2 * WEIGHTS.mix) break; // tidak ada yang berulang & semua tim campur: tidak mungkin lebih baik
       if (kind === PAIRS && bestTotal === 0) break;
     }
-    return { matches: best || [], sitOut: split.sitOut };
+    return { matches: best || [], sitOut: bestSplit.sitOut };
   }
 
   // ---------- jalur 2: isi satu lapangan ----------
@@ -229,13 +269,15 @@
 
     // Data per kandidat + matriks partner/lawan dihitung SEKALI (pairKey itu mahal kalau di dalam loop).
     var m = cand.length;
-    var ex = [], wt = [], gd = [];
+    var ex = [], wt = [], gd = [], ts = [];
+    var useTier = !!ctx.balanceTier && kind !== PAIRS;
     var minSit = Infinity;
     cand.forEach(function (u) { var s = count(ctx.sitOutCount, u); if (s < minSit) minSit = s; });
     cand.forEach(function (u) {
       ex.push(Math.max(0, gamesOf(u) - minGames));
       wt.push(Math.min(count(ctx.sitOutCount, u) - minSit, WAIT_CAP));
       gd.push(kind === PAIRS ? '' : gender(u));
+      ts.push(useTier ? tierOfName(ctx, u) : 0);
     });
     var pc = [], oc = [];
     for (var i = 0; i < m; i++) {
@@ -267,6 +309,12 @@
       }
     } else {
       var mixOf = function (x, y) { return gd[x] !== gd[y] ? WEIGHTS.mix : 0; };
+      // Ying Yang: biaya selisih tier dua tim (0 kalau tidak aktif, jadi Americano tidak terpengaruh).
+      var tierCost = function (x, y, u, v) {
+        if (!useTier) return 0;
+        var df = ts[x] + ts[y] - ts[u] - ts[v];
+        return WEIGHTS.tier * df * df - WEIGHTS.gap * (Math.abs(ts[x] - ts[y]) + Math.abs(ts[u] - ts[v]));
+      };
       for (a = 0; a < m; a++) {
         for (b = a + 1; b < m; b++) {
           for (c = b + 1; c < m; c++) {
@@ -274,13 +322,13 @@
               var base = groupBase(ex[a] + ex[b] + ex[c] + ex[d], wt[a] + wt[b] + wt[c] + wt[d]);
               // 3 susunan 2v2: (ab|cd), (ac|bd), (ad|bc)
               offer(base + WEIGHTS.partner * (pc[a][b] * pc[a][b] + pc[c][d] * pc[c][d]) +
-                    WEIGHTS.opponent * (oc[a][c] + oc[a][d] + oc[b][c] + oc[b][d]) - mixOf(a, b) - mixOf(c, d),
+                    WEIGHTS.opponent * (oc[a][c] + oc[a][d] + oc[b][c] + oc[b][d]) - mixOf(a, b) - mixOf(c, d) + tierCost(a, b, c, d),
                     [a, b, c, d, 0]);
               offer(base + WEIGHTS.partner * (pc[a][c] * pc[a][c] + pc[b][d] * pc[b][d]) +
-                    WEIGHTS.opponent * (oc[a][b] + oc[a][d] + oc[c][b] + oc[c][d]) - mixOf(a, c) - mixOf(b, d),
+                    WEIGHTS.opponent * (oc[a][b] + oc[a][d] + oc[c][b] + oc[c][d]) - mixOf(a, c) - mixOf(b, d) + tierCost(a, c, b, d),
                     [a, b, c, d, 1]);
               offer(base + WEIGHTS.partner * (pc[a][d] * pc[a][d] + pc[b][c] * pc[b][c]) +
-                    WEIGHTS.opponent * (oc[a][b] + oc[a][c] + oc[d][b] + oc[d][c]) - mixOf(a, d) - mixOf(b, c),
+                    WEIGHTS.opponent * (oc[a][b] + oc[a][c] + oc[d][b] + oc[d][c]) - mixOf(a, d) - mixOf(b, c) + tierCost(a, d, b, c),
                     [a, b, c, d, 2]);
             }
           }
@@ -372,6 +420,8 @@
     rankUnits: rankUnits,
     pickForCourt: pickForCourt,
     recommendRotation: recommendRotation,
+    tierScore: tierScore,
+    TIER_SCORE: TIER_SCORE,
     WEIGHTS: WEIGHTS,
     FAIR_BAND: FAIR_BAND,
     MAX_CANDIDATES: MAX_CANDIDATES

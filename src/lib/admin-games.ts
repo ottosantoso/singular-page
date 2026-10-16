@@ -95,6 +95,7 @@ const FORMAT_LABEL: Record<string, string> = {
   americano: "Americano",
   mexicano: "Mexicano",
   super: "Super Mexicano",
+  yingyang: "Ying Yang",
 };
 
 export function sportLabel(sport: string | null): string {

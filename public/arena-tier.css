@@ -1,0 +1,78 @@
+/* Tier pemain + format Ying Yang — gaya terisolasi, tidak mengubah tampilan lain. */
+#arenaScreen .tier-field { position: relative; margin: 4px 0 12px; }
+#arenaScreen .tier-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+#arenaScreen .tier-head-icon {
+  width: 30px; height: 30px; border-radius: 50%; flex: 0 0 30px;
+  display: grid; place-items: center; color: #fff; background: var(--arena-banner, #0f172a);
+}
+#arenaScreen .tier-head-icon svg { width: 15px; height: 15px; }
+#arenaScreen .tier-title { display: block; font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--arena-banner, #0f172a); text-transform: uppercase; }
+#arenaScreen .tier-sub { display: block; font-size: 11.5px; color: var(--line-dim, #64748b); font-weight: 500; }
+#arenaScreen .tier-optional { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--line-dim, #64748b); }
+
+#arenaScreen .tier-trigger {
+  width: 100%; min-height: 46px; display: flex; align-items: center; gap: 10px;
+  padding: 0 14px; border-radius: 12px; cursor: pointer; text-align: left;
+  border: 1.5px solid var(--arena-border, #e2e8f0); background: var(--arena-surface, #fff);
+  color: var(--arena-banner, #0f172a); font: inherit; font-size: 14px; font-weight: 600;
+  text-transform: none; letter-spacing: 0;
+}
+#arenaScreen .tier-trigger:hover:not(:disabled) { border-color: var(--sport-color, #85bd13); }
+#arenaScreen .tier-trigger:focus-visible, #arenaScreen .tier-field.open .tier-trigger { outline: 0; border-color: var(--sport-color, #85bd13); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sport-color, #85bd13) 22%, transparent); }
+#arenaScreen .tier-trigger:disabled { opacity: .55; cursor: not-allowed; }
+#arenaScreen .tier-trigger-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#arenaScreen .tier-trigger-label.placeholder { color: var(--line-dim, #64748b); font-weight: 500; }
+#arenaScreen .tier-caret { width: 16px; height: 16px; flex: 0 0 16px; transition: transform .15s ease; }
+#arenaScreen .tier-field.open .tier-caret { transform: rotate(180deg); }
+
+#arenaScreen .tier-menu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+  margin: 0; padding: 6px; list-style: none; max-height: 320px; overflow-y: auto;
+  background: var(--arena-surface, #fff); border: 1.5px solid var(--arena-border, #e2e8f0);
+  border-radius: 14px; box-shadow: 0 18px 40px -18px rgba(15, 23, 42, .45);
+}
+#arenaScreen .tier-menu[hidden] { display: none; }
+#arenaScreen .tier-option {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;
+  cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--arena-banner, #0f172a);
+}
+#arenaScreen .tier-option:hover, #arenaScreen .tier-option.focus { background: color-mix(in srgb, var(--sport-color, #85bd13) 14%, #fff); }
+#arenaScreen .tier-option[aria-selected="true"] { background: color-mix(in srgb, var(--sport-color, #85bd13) 24%, #fff); }
+#arenaScreen .tier-option small { display: block; font-size: 11px; font-weight: 500; color: var(--line-dim, #64748b); }
+#arenaScreen .tier-option-text { flex: 1; min-width: 0; }
+
+#arenaScreen .tier-badge {
+  width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff; background: var(--tier-color, #94a3b8);
+}
+#arenaScreen .tier-badge svg { width: 14px; height: 14px; }
+#arenaScreen .tier-badge.sm { width: 18px; height: 18px; flex-basis: 18px; }
+#arenaScreen .tier-badge.sm svg { width: 10px; height: 10px; }
+#arenaScreen [data-tier="newbie"]       { --tier-color: #85bd13; }
+#arenaScreen [data-tier="beginner"]     { --tier-color: #2563eb; }
+#arenaScreen [data-tier="intermediate"] { --tier-color: #eab308; }
+#arenaScreen [data-tier="advanced"]     { --tier-color: #f97316; }
+#arenaScreen [data-tier="pro"]          { --tier-color: #7c3aed; }
+#arenaScreen [data-tier="elite"]        { --tier-color: #ec4899; }
+
+/* Chip tier di daftar pemain terdaftar */
+#arenaScreen .player-tier {
+  display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+  padding: 2px 8px 2px 3px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  color: var(--arena-banner, #0f172a); background: color-mix(in srgb, var(--tier-color, #94a3b8) 16%, #fff);
+  border: 1px solid color-mix(in srgb, var(--tier-color, #94a3b8) 40%, transparent);
+}
+
+/* Kartu format Ying Yang */
+#arenaScreen .yy-mark { display: inline-flex; align-items: center; gap: 6px; }
+#arenaScreen .yy-mark svg { width: 16px; height: 16px; flex: 0 0 16px; }
+#arenaScreen .yy-example {
+  margin-top: 8px; padding: 8px 10px; border-radius: 10px; font-size: 12px; line-height: 1.55;
+  background: color-mix(in srgb, var(--sport-color, #85bd13) 10%, #fff);
+  border: 1px dashed color-mix(in srgb, var(--sport-color, #85bd13) 55%, transparent);
+}
+#arenaScreen .hint.warn { color: #b45309; }
+
+@media (max-width: 640px) {
+  #arenaScreen .tier-menu { max-height: 260px; }
+}
