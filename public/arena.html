@@ -474,6 +474,7 @@
 <link rel="stylesheet" href="/arena-refinement.css">
 <link rel="stylesheet" href="/arena-sport-themes.css">
 <link rel="stylesheet" href="/arena-menu-redesign.css">
+<link rel="stylesheet" href="/arena-tier.css">
 </head>
 <body class="welcome-active">
 <div class="score-toast-wrap" id="scoreToastWrap" aria-live="polite"></div>
@@ -583,6 +584,18 @@
                 <div class="hint">Dipakai untuk menyeimbangkan pasangan campur saat diacak.</div>
               </div>
             </div>
+            <div class="tier-field" id="tierField">
+              <div class="tier-head">
+                <span class="tier-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 20V13M12 20V8M18 20V4"/></svg></span>
+                <span><span class="tier-title" id="tierLabel">Tier <span class="tier-optional">(opsional)</span></span><span class="tier-sub">Pilih level permainan. Dipakai format Ying Yang untuk menyeimbangkan tim.</span></span>
+              </div>
+              <input type="hidden" id="playerTierInput" value="">
+              <button type="button" class="tier-trigger" id="tierPickerBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="tierLabel tierPickerValue">
+                <span id="tierPickerValue" class="tier-trigger-label placeholder">Pilih tier permainan</span>
+                <svg class="tier-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <ul class="tier-menu" id="tierMenu" role="listbox" aria-labelledby="tierLabel" tabindex="-1" hidden></ul>
+            </div>
             <button type="button" class="btn-primary" id="registerPlayerBtn">+ Tambah Pemain</button>
             <div class="status" id="playerEntryStatus"></div>
           </div>
@@ -626,11 +639,13 @@
               <button type="button" class="choice-card active" data-format-card="americano"><span class="choice-name">Americano</span><span class="choice-desc">Partner &amp; lawan diacak, semua dapat giliran merata.</span><span class="choice-tag">Disarankan untuk pemula</span></button>
               <button type="button" class="choice-card" data-format-card="mexicano"><span class="choice-name">Mexicano</span><span class="choice-desc">Mulai ronde 2, lawan disusun dari klasemen sementara.</span></button>
               <button type="button" class="choice-card" data-format-card="super"><span class="choice-name">Super Mexicano</span><span class="choice-desc">Seperti Mexicano, tapi poin di Lapangan 1 dikali 2.</span></button>
+              <button type="button" class="choice-card" data-format-card="yingyang"><span class="choice-name yy-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2a5 5 0 0 1 0 10 5 5 0 0 0 0 10A10 10 0 0 1 12 2Z" fill="currentColor"/><circle cx="12" cy="7" r="1.4" fill="#fff"/><circle cx="12" cy="17" r="1.4" fill="currentColor"/></svg>Ying Yang</span><span class="choice-desc">Tim seimbang: yang jago dipasangkan dengan yang pemula (Pro + Newbie lawan Pro + Newbie).</span><span class="choice-tag">Cocok untuk main campur level</span></button>
             </div>
             <select id="formatSelect" class="visually-hidden-select" tabindex="-1" aria-hidden="true">
               <option value="americano">Americano</option>
               <option value="mexicano">Mexicano</option>
               <option value="super">Super Mexicano</option>
+              <option value="yingyang">Ying Yang</option>
             </select>
             <div class="hint" id="formatHint"></div>
           </div>
@@ -899,6 +914,11 @@
 
   const playerNameInput = document.getElementById('playerNameInput');
   const playerGenderInput = document.getElementById('playerGenderInput');
+  const playerTierInput = document.getElementById('playerTierInput');
+  const tierField = document.getElementById('tierField');
+  const tierPickerBtn = document.getElementById('tierPickerBtn');
+  const tierPickerValue = document.getElementById('tierPickerValue');
+  const tierMenu = document.getElementById('tierMenu');
   const registerPlayerBtn = document.getElementById('registerPlayerBtn');
   const playerEntryStatus = document.getElementById('playerEntryStatus');
   const registeredPlayersList = document.getElementById('registeredPlayersList');
@@ -1132,13 +1152,25 @@
   modePairsBtn.addEventListener('click', () => setSetupMode('pairs'));
   modeCustomBtn.addEventListener('click', () => setSetupMode('custom'));
 
-  const FORMAT_LABEL = { americano: 'Americano', mexicano: 'Mexicano', super: 'Super Mexicano' };
+  const FORMAT_LABEL = { americano: 'Americano', mexicano: 'Mexicano', super: 'Super Mexicano', yingyang: 'Ying Yang' };
   const FORMAT_HINT = {
     americano: 'Partner & lawan diacak tiap ronde, semua pemain dapat giliran main merata.',
     mexicano: 'Ronde 1 diacak. Mulai ronde 2, pasangan disusun dari peringkat sementara: #1 & #4 lawan #2 & #3 di tiap lapangan. Lapangan 1 diisi pemain peringkat teratas. Ronde berikutnya baru disusun setelah semua skor lapangan masuk.',
-    super: 'Sama seperti Mexicano, tapi poin yang didapat di Lapangan 1 dikali 2, jadi peluang comeback terbuka. Butuh minimal 2 lapangan agar bonusnya berpengaruh.'
+    super: 'Sama seperti Mexicano, tapi poin yang didapat di Lapangan 1 dikali 2, jadi peluang comeback terbuka. Butuh minimal 2 lapangan agar bonusnya berpengaruh.',
+    yingyang: 'Format seimbang untuk main campur level. Tiap tim diisi pemain jago + pemain pemula (contoh: Pro + Newbie lawan Pro + Newbie), jadi kedua tim selalu sama kuat. Partner & lawan tetap diacak tiap ronde dan semua pemain dapat giliran merata. Isi tier tiap pemain di langkah 1.'
   };
-  function updateFormatHint(){ formatHint.textContent = FORMAT_HINT[formatSelect.value] || ''; }
+  function updateFormatHint(){
+    formatHint.classList.remove('warn');
+    let text = FORMAT_HINT[formatSelect.value] || '';
+    if (formatSelect.value === 'yingyang'){
+      const noTier = registeredPlayers.filter(player => !player.tier).length;
+      if (noTier > 0){
+        text += ' Perhatian: ' + noTier + ' pemain belum punya tier dan dianggap Intermediate.';
+        formatHint.classList.add('warn');
+      }
+    }
+    formatHint.textContent = text;
+  }
   formatSelect.addEventListener('change', () => { updateFormatHint(); updateRotationHint(); });
   document.querySelectorAll('[data-format-card]').forEach(card => {
     card.addEventListener('click', () => {
@@ -1178,8 +1210,10 @@
   //  Otomatis : Mandiri kalau ada cukup cadangan, selain itu Serentak (lihat P.recommendRotation).
   // Pilihan hanya relevan untuk Americano / Pasangan Tetap dengan >1 lapangan. Mexicano selalu serentak
   // (peringkat butuh semua skor), mode Custom selalu manual per lapangan.
+  // Americano & Ying Yang sama-sama acak per ronde (tanpa peringkat), jadi opsi rotasi lapangannya sama.
+  function isAmericanoLike(format){ return format === 'americano' || format === 'yingyang'; }
   function rotationApplies(){
-    return setupMode === 'pairs' || (setupMode === 'individual' && formatSelect.value === 'americano');
+    return setupMode === 'pairs' || (setupMode === 'individual' && isAmericanoLike(formatSelect.value));
   }
   function rotationHintText(choice, rec, unitWord){
     const resolved = choice === 'auto' ? rec.mode : choice;
@@ -1214,11 +1248,94 @@
     return window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'p-' + Date.now() + '-' + Math.random().toString(16).slice(2);
   }
 
+  // ===== Tier pemain =====
+  // Disimpan sebagai kunci teks ('newbie'..'elite') di player.tier — ikut tersimpan di state sesi (cloud)
+  // dan di tabel arena_players. Skor angkanya (1–6) hanya dipakai internal oleh format Ying Yang.
+  const TIER_ICONS = {
+    person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',
+    cup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v6a4 4 0 0 1-8 0V4ZM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 14v4M9 20h6"/></svg>',
+    medal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="5"/><path d="M9 3l3 6 3-6"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg>',
+    crown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8Z"/></svg>',
+    clear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>'
+  };
+  const TIERS = [
+    { key: 'newbie',       label: 'Newbie',       note: 'Baru mulai main',          icon: TIER_ICONS.person },
+    { key: 'beginner',     label: 'Beginner',     note: 'Paham dasar permainan',    icon: TIER_ICONS.person },
+    { key: 'intermediate', label: 'Intermediate', note: 'Sudah konsisten',          icon: TIER_ICONS.cup },
+    { key: 'advanced',     label: 'Advanced',     note: 'Teknik & taktik bagus',    icon: TIER_ICONS.medal },
+    { key: 'pro',          label: 'Pro',          note: 'Level kompetitif',         icon: TIER_ICONS.star },
+    { key: 'elite',        label: 'Elite',        note: 'Level tertinggi',          icon: TIER_ICONS.crown }
+  ];
+  function tierByKey(key){ return TIERS.find(t => t.key === key) || null; }
+
+  let tierFocusIndex = -1; // -1 = "Tanpa tier", 0..5 = TIERS
+  function buildTierMenu(){
+    const items = [{ key: '', label: 'Tanpa tier', note: 'Dianggap Intermediate di format Ying Yang', icon: TIER_ICONS.clear }].concat(TIERS);
+    tierMenu.innerHTML = items.map((t, i) =>
+      `<li class="tier-option" role="option" id="tierOpt${i}" data-tier="${t.key}" data-value="${t.key}" aria-selected="false">` +
+      `<span class="tier-badge" ${t.key ? '' : 'style="--tier-color:#94a3b8"'}>${t.icon}</span>` +
+      `<span class="tier-option-text">${t.label}<small>${t.note}</small></span></li>`
+    ).join('');
+  }
+  function setTierValue(key){
+    const t = tierByKey(key);
+    playerTierInput.value = t ? t.key : '';
+    tierPickerValue.textContent = t ? t.label : 'Pilih tier permainan';
+    tierPickerValue.classList.toggle('placeholder', !t);
+    tierMenu.querySelectorAll('.tier-option').forEach(el => el.setAttribute('aria-selected', String(el.dataset.value === (t ? t.key : ''))));
+  }
+  function markTierFocus(){
+    const opts = tierMenu.querySelectorAll('.tier-option');
+    opts.forEach((el, i) => el.classList.toggle('focus', i === tierFocusIndex + 1));
+    const cur = opts[tierFocusIndex + 1];
+    if (cur){ tierPickerBtn.setAttribute('aria-activedescendant', cur.id); cur.scrollIntoView({ block: 'nearest' }); }
+  }
+  function openTierMenu(){
+    if (tierPickerBtn.disabled) return;
+    tierMenu.hidden = false;
+    tierField.classList.add('open');
+    tierPickerBtn.setAttribute('aria-expanded', 'true');
+    const idx = TIERS.findIndex(t => t.key === playerTierInput.value);
+    tierFocusIndex = idx; // idx -1 -> "Tanpa tier"
+    markTierFocus();
+  }
+  function closeTierMenu(){
+    tierMenu.hidden = true;
+    tierField.classList.remove('open');
+    tierPickerBtn.setAttribute('aria-expanded', 'false');
+    tierPickerBtn.removeAttribute('aria-activedescendant');
+  }
+  function chooseTier(key){ setTierValue(key); closeTierMenu(); tierPickerBtn.focus(); }
+  buildTierMenu();
+  tierPickerBtn.addEventListener('click', () => { tierMenu.hidden ? openTierMenu() : closeTierMenu(); });
+  tierMenu.addEventListener('click', event => {
+    const opt = event.target.closest('.tier-option');
+    if (opt) chooseTier(opt.dataset.value);
+  });
+  tierPickerBtn.addEventListener('keydown', event => {
+    const open = !tierMenu.hidden;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp'){
+      event.preventDefault();
+      if (!open){ openTierMenu(); return; }
+      tierFocusIndex = Math.max(-1, Math.min(TIERS.length - 1, tierFocusIndex + (event.key === 'ArrowDown' ? 1 : -1)));
+      markTierFocus();
+    } else if (event.key === 'Enter' || event.key === ' '){
+      if (open){ event.preventDefault(); chooseTier(tierFocusIndex < 0 ? '' : TIERS[tierFocusIndex].key); }
+    } else if (event.key === 'Escape' && open){
+      event.preventDefault(); closeTierMenu();
+    } else if (event.key === 'Tab' && open){
+      closeTierMenu();
+    }
+  });
+  document.addEventListener('click', event => { if (!tierField.contains(event.target)) closeTierMenu(); });
+
   function renderRegisteredPlayers(){
     registeredPlayersList.innerHTML = '';
     if (!registeredPlayers.length){
       registeredPlayersList.innerHTML = '<div class="empty-lb">Belum ada pemain.</div>';
       updatePlayerSuggestion();
+      updateFormatHint();
       return;
     }
     registeredPlayers.forEach(player => {
@@ -1226,7 +1343,11 @@
       row.className = 'player-row';
       const icon = player.gender === 'female' ? '♀' : '♂';
       const label = player.gender === 'female' ? 'Perempuan' : 'Laki-Laki';
-      row.innerHTML = `<span aria-label="${label}" title="${label}">${icon}</span><span class="player-row-name">${escHtml(player.name)}</span><button type="button" class="btn-tiny" data-id="${player.id}" aria-label="Hapus ${escHtml(player.name)}" title="Hapus">×</button>`;
+      const tierInfo = player.tier ? tierByKey(player.tier) : null;
+      const tierChip = tierInfo
+        ? `<span class="player-tier" data-tier="${tierInfo.key}" title="Tier ${escHtml(tierInfo.label)}"><span class="tier-badge sm">${tierInfo.icon}</span>${escHtml(tierInfo.label)}</span>`
+        : '';
+      row.innerHTML = `<span aria-label="${label}" title="${label}">${icon}</span><span class="player-row-name">${escHtml(player.name)}</span>${tierChip}<button type="button" class="btn-tiny" data-id="${player.id}" aria-label="Hapus ${escHtml(player.name)}" title="Hapus">×</button>`;
       registeredPlayersList.appendChild(row);
     });
     registeredPlayersList.querySelectorAll('[data-id]').forEach(button => {
@@ -1237,6 +1358,7 @@
       });
     });
     updatePlayerSuggestion();
+    updateFormatHint();
   }
 
   registerPlayerBtn.addEventListener('click', () => {
@@ -1247,8 +1369,11 @@
       playerEntryStatus.textContent = 'Nama pemain sudah ada di daftar.';
       return;
     }
-    registeredPlayers.push({ id: playerId(), name, gender: playerGenderInput.value });
+    const newPlayer = { id: playerId(), name, gender: playerGenderInput.value };
+    if (playerTierInput.value) newPlayer.tier = playerTierInput.value;
+    registeredPlayers.push(newPlayer);
     playerNameInput.value = '';
+    setTierValue(''); // pemain berikutnya mulai dari kosong supaya tier tidak terbawa tidak sengaja
     renderRegisteredPlayers();
     playerNameInput.focus();
   });
@@ -1348,7 +1473,7 @@
     const rotationRec = P.recommendRotation(setupMode === 'pairs' ? pairs.length : players.length, courts, setupMode === 'pairs' ? P.PAIRS : P.PLAYERS);
     let rotation = 'synchronized';
     if (setupMode === 'custom') rotation = 'independent';
-    else if (format === 'americano' && courts > 1) rotation = rotationChoice === 'auto' ? rotationRec.mode : rotationChoice;
+    else if (isAmericanoLike(format) && courts > 1) rotation = rotationChoice === 'auto' ? rotationRec.mode : rotationChoice;
     if (rotationApplies() && courts > 1){
       const unitWord = setupMode === 'pairs' ? 'pasangan' : 'pemain';
       statusMsg.textContent = (statusMsg.textContent ? statusMsg.textContent + ' ' : '') +
@@ -1396,7 +1521,7 @@
     }
 
     playerNameInput.disabled = true;
-    playerGenderInput.disabled = true;
+    playerGenderInput.disabled = true; tierPickerBtn.disabled = true; closeTierMenu();
     registerPlayerBtn.disabled = true;
     registeredPlayersList.querySelectorAll('button').forEach(button => { button.disabled = true; });
 
@@ -1495,7 +1620,7 @@
     state = null;
 
     playerNameInput.disabled = false;
-    playerGenderInput.disabled = false;
+    playerGenderInput.disabled = false; tierPickerBtn.disabled = false;
     registerPlayerBtn.disabled = false;
     courtsInput.disabled = false;
     roundDurationInput.disabled = false;
@@ -1507,6 +1632,7 @@
     rotationSelect.value = 'auto';
     sessionDurationInput.disabled = false;
     playerNameInput.value = '';
+    setTierValue('');
     registeredPlayers = [];
     renderRegisteredPlayers();
     roundDurationInput.value = '';
@@ -1823,7 +1949,7 @@
       if (!state.matchHistory) state.matchHistory = [];
       state.players = (state.players || []).map(player => typeof player === 'string'
         ? { id: playerId(), name: player, gender: 'male' }
-        : player);
+        : (player.tier && !tierByKey(player.tier) ? Object.assign({}, player, { tier: '' }) : player));
       Object.keys(state.leaderboard || {}).forEach(name => {
         if (typeof state.leaderboard[name].wins !== 'number') state.leaderboard[name].wins = 0;
       });
@@ -1837,7 +1963,7 @@
       roundDurationInput.value = state.roundDurationMin || '';
       sessionDurationInput.value = state.sessionDurationMin || '';
       playerNameInput.disabled = true;
-      playerGenderInput.disabled = true;
+      playerGenderInput.disabled = true; tierPickerBtn.disabled = true; closeTierMenu();
       registerPlayerBtn.disabled = true;
       registeredPlayersList.querySelectorAll('button').forEach(button => { button.disabled = true; });
       courtsInput.disabled = true;
@@ -1859,7 +1985,7 @@
       registeredPlayers = state.players.map(player => ({ ...player }));
       renderRegisteredPlayers();
       playerNameInput.disabled = true;
-      playerGenderInput.disabled = true;
+      playerGenderInput.disabled = true; tierPickerBtn.disabled = true; closeTierMenu();
       registerPlayerBtn.disabled = true;
       registeredPlayersList.querySelectorAll('button').forEach(button => { button.disabled = true; });
       courtsInput.disabled = true;
@@ -1877,7 +2003,7 @@
     } else {
       state = null;
       playerNameInput.disabled = false;
-      playerGenderInput.disabled = false;
+      playerGenderInput.disabled = false; tierPickerBtn.disabled = false;
       registerPlayerBtn.disabled = false;
       courtsInput.disabled = false;
       roundDurationInput.disabled = false;
@@ -2106,7 +2232,13 @@
 
 
       const players = playerNames().map(name => ({ arena_code: code, name }));
-      if (players.length) await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
+      if (players.length){
+        // Tier ikut disimpan ke kolom arena_players.tier. Kalau migrasinya belum jalan di database ini,
+        // simpan ulang tanpa tier supaya daftar pemain tetap tersimpan seperti biasa.
+        const withTier = players.map(row => ({ ...row, tier: tierNameOf(row.name) || null }));
+        const up = await ottoDb.from('arena_players').upsert(withTier, { onConflict: 'arena_code,name' });
+        if (up && up.error) await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
+      }
 
       const rows = matches.map((m, i) => {
         const court = Number(m.court) || (i + 1);
@@ -3011,7 +3143,7 @@
   function formatOf(){ return (state && state.format) || 'americano'; }
   // Mexicano & Super Mexicano: pasangan disusun dari peringkat, jadi SEMUA lapangan harus selesai
   // dulu sebelum ronde berikutnya dibuat (ronde serentak, berlaku untuk 1 lapangan maupun banyak).
-  function isRankedFormat(){ return !!state && state.mode === 'individual' && formatOf() !== 'americano'; }
+  function isRankedFormat(){ return !!state && state.mode === 'individual' && (formatOf() === 'mexicano' || formatOf() === 'super'); }
   // Mode rotasi lapangan sesi ini: 'independent' (Mandiri) atau 'synchronized' (Serentak).
   // Mexicano selalu serentak, Custom selalu mandiri. Sesi lama (sebelum ada pilihan rotasi) tidak punya
   // state.rotation dan dulu selalu mandiri kalau lapangannya >1, jadi itu default-nya.
@@ -3035,6 +3167,9 @@
       opponentCount: state.opponentCount,
       sitOutCount: state.sitOutCount,
       genderOf,
+      // Ying Yang: pasangan diseimbangkan berdasarkan tier. Format lain tidak memakai tier sama sekali.
+      tierOf: name => P.tierScore(tierNameOf(name)),
+      balanceTier: state.mode === 'individual' && formatOf() === 'yingyang',
       gamesOf: state.mode === 'pairs' ? avgPairGames : gamesOf,
       pointsOf: name => (state.leaderboard[name] || {}).points || 0,
       winsOf: name => (state.leaderboard[name] || {}).wins || 0
@@ -3318,6 +3453,11 @@
   function isCustomMode(){ return state && state.mode === 'custom'; }
 
   // ===== akhir logic Langkah 15 =====
+
+  function tierNameOf(name){
+    const player = (state.players || []).find(p => p && p.name === name);
+    return (player && player.tier) || '';
+  }
 
   function genderOf(name){
     const player = (state.players || []).find(p => p.name === name);

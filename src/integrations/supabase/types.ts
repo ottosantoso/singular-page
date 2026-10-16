@@ -151,18 +151,21 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          tier: string | null
         }
         Insert: {
           arena_code: string
           created_at?: string
           id?: string
           name: string
+          tier?: string | null
         }
         Update: {
           arena_code?: string
           created_at?: string
           id?: string
           name?: string
+          tier?: string | null
         }
         Relationships: [
           {

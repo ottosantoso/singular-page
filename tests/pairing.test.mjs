@@ -301,3 +301,143 @@ test("recordMatch: catat (+1) dan batalkan (-1), tidak pernah di bawah 0", () =>
   P.recordMatch(c, m, -1);
   assert.equal(c.partnerCount[P.pairKey("A", "B")], 0);
 });
+
+// ===== Ying Yang (format seimbang tier) =====
+
+const TIERS = { newbie: 1, beginner: 2, intermediate: 3, advanced: 4, pro: 5, elite: 6 };
+const tierMap = (spec) => Object.fromEntries(Object.entries(spec).map(([n, t]) => [n, TIERS[t]]));
+const teamSum = (team, tiers) => team.reduce((a, n) => a + tiers[n], 0);
+
+// Simulasi sesi serentak: plan -> catat -> ulang. Mengembalikan semua match + counts.
+function runYingYang({ spec, courts, rounds, seed, balanceTier = true }) {
+  const units = Object.keys(spec);
+  const tiers = tierMap(spec);
+  const rng = mulberry32(seed);
+  const s = newCounts(units);
+  const all = [];
+  for (let r = 0; r < rounds; r++) {
+    const plan = P.planRound(units, courts, P.PLAYERS, {
+      ...s,
+      genderOf: () => "male",
+      tierOf: (n) => tiers[n],
+      balanceTier,
+      rng,
+    });
+    plan.sitOut.forEach((u) => s.sitOutCount[u]++);
+    plan.matches.forEach((m) => {
+      P.recordMatch(s, m, 1);
+      all.push(m);
+    });
+  }
+  return { all, tiers, s };
+}
+
+test("Ying Yang: 2 Pro + 2 Newbie selalu Pro+Newbie vs Pro+Newbie, tidak pernah Pro+Pro vs Newbie+Newbie", () => {
+  const spec = { A: "pro", B: "pro", C: "newbie", D: "newbie" };
+  for (let seed = 1; seed <= 40; seed++) {
+    const { all, tiers } = runYingYang({ spec, courts: 1, rounds: 3, seed });
+    all.forEach((m) => assert.equal(teamSum(m.teamA, tiers), teamSum(m.teamB, tiers)));
+    all.forEach((m) => {
+      assert.notEqual(tiers[m.teamA[0]], tiers[m.teamA[1]], "satu tim tidak boleh sama-sama sama tier");
+      assert.notEqual(tiers[m.teamB[0]], tiers[m.teamB[1]]);
+    });
+  }
+});
+
+test("Ying Yang: 4 Pro + 4 Newbie, 2 lapangan -> semua tim Pro+Newbie, lapangan merata", () => {
+  const spec = { P1: "pro", P2: "pro", P3: "pro", P4: "pro", N1: "newbie", N2: "newbie", N3: "newbie", N4: "newbie" };
+  for (let seed = 1; seed <= 25; seed++) {
+    const { all, tiers } = runYingYang({ spec, courts: 2, rounds: 4, seed });
+    all.forEach((m) => {
+      assert.equal(teamSum(m.teamA, tiers), teamSum(m.teamB, tiers));
+      assert.equal(teamSum(m.teamA, tiers), 6); // Pro(5)+Newbie(1)
+    });
+  }
+});
+
+test("Ying Yang: tier campur (Pro, Advanced, Beginner, Newbie) -> selisih total tim maksimal 0 bila memungkinkan", () => {
+  const spec = { A: "pro", B: "advanced", C: "beginner", D: "newbie", E: "pro", F: "advanced", G: "beginner", H: "newbie" };
+  for (let seed = 1; seed <= 25; seed++) {
+    const { all, tiers } = runYingYang({ spec, courts: 2, rounds: 4, seed });
+    all.forEach((m) => assert.ok(Math.abs(teamSum(m.teamA, tiers) - teamSum(m.teamB, tiers)) <= 1));
+  }
+});
+
+test("Ying Yang: partner bergilir dan tidak menumpuk (3 Pro + 3 Newbie, 1 lapangan, 3 ronde)", () => {
+  const spec = { P1: "pro", P2: "pro", P3: "pro", N1: "newbie", N2: "newbie", N3: "newbie" };
+  const { all, s } = runYingYang({ spec, courts: 1, rounds: 3, seed: 5 });
+  assert.equal(all.length, 3);
+  const maxPartner = Math.max(...Object.values(s.partnerCount));
+  assert.ok(maxPartner <= 2, "partner jangan menumpuk");
+});
+
+test("Ying Yang: pemain tanpa tier dianggap Intermediate (tierScore)", () => {
+  assert.equal(P.tierScore(undefined), 3);
+  assert.equal(P.tierScore(""), 3);
+  assert.equal(P.tierScore("Pro"), 5);
+  assert.equal(P.tierScore("ELITE"), 6);
+  assert.equal(P.tierScore("newbie"), 1);
+});
+
+test("Ying Yang: pickForCourt (Mandiri) mengutamakan tim seimbang", () => {
+  const spec = { A: "pro", B: "pro", C: "newbie", D: "newbie", E: "pro", F: "newbie" };
+  const units = Object.keys(spec);
+  const tiers = tierMap(spec);
+  for (let seed = 1; seed <= 40; seed++) {
+    const ctx = {
+      ...newCounts(units),
+      genderOf: () => "male",
+      gamesOf: () => 0,
+      tierOf: (n) => tiers[n],
+      balanceTier: true,
+      rng: mulberry32(seed),
+    };
+    const r = P.pickForCourt(units, P.PLAYERS, ctx);
+    assert.equal(teamSum(r.match.teamA, tiers), teamSum(r.match.teamB, tiers));
+  }
+});
+
+test("Americano tidak berubah: tierOf dikirim tapi balanceTier mati -> hasil persis sama dengan tanpa tier", () => {
+  const spec = { A: "pro", B: "pro", C: "newbie", D: "newbie", E: "beginner", F: "advanced", G: "pro", H: "newbie" };
+  const units = Object.keys(spec);
+  const tiers = tierMap(spec);
+  const run = (withTier) => {
+    const rng = mulberry32(99);
+    const s = newCounts(units);
+    const out = [];
+    for (let r = 0; r < 6; r++) {
+      const ctx = { ...s, genderOf: () => "male", rng };
+      if (withTier) ctx.tierOf = (n) => tiers[n];
+      const plan = P.planRound(units, 2, P.PLAYERS, ctx);
+      plan.sitOut.forEach((u) => s.sitOutCount[u]++);
+      plan.matches.forEach((m) => P.recordMatch(s, m, 1));
+      out.push(JSON.stringify(plan));
+    }
+    return out;
+  };
+  assert.deepEqual(run(true), run(false));
+});
+
+test("Ying Yang: 6 Pro + 6 Newbie, 2 lapangan (4 istirahat) -> yang main dipilih seimbang, semua tim Pro+Newbie", () => {
+  const spec = Object.fromEntries([
+    ...["P1", "P2", "P3", "P4", "P5", "P6"].map((n) => [n, "pro"]),
+    ...["N1", "N2", "N3", "N4", "N5", "N6"].map((n) => [n, "newbie"]),
+  ]);
+  for (let seed = 1; seed <= 30; seed++) {
+    const { all, tiers } = runYingYang({ spec, courts: 2, rounds: 6, seed });
+    all.forEach((m) => {
+      assert.equal(teamSum(m.teamA, tiers), 6);
+      assert.equal(teamSum(m.teamB, tiers), 6);
+    });
+  }
+});
+
+test("Ying Yang: istirahat tetap adil (tiap pemain istirahat bergiliran, selisih maks 1)", () => {
+  const spec = Object.fromEntries([
+    ...["P1", "P2", "P3", "P4", "P5", "P6"].map((n) => [n, "pro"]),
+    ...["N1", "N2", "N3", "N4", "N5", "N6"].map((n) => [n, "newbie"]),
+  ]);
+  const { s } = runYingYang({ spec, courts: 2, rounds: 6, seed: 11 });
+  const sits = Object.values(s.sitOutCount);
+  assert.ok(Math.max(...sits) - Math.min(...sits) <= 1);
+});

@@ -14,3 +14,7 @@
 
 # Redesign layar "Pilih Arena Kamu"
 - [x] Layar menu pilih olahraga (`#welcomeScreen` di `public/arena.html`) didesain ulang sesuai referensi: background foto lapangan, banner navy, kartu kaca dengan foto + ikon bulat berwarna, kartu Riwayat full-width. CSS terisolasi di `public/arena-menu-redesign.css`; script gameplay, layar Arena, dan Riwayat tidak diubah.
+
+# Format Ying Yang + Tier pemain
+- [x] Pilih tier (Newbie–Elite, opsional) saat tambah pemain; tampil di daftar pemain terdaftar; tersimpan di state sesi dan kolom `arena_players.tier` (migrasi `20261016050000_arena_players_tier.sql`).
+- [x] Format baru Ying Yang (di samping Super Mexicano) untuk semua olahraga: tim seimbang Pro+Newbie vs Pro+Newbie; logika di `public/pairing.js` hanya aktif lewat `ctx.balanceTier`, Americano/Mexicano/Super tidak berubah (ada tes pembuktian).
