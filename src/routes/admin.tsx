@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -36,6 +36,7 @@ import {
 } from "@/lib/admin-games";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { GamePreview } from "@/components/admin/game-preview";
+import { Pagination } from "@/components/admin/pagination";
 import { PlatformUsers } from "@/components/admin/platform-users";
 import { SPORT_THEMES, SportIcon, sportTheme } from "@/components/sport-icons";
 import hero from "@/assets/sports-hero.jpg";
@@ -308,11 +309,19 @@ function Dashboard({ section, onSection }: { section: Section; onSection: (next:
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  // Filter atau pencarian berubah -> kembali ke halaman pertama.
+  useEffect(() => {
+    setPage(1);
+  }, [tab, debounced]);
 
   const query = useQuery({
     queryKey: ["admin-games", tab, debounced],
@@ -332,6 +341,17 @@ function Dashboard({ section, onSection }: { section: Section; onSection: (next:
 
   const counts = query.data?.counts;
   const items = query.data?.items ?? [];
+  // Daftar disegarkan tiap 10 detik: jaga halaman tetap valid kalau jumlah data menyusut.
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  function goToPage(next: number) {
+    setPage(next);
+    // Kembali ke awal daftar supaya tidak perlu scroll naik setelah pindah halaman.
+    const top = listRef.current?.getBoundingClientRect().top ?? 0;
+    if (top < 80) listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <>
@@ -453,7 +473,7 @@ function Dashboard({ section, onSection }: { section: Section; onSection: (next:
             </label>
           </div>
 
-          <div className="mt-4">
+          <div ref={listRef} className="mt-4 scroll-mt-20">
             {query.isLoading ? (
               <div className="flex items-center justify-center gap-2 py-16 text-sm text-arena-dim">
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Memuat…
@@ -467,13 +487,26 @@ function Dashboard({ section, onSection }: { section: Section; onSection: (next:
                 {debounced ? "Tidak ada permainan yang cocok dengan pencarian." : "Belum ada permainan di kategori ini."}
               </p>
             ) : (
-              <ul className="grid gap-3 lg:grid-cols-2">
-                {items.map((g) => (
-                  <li key={g.game_key}>
-                    <GameRow game={g} onOpen={() => setOpenKey(g.game_key)} />
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="grid gap-3 lg:grid-cols-2">
+                  {pageItems.map((g) => (
+                    <li key={g.game_key}>
+                      <GameRow game={g} onOpen={() => setOpenKey(g.game_key)} />
+                    </li>
+                  ))}
+                </ul>
+                <Pagination
+                  total={items.length}
+                  page={currentPage}
+                  pageSize={pageSize}
+                  noun="permainan"
+                  onPage={goToPage}
+                  onPageSize={(next) => {
+                    setPageSize(next);
+                    setPage(1);
+                  }}
+                />
+              </>
             )}
           </div>
 
