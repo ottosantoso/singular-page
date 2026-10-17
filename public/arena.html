@@ -1058,7 +1058,8 @@
       registeredPlayers = (payload.players || []).map(player => ({
         id: playerId(),
         name: player.display_name,
-        gender: 'male'
+        gender: player.gender || 'male',
+        tier: player.tier || ''
       }));
       renderRegisteredPlayers();
       syncStatus.textContent = registeredPlayers.length

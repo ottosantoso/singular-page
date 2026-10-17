@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, CheckCircle2, Copy, Loader2, Share2, Trophy, Users, Medal, UserRound, Phone, Mail, Image, ChevronDown } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Copy, Loader2, Share2, Trophy, Users, Medal, UserRound, Phone, Mail, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/e/$publicCode")({
@@ -48,10 +48,10 @@ function PublicEventPage() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [gender, setGender] = useState("");
   const [tier, setTier] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [photoUrl, setPhotoUrl] = useState("");
   const [consent, setConsent] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -85,23 +85,36 @@ function PublicEventPage() {
     event.preventDefault();
     setSubmitting(true);
     setMessage("");
-    const { data, error: registerError } = await supabase.rpc("register_event_guest", {
+    const registrationArgs = {
       p_public_code: publicCode,
       p_display_name: displayName,
+      p_gender: gender,
       ...(phone ? { p_phone: phone } : {}),
       ...(email ? { p_email: email } : {}),
-      ...(photoUrl ? { p_photo_url: photoUrl } : {}),
       p_consent_to_show_name: consent,
       p_tier: tier,
-    });
+    };
+    let registrationResult = await supabase.rpc("register_event_guest", registrationArgs);
+    if (registrationResult.error?.message?.includes("p_gender")) {
+      const legacyArgs = {
+        p_public_code: publicCode,
+        p_display_name: displayName,
+        ...(phone ? { p_phone: phone } : {}),
+        ...(email ? { p_email: email } : {}),
+        p_consent_to_show_name: consent,
+        p_tier: tier,
+      };
+      registrationResult = await supabase.rpc("register_event_guest", legacyArgs);
+    }
+    const { data, error: registerError } = registrationResult;
     if (registerError || !data?.[0]) {
       setMessage(registerError?.message || "Pendaftaran belum berhasil.");
     } else {
       localStorage.setItem(storageKey, data[0].registration_token);
       setDisplayName("");
+      setGender("");
       setPhone("");
       setEmail("");
-      setPhotoUrl("");
       setMessage("Kamu sudah terdaftar. Link ini bisa dipakai lagi untuk melihat hasil pertandingan.");
       await loadEvent();
     }
@@ -261,9 +274,10 @@ function PublicEventPage() {
                   <form onSubmit={register} className="public-event__form">
                     <div className="public-event__form-intro"><span className="public-event__form-icon"><UserRound /></span><div><p className="public-event__form-kicker">Pendaftaran pemain</p><h3>Isi data kamu</h3><p>Nama dan tier akan tampil di daftar peserta event.</p></div></div>
                     <Field label="Nama tampil" required icon={<UserRound />}><input required minLength={2} maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Contoh: Budi Santoso" className="public-event__input" /></Field>
+                    <Field label="Jenis kelamin" required icon={<UserRound />}><div className="public-event__select-wrap"><select required value={gender} onChange={(e) => setGender(e.target.value)} className="public-event__input public-event__select"><option value="">Pilih jenis kelamin</option><option value="male">Laki-laki</option><option value="female">Perempuan</option></select><ChevronDown /></div></Field>
+
                     <Field label="Pilih tier" required icon={<Medal />} hint="Untuk penyeimbangan pertandingan"><div className="public-event__select-wrap"><select required value={tier} onChange={(e) => setTier(e.target.value)} className="public-event__input public-event__select"><option value="">Pilih level permainan</option><option value="newbie">Newbie</option><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option><option value="pro">Pro</option><option value="elite">Elite</option></select><ChevronDown /></div></Field>
                     <div className="public-event__form-grid"><Field label="WhatsApp" hint="Opsional" icon={<Phone />}><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08xxxxxxxxxx" className="public-event__input" /></Field><Field label="Email" hint="Opsional" icon={<Mail />}><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kamu@email.com" className="public-event__input" /></Field></div>
-                    <Field hide label="URL foto/avatar" hint="Opsional" icon={<Image />}><input type="url" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://..." className="public-event__input" /></Field>
                     <label className="public-event__consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>Nama saya boleh tampil di daftar peserta dan hasil event.</span></label>
                     {message && <p className="public-event__message">{message}</p>}
                     <button disabled={submitting} className="public-event__submit">{submitting && <Loader2 className="size-4 animate-spin" />} Daftar event <ArrowLeft className="size-4 rotate-180" /></button>

@@ -242,6 +242,7 @@ export type Database = {
           consent_to_show_name: boolean
           created_at: string
           display_name: string
+          gender: string | null
           email: string | null
           event_id: string
           phone: string | null
@@ -258,6 +259,7 @@ export type Database = {
           consent_to_show_name?: boolean
           created_at?: string
           display_name: string
+          gender?: string | null
           email?: string | null
           event_id: string
           phone?: string | null
@@ -274,6 +276,7 @@ export type Database = {
           consent_to_show_name?: boolean
           created_at?: string
           display_name?: string
+          gender?: string | null
           email?: string | null
           event_id?: string
           phone?: string | null
@@ -955,6 +958,7 @@ export type Database = {
         Args: {
           p_consent_to_show_name?: boolean
           p_display_name: string
+          p_gender: string
           p_email?: string
           p_phone?: string
           p_photo_url?: string
