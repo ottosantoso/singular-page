@@ -1,7 +1,35 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, CheckCircle2, Copy, Loader2, Share2, Trophy, Users, Medal, UserRound, Phone, Mail, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  Copy,
+  Crown,
+  Flame,
+  Loader2,
+  Mail,
+  MapPin,
+  Mars,
+  Medal,
+  Phone,
+  Share2,
+  Sprout,
+  Star,
+  Trophy,
+  UserPlus,
+  UserRound,
+  Users,
+  Venus,
+  VenusAndMars,
+  type LucideIcon,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SportIcon, sportTheme } from "@/components/sport-icons";
+import equipment from "@/assets/sport-equipment.jpg";
 
 export const Route = createFileRoute("/e/$publicCode")({
   head: () => ({
@@ -36,10 +64,68 @@ type PublicPlayer = {
 type PublicPayload = {
   event: PublicEvent | null;
   players: PublicPlayer[];
-  me: { display_name: string; tier: string | null; status: string } | null;
+  me: { display_name: string; tier: string | null; gender?: string | null; status: string } | null;
   matches: Array<Record<string, unknown>>;
   history: Array<Record<string, unknown>>;
 };
+
+type TierMeta = { key: string; label: string; note: string; icon: LucideIcon };
+
+const TIERS: TierMeta[] = [
+  { key: "newbie", label: "Newbie", note: "Baru mulai main", icon: Sprout },
+  { key: "beginner", label: "Beginner", note: "Paham dasar permainan", icon: Medal },
+  { key: "intermediate", label: "Intermediate", note: "Sudah konsisten", icon: Trophy },
+  { key: "advanced", label: "Advanced", note: "Teknik & taktik bagus", icon: Flame },
+  { key: "pro", label: "Pro", note: "Level kompetitif", icon: Crown },
+  { key: "elite", label: "Elite", note: "Level tertinggi", icon: Star },
+];
+
+const GENDERS: { value: string; label: string; icon: LucideIcon; tone: string }[] = [
+  { value: "male", label: "Laki-laki", icon: Mars, tone: "pe-tone--male" },
+  { value: "female", label: "Perempuan", icon: Venus, tone: "pe-tone--female" },
+];
+
+const FORMAT_LABELS: Record<string, string> = {
+  americano: "Americano",
+  mexicano: "Mexicano",
+  super: "Super Mexicano",
+  yingyang: "Ying Yang",
+  custom: "Custom",
+};
+
+function tierMeta(value: string | null | undefined): TierMeta {
+  return (
+    TIERS.find((tier) => tier.key === value) ?? {
+      key: "intermediate",
+      label: "Intermediate",
+      note: "Sudah konsisten",
+      icon: Trophy,
+    }
+  );
+}
+
+function formatLabel(value: string) {
+  return FORMAT_LABELS[value] ?? value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function playerStatusLabel(value: string) {
+  if (value === "registered") return "Terdaftar";
+  if (value === "checked_in") return "Check-in";
+  return value;
+}
+
+function eventStatusLabel(value: string) {
+  if (value === "registration") return "Pendaftaran dibuka";
+  if (value === "live") return "Event berjalan";
+  return "Event selesai";
+}
+
+function initials(name: string) {
+  const parts = name.replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+  const first = parts[0] ?? "?";
+  const second = parts[1];
+  return (second ? `${first.charAt(0)}${second.charAt(0)}` : first.slice(0, 2)).toUpperCase();
+}
 
 function PublicEventPage() {
   const { publicCode } = Route.useParams();
@@ -56,6 +142,8 @@ function PublicEventPage() {
   const [submitting, setSubmitting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [message, setMessage] = useState("");
+  const [copied, setCopied] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
   const storageKey = `ottoplay.event-registration.${publicCode}`;
 
   async function loadEvent() {
@@ -83,6 +171,14 @@ function PublicEventPage() {
 
   async function register(event: FormEvent) {
     event.preventDefault();
+    if (!gender) {
+      setMessage("Pilih jenis kelamin dulu.");
+      return;
+    }
+    if (!tier) {
+      setMessage("Pilih tier permainan dulu.");
+      return;
+    }
     setSubmitting(true);
     setMessage("");
     const registrationArgs = {
@@ -96,6 +192,7 @@ function PublicEventPage() {
     };
     let registrationResult = await supabase.rpc("register_event_guest", registrationArgs);
     if (registrationResult.error?.message?.includes("p_gender")) {
+      // Database lama belum punya parameter p_gender: kirim ulang tanpa jenis kelamin.
       const legacyArgs = {
         p_public_code: publicCode,
         p_display_name: displayName,
@@ -104,7 +201,10 @@ function PublicEventPage() {
         p_consent_to_show_name: consent,
         p_tier: tier,
       };
-      registrationResult = await supabase.rpc("register_event_guest", legacyArgs);
+      registrationResult = await supabase.rpc(
+        "register_event_guest",
+        legacyArgs as unknown as typeof registrationArgs,
+      );
     }
     const { data, error: registerError } = registrationResult;
     if (registerError || !data?.[0]) {
@@ -140,22 +240,33 @@ function PublicEventPage() {
     setCancelling(false);
   }
 
+  function openForm() {
+    setShowForm(true);
+    window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  }
+
+  function copyLink() {
+    navigator.clipboard
+      ?.writeText(shareUrl)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => undefined);
+  }
+
   const shareUrl = typeof window !== "undefined" ? window.location.href : `/e/${publicCode}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Ikut event ${payload?.event?.name || "OTTOPLAY"}: ${shareUrl}`)}`;
-  const startLabel = payload?.event?.starts_at
-    ? new Date(payload.event.starts_at).toLocaleString("id-ID", {
-        dateStyle: "full",
-        timeStyle: "short",
-      })
-    : "Waktu event belum ditentukan";
-  const matchRows = payload?.matches as Array<{ round?: number; court?: number; team_a?: string[]; team_b?: string[]; score_a?: number; score_b?: number }>;
+  const matchRows = (payload?.matches ?? []) as Array<{
+    round?: number;
+    court?: number;
+    team_a?: string[];
+    team_b?: string[];
+    score_a?: number;
+    score_b?: number;
+  }>;
 
-  const capacityLabel = useMemo(() => {
-    if (!payload?.event?.max_players) return `${payload?.players.length ?? 0} pemain terdaftar`;
-    return `${payload.players.length}/${payload.event.max_players} pemain terdaftar`;
-  }, [payload]);
-
-  if (loading) {
+  if (loading && !payload) {
     return (
       <main className="arena-home court-lines grid min-h-screen place-items-center px-4">
         <Loader2 className="size-10 animate-spin text-arena-lime" />
@@ -178,145 +289,422 @@ function PublicEventPage() {
     );
   }
 
+  const ev = payload.event;
+  const theme = sportTheme(ev.sport);
+  const registrationOpen = ev.status === "registration";
+  const playerCount = payload.players.length;
+  const fill = ev.max_players ? Math.min(100, Math.round((playerCount / ev.max_players) * 100)) : null;
+  const capacityLabel = ev.max_players
+    ? `${playerCount}/${ev.max_players} pemain terdaftar`
+    : `${playerCount} pemain terdaftar`;
+
+  const start = ev.starts_at ? new Date(ev.starts_at) : null;
+  const end = ev.ends_at ? new Date(ev.ends_at) : null;
+  const clock = (value: Date) => value.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  const dateLabel = start ? start.toLocaleString("id-ID", { dateStyle: "full" }) : "Waktu event belum ditentukan";
+  const timeLabel = start
+    ? end && end.toDateString() === start.toDateString()
+      ? `${clock(start)} - ${clock(end)}`
+      : `Pukul ${clock(start)}`
+    : "";
+
+  const words = ev.name.trim().split(/\s+/);
+  const lastWord = words.length > 1 ? words[words.length - 1] : "";
+  const leadWords = words.length > 1 ? words.slice(0, -1).join(" ") : ev.name;
+
+  const pageStyle = {
+    "--pe-accent": theme.accent,
+  } as CSSProperties;
+  const heroStyle: CSSProperties = {
+    background: `linear-gradient(105deg, ${theme.from} 0%, ${theme.from} 38%, ${theme.to} 100%)`,
+  };
+  const heroImageStyle: CSSProperties | null =
+    theme.panel === null
+      ? null
+      : {
+          backgroundColor: theme.to,
+          backgroundImage: `url(${equipment})`,
+          backgroundBlendMode: "multiply",
+          backgroundSize: "400% auto",
+          backgroundPosition: `${(theme.panel * 100) / 3}% 42%`,
+          WebkitMaskImage: "linear-gradient(to right, transparent 0%, #000 55%)",
+          maskImage: "linear-gradient(to right, transparent 0%, #000 55%)",
+        };
+  const accentStrip: CSSProperties = {
+    background: `linear-gradient(135deg, color-mix(in srgb, ${theme.accent} 30%, #eefbd9), #d6f6ea 70%, #d3f3fb)`,
+  };
+
   return (
-    <main className="public-event-page min-h-screen px-4 py-8 sm:px-6 sm:py-12">
-      <div className="mx-auto w-full max-w-5xl">
+    <main className="public-event-page min-h-screen px-4 py-8 sm:px-6 sm:py-10" style={pageStyle}>
+      <div className="relative z-10 mx-auto w-full max-w-6xl">
         <Link
           to="/"
           className="inline-flex items-center gap-2 font-display text-xs font-bold uppercase tracking-wider text-arena-dim transition hover:text-arena-ink"
         >
           <ArrowLeft className="size-4" /> OTTOPLAY
         </Link>
-        <section className="mt-5 overflow-hidden rounded-[30px] bg-arena-ink text-white shadow-[0_24px_60px_-30px] shadow-arena-ink/70">
-          <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-arena-lime">
-                {payload.event.organization_name}
+
+        <section
+          className="relative isolate mt-4 overflow-hidden rounded-[28px] text-white shadow-[0_28px_60px_-34px_rgba(8,32,56,.8)]"
+          style={heroStyle}
+        >
+          {heroImageStyle && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-full opacity-35 sm:w-[46%] sm:opacity-100"
+              style={heroImageStyle}
+            />
+          )}
+          <div className="grid gap-6 p-6 sm:p-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+            <div className="min-w-0">
+              <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] backdrop-blur-sm">
+                <span className="size-1.5 rounded-full" style={{ background: theme.accent }} aria-hidden="true" />
+                {ev.organization_name}
               </p>
-              <h1 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-5xl">
-                {payload.event.name}
+              <h1 className="mt-4 font-display text-3xl font-bold uppercase leading-[1.05] tracking-tight sm:text-5xl">
+                {leadWords}
+                {lastWord && (
+                  <>
+                    {" "}
+                    <span style={{ color: theme.accent }}>{lastWord}</span>
+                  </>
+                )}
               </h1>
-              <p className="mt-4 text-sm leading-6 text-white/70">
-                {payload.event.sport} · {payload.event.format} · {startLabel}
-                {payload.event.venue_name ? ` · ${payload.event.venue_name}` : ""}
-              </p>
+
+              <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:max-w-xl">
+                <HeroInfo icon={<SportIcon sport={ev.sport} className="size-5" />} accent={theme.accent}>
+                  <dt className="sr-only">Olahraga</dt>
+                  <dd className="font-semibold">{theme.label === "Olahraga" ? ev.sport : theme.label}</dd>
+                  <dd className="text-xs text-white/65">{formatLabel(ev.format)}</dd>
+                </HeroInfo>
+                <HeroInfo icon={<CalendarDays className="size-5" />} accent={theme.accent}>
+                  <dt className="sr-only">Jadwal</dt>
+                  <dd className="font-semibold">{dateLabel}</dd>
+                  {timeLabel && <dd className="text-xs text-white/65">{timeLabel}</dd>}
+                </HeroInfo>
+                {ev.venue_name && (
+                  <HeroInfo icon={<MapPin className="size-5" />} accent={theme.accent}>
+                    <dt className="sr-only">Lokasi</dt>
+                    <dd className="font-semibold">{ev.venue_name}</dd>
+                  </HeroInfo>
+                )}
+              </dl>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#0b1f33] shadow-lg transition hover:brightness-105"
+                  style={{ background: theme.accent }}
+                >
+                  {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  {copied ? "Tersalin" : "Salin link"}
+                </button>
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/5 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-white/15"
+                >
+                  <Share2 className="size-4" /> Bagikan WhatsApp
+                </a>
+              </div>
             </div>
-            <div className="rounded-2xl bg-white/10 p-4 lg:min-w-48">
-              <p className="text-xs font-bold uppercase tracking-wider text-white/60">Status</p>
-              <p className="mt-2 font-display text-xl font-bold text-arena-lime">
-                {payload.event.status === "registration" ? "Pendaftaran dibuka" : "Event berjalan"}
+
+            <div className="rounded-2xl border border-white/15 bg-[#04161f]/55 p-4 backdrop-blur-md lg:min-w-60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">Status</p>
+              <p className="mt-2 flex items-center gap-2 font-display text-xl font-bold" style={{ color: theme.accent }}>
+                <span className="relative flex size-2.5" aria-hidden="true">
+                  {registrationOpen && (
+                    <span className="absolute inline-flex size-full animate-ping rounded-full opacity-60" style={{ background: theme.accent }} />
+                  )}
+                  <span className="relative inline-flex size-2.5 rounded-full" style={{ background: theme.accent }} />
+                </span>
+                {eventStatusLabel(ev.status)}
               </p>
-              <p className="mt-1 text-sm text-white/70">{capacityLabel}</p>
+              <p className="mt-1 text-sm text-white/75">{capacityLabel}</p>
+              {fill !== null && (
+                <div
+                  className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/15"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={fill}
+                  aria-label="Kuota pemain"
+                >
+                  <div className="h-full rounded-full" style={{ width: `${fill}%`, background: theme.accent }} />
+                </div>
+              )}
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2 border-t border-white/10 p-4 sm:px-10">
-            <button
-              type="button"
-              onClick={() => void navigator.clipboard?.writeText(shareUrl)}
-              className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/15"
-            >
-              <Copy className="size-4" /> Salin link
-            </button>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-arena-lime px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink"
-            >
-              <Share2 className="size-4" /> Bagikan WhatsApp
-            </a>
           </div>
         </section>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.7fr)]">
-          <div className="rounded-[26px] border border-arena-ink/10 bg-white/90 p-6 shadow-sm sm:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-arena-lime">Peserta</p>
-                <h2 className="mt-1 font-display text-2xl font-bold">Daftar pemain</h2>
-              </div>
-              <Users className="size-7 text-arena-lime" />
-            </div>
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              {payload.players.map((player, index) => (
-                <div key={`${player.display_name}-${player.registered_at}`} className="public-event__player-row">
-                  <span className="public-event__player-number">{String(index + 1).padStart(2, "0")}</span>
-                  <div className="min-w-0 flex-1"><p className="truncate font-semibold text-arena-ink">{player.display_name}</p><p className="mt-1 text-[11px] uppercase tracking-wider text-arena-dim">{player.status}</p></div>
-                  <span className={`public-event__tier-badge public-event__tier-badge--${player.tier || "intermediate"}`}>{formatTier(player.tier)}</span>
+        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] lg:items-start">
+          <div className="overflow-hidden rounded-[24px] border border-arena-ink/10 bg-white/90 shadow-[0_18px_40px_-32px_rgba(17,45,72,.6)]">
+            <div className="flex items-center justify-between gap-4 border-b border-arena-ink/10 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <span className="grid size-11 place-items-center rounded-2xl bg-arena-ink/5 text-arena-ink">
+                  <Users className="size-5" />
+                </span>
+                <div>
+                  <h2 className="font-display text-xl font-bold">Daftar pemain</h2>
+                  <p className="text-xs text-arena-dim">Peserta yang sudah bergabung di event ini</p>
                 </div>
-              ))}
-              {!payload.players.length && <p className="text-sm text-arena-dim">Belum ada pemain terdaftar.</p>}
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-arena-ink/10 bg-white px-3 py-1.5 font-display text-sm font-bold text-arena-ink">
+                <UserRound className="size-4 text-arena-lime" />
+                {ev.max_players ? `${playerCount} / ${ev.max_players}` : playerCount}
+              </span>
             </div>
-          </div>
 
-          <div className="rounded-[26px] bg-gradient-to-br from-lime-200 via-cyan-100 to-white p-6 sm:p-8">
-            {payload.me ? (
-              <>
-                <CheckCircle2 className="size-8 text-emerald-600" />
-                <h2 className="mt-5 font-display text-2xl font-bold">Kamu sudah terdaftar</h2>
-                <p className="mt-2 text-sm leading-6 text-arena-dim">
-                  Hai {payload.me.display_name}, gunakan link ini lagi untuk melihat jadwal, skor, dan ranking.
+            {payload.players.length ? (
+              <ul className="grid gap-2 p-5">
+                {payload.players.map((player, index) => {
+                  const meta = tierMeta(player.tier);
+                  return (
+                    <li key={`${player.display_name}-${player.registered_at}`} className="public-event__player-row">
+                      <span className={`grid size-10 shrink-0 place-items-center rounded-full text-xs font-bold pe-tone--${meta.key}`} aria-hidden="true">
+                        {initials(player.display_name)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-arena-ink">
+                          <span className="mr-1.5 font-display text-[11px] text-arena-dim">{String(index + 1).padStart(2, "0")}</span>
+                          {player.display_name}
+                        </p>
+                        <p className="mt-0.5 text-[11px] uppercase tracking-wider text-arena-dim">{playerStatusLabel(player.status)}</p>
+                      </div>
+                      <TierBadge tier={player.tier} />
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="grid place-items-center px-6 py-12 text-center">
+                <span
+                  className="grid size-24 place-items-center rounded-full text-arena-ink"
+                  style={{ background: `color-mix(in srgb, ${theme.accent} 28%, #ffffff)` }}
+                >
+                  <SportIcon sport={ev.sport} className="size-11" />
+                </span>
+                <h3 className="mt-5 font-display text-lg font-bold">Belum ada pemain terdaftar</h3>
+                <p className="mt-1 max-w-xs text-sm leading-6 text-arena-dim">
+                  Jadilah yang pertama untuk bergabung dan rasakan keseruan pertandingan!
                 </p>
-                {payload.event.status === "registration" && (
-                  <button type="button" onClick={() => void cancelRegistration()} disabled={cancelling} className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-red-200 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-red-700 disabled:opacity-50">
-                    {cancelling ? "Membatalkan..." : "Batalkan pendaftaran"}
+                {!payload.me && (
+                  <button
+                    type="button"
+                    onClick={openForm}
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-arena-ink px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-arena-lime lg:hidden"
+                  >
+                    <UserPlus className="size-4" /> Daftar sekarang
                   </button>
                 )}
-              </>
-            ) : (
-              <>
-                <Trophy className="size-8 text-arena-ink" />
-                <h2 className="mt-5 font-display text-2xl font-bold">Ikut bermain?</h2>
-                <p className="mt-2 text-sm leading-6 text-arena-dim">
-                  Tidak perlu membuat akun OTTOPLAY. Daftar sebagai guest, lalu simpan link ini.
-                </p>
-                {showForm ? (
-                  <form onSubmit={register} className="public-event__form">
-                    <div className="public-event__form-intro"><span className="public-event__form-icon"><UserRound /></span><div><p className="public-event__form-kicker">Pendaftaran pemain</p><h3>Isi data kamu</h3><p>Nama dan tier akan tampil di daftar peserta event.</p></div></div>
-                    <Field label="Nama tampil" required icon={<UserRound />}><input required minLength={2} maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Contoh: Budi Santoso" className="public-event__input" /></Field>
-                    <Field label="Jenis kelamin" required icon={<UserRound />}><div className="public-event__select-wrap"><select required value={gender} onChange={(e) => setGender(e.target.value)} className="public-event__input public-event__select"><option value="">Pilih jenis kelamin</option><option value="male">Laki-laki</option><option value="female">Perempuan</option></select><ChevronDown /></div></Field>
+              </div>
+            )}
+          </div>
 
-                    <Field label="Pilih tier" required icon={<Medal />} hint="Untuk penyeimbangan pertandingan"><div className="public-event__select-wrap"><select required value={tier} onChange={(e) => setTier(e.target.value)} className="public-event__input public-event__select"><option value="">Pilih level permainan</option><option value="newbie">Newbie</option><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option><option value="pro">Pro</option><option value="elite">Elite</option></select><ChevronDown /></div></Field>
-                    <div className="public-event__form-grid"><Field label="WhatsApp" hint="Opsional" icon={<Phone />}><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08xxxxxxxxxx" className="public-event__input" /></Field><Field label="Email" hint="Opsional" icon={<Mail />}><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kamu@email.com" className="public-event__input" /></Field></div>
-                    <label className="public-event__consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>Nama saya boleh tampil di daftar peserta dan hasil event.</span></label>
-                    {message && <p className="public-event__message">{message}</p>}
-                    <button disabled={submitting} className="public-event__submit">{submitting && <Loader2 className="size-4 animate-spin" />} Daftar event <ArrowLeft className="size-4 rotate-180" /></button>
-                  </form>
-                ) : (
-                  <button type="button" onClick={() => setShowForm(true)} className="btn-arena mt-5 w-full justify-center">
+          <div
+            ref={formRef}
+            className="scroll-mt-6 overflow-hidden rounded-[24px] border border-arena-ink/10 bg-white/95 shadow-[0_18px_40px_-32px_rgba(17,45,72,.6)]"
+          >
+            <div className="flex items-start gap-3 px-6 py-5" style={accentStrip}>
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-arena-ink text-white">
+                {payload.me ? <CheckCircle2 className="size-5" /> : <UserPlus className="size-5" />}
+              </span>
+              <div>
+                <h2 className="font-display text-xl font-bold">{payload.me ? "Kamu sudah terdaftar" : "Ikut bermain?"}</h2>
+                <p className="mt-0.5 text-xs leading-5 text-arena-ink/70">
+                  {payload.me
+                    ? `Hai ${payload.me.display_name}, gunakan link ini lagi untuk melihat jadwal, skor, dan ranking.`
+                    : "Tidak perlu membuat akun OTTOPLAY. Daftar sebagai guest, lalu simpan link ini."}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {payload.me ? (
+                <div className="grid gap-4">
+                  <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50 p-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-arena-dim">Tier kamu</span>
+                    <TierBadge tier={payload.me.tier} />
+                  </div>
+                  {message && <p className="public-event__message">{message}</p>}
+                  {registrationOpen && (
+                    <button
+                      type="button"
+                      onClick={() => void cancelRegistration()}
+                      disabled={cancelling}
+                      className="inline-flex w-full items-center justify-center rounded-full border border-red-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {cancelling ? "Membatalkan..." : "Batalkan pendaftaran"}
+                    </button>
+                  )}
+                </div>
+              ) : showForm ? (
+                <form onSubmit={register} className="grid gap-4">
+                  <FormField label="Nama tampil" required icon={<UserRound />} htmlFor="pe-name">
+                    <input
+                      id="pe-name"
+                      required
+                      minLength={2}
+                      maxLength={80}
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="Contoh: Budi Santoso"
+                      className="public-event__input"
+                    />
+                  </FormField>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField label="Jenis kelamin" required icon={<VenusAndMars />} htmlFor="pe-gender">
+                      <Select value={gender} onValueChange={setGender}>
+                        <SelectTrigger id="pe-gender" className={selectTriggerClass} aria-required="true">
+                          <SelectValue placeholder="Pilih jenis kelamin">
+                            {GENDERS.filter((item) => item.value === gender).map((item) => (
+                              <span key={item.value} className="flex items-center gap-2">
+                                <span className={`grid size-6 place-items-center rounded-lg ${item.tone}`}>
+                                  <item.icon className="size-3.5" />
+                                </span>
+                                {item.label}
+                              </span>
+                            ))}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className={selectContentClass}>
+                          {GENDERS.map((item) => (
+                            <SelectItem key={item.value} value={item.value} textValue={item.label} className="cursor-pointer rounded-lg py-2">
+                              <span className="flex items-center gap-3">
+                                <span className={`grid size-8 place-items-center rounded-lg ${item.tone}`}>
+                                  <item.icon className="size-4" />
+                                </span>
+                                <span className="text-sm font-semibold text-arena-ink">{item.label}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+
+                    <FormField label="Pilih tier" required icon={<Medal />} htmlFor="pe-tier">
+                      <Select value={tier} onValueChange={setTier}>
+                        <SelectTrigger id="pe-tier" className={selectTriggerClass} aria-required="true">
+                          <SelectValue placeholder="Pilih level permainan">
+                            {TIERS.filter((item) => item.key === tier).map((item) => (
+                              <span key={item.key} className="flex items-center gap-2">
+                                <span className={`grid size-6 place-items-center rounded-lg pe-tone--${item.key}`}>
+                                  <item.icon className="size-3.5" />
+                                </span>
+                                {item.label}
+                              </span>
+                            ))}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className={selectContentClass}>
+                          {TIERS.map((item) => (
+                            <SelectItem key={item.key} value={item.key} textValue={item.label} className="cursor-pointer rounded-lg py-2">
+                              <span className="flex items-center gap-3">
+                                <span className={`grid size-8 place-items-center rounded-lg pe-tone--${item.key}`}>
+                                  <item.icon className="size-4" />
+                                </span>
+                                <span className="flex flex-col">
+                                  <span className="text-sm font-semibold text-arena-ink">{item.label}</span>
+                                  <span className="text-[11px] text-arena-dim">{item.note}</span>
+                                </span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                  </div>
+                  <p className="-mt-2 text-[11px] text-arena-dim">Tier dipakai untuk menyeimbangkan pertandingan.</p>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField label="WhatsApp" hint="Opsional" icon={<Phone />} htmlFor="pe-phone">
+                      <input
+                        id="pe-phone"
+                        inputMode="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="08xxxxxxxxxx"
+                        className="public-event__input"
+                      />
+                    </FormField>
+                    <FormField label="Email" hint="Opsional" icon={<Mail />} htmlFor="pe-email">
+                      <input
+                        id="pe-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="kamu@email.com"
+                        className="public-event__input"
+                      />
+                    </FormField>
+                  </div>
+
+                  <label className="public-event__consent">
+                    <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                    <span>Nama saya boleh tampil di daftar peserta dan hasil event.</span>
+                  </label>
+
+                  {message && (
+                    <p className="public-event__message" role="status">
+                      {message}
+                    </p>
+                  )}
+
+                  <button disabled={submitting} className="public-event__submit">
+                    {submitting ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+                    Daftar event
+                    <ArrowRight className="size-4" />
+                  </button>
+                </form>
+              ) : (
+                <div className="grid gap-3">
+                  <button type="button" onClick={() => setShowForm(true)} className="btn-arena w-full justify-center">
                     Daftar sebagai pemain
                   </button>
-                )}
-              </>
-            )}
-            {!payload.me && message && !showForm && <p className="mt-4 text-xs text-arena-dim">{message}</p>}
+                  {message && <p className="public-event__message">{message}</p>}
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
-        <section className="mt-6 rounded-[26px] border border-arena-ink/10 bg-white/90 p-6 shadow-sm sm:p-8">
+        <section className="mt-6 overflow-hidden rounded-[24px] border border-arena-ink/10 bg-white/90 p-6 shadow-[0_18px_40px_-32px_rgba(17,45,72,.6)] sm:p-7">
           <div className="flex items-center gap-3">
-            <Trophy className="size-6 text-arena-lime" />
-            <h2 className="font-display text-2xl font-bold">Hasil pertandingan</h2>
-          </div>
-          {matchRows.length ? (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {matchRows.slice(-12).reverse().map((match, index) => (
-                <div key={`${match.round ?? 0}-${match.court ?? index}`} className="rounded-2xl bg-slate-50 p-4">
-                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-arena-dim">
-                    <span>Ronde {match.round ?? "-"}</span>
-                    <span>Lapangan {match.court ?? "-"}</span>
-                  </div>
-                  <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 text-sm">
-                    <span>{(match.team_a ?? []).join(" & ") || "Tim A"}</span>
-                    <strong>{match.score_a ?? 0}</strong>
-                    <span>{(match.team_b ?? []).join(" & ") || "Tim B"}</span>
-                    <strong>{match.score_b ?? 0}</strong>
-                  </div>
-                </div>
-              ))}
+            <span className="grid size-11 place-items-center rounded-2xl bg-amber-100 text-amber-600">
+              <Trophy className="size-5" />
+            </span>
+            <div>
+              <h2 className="font-display text-xl font-bold">Hasil pertandingan</h2>
+              {!matchRows.length && (
+                <p className="mt-0.5 text-xs leading-5 text-arena-dim">
+                  Skor, jadwal lapangan, partner, lawan, dan ranking akan muncul di sini setelah Arena mulai berjalan.
+                </p>
+              )}
             </div>
-          ) : (
-            <p className="mt-4 text-sm leading-6 text-arena-dim">Skor, jadwal lapangan, partner, lawan, dan ranking akan muncul di sini setelah Arena mulai berjalan.</p>
+          </div>
+          {matchRows.length > 0 && (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {matchRows
+                .slice(-12)
+                .reverse()
+                .map((match, index) => (
+                  <div key={`${match.round ?? 0}-${match.court ?? index}`} className="rounded-2xl bg-slate-50 p-4">
+                    <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-arena-dim">
+                      <span>Ronde {match.round ?? "-"}</span>
+                      <span>Lapangan {match.court ?? "-"}</span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 text-sm">
+                      <span>{(match.team_a ?? []).join(" & ") || "Tim A"}</span>
+                      <strong>{match.score_a ?? 0}</strong>
+                      <span>{(match.team_b ?? []).join(" & ") || "Tim B"}</span>
+                      <strong>{match.score_b ?? 0}</strong>
+                    </div>
+                  </div>
+                ))}
+            </div>
           )}
         </section>
       </div>
@@ -324,11 +712,58 @@ function PublicEventPage() {
   );
 }
 
-function Field({ label, hint, required, icon, children }: { label: string; hint?: string; required?: boolean; icon: ReactNode; children: ReactNode }) {
-  return <label className="public-event__field"><span className="public-event__field-label"><span className="public-event__field-title">{icon}{label}{required && <b>*</b>}</span>{hint && <small>{hint}</small>}</span>{children}</label>;
+const selectTriggerClass =
+  "h-12 rounded-[13px] border-[#d5e5eb] bg-white/80 px-3.5 text-sm font-medium text-arena-ink shadow-none transition focus:border-arena-lime focus:ring-2 focus:ring-arena-lime/25 data-[state=open]:border-arena-lime data-[placeholder]:font-normal data-[placeholder]:text-[#9aabba]";
+
+const selectContentClass = "rounded-2xl border-arena-ink/10 bg-white p-1 shadow-2xl";
+
+function HeroInfo({ icon, accent, children }: { icon: ReactNode; accent: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/10" style={{ color: accent }}>
+        {icon}
+      </span>
+      <div className="min-w-0 text-sm leading-5">{children}</div>
+    </div>
+  );
 }
 
-function formatTier(value: string | null | undefined) {
-  if (!value) return "Intermediate";
-  return value.charAt(0).toUpperCase() + value.slice(1);
+function FormField({
+  label,
+  hint,
+  required,
+  icon,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  icon: ReactNode;
+  htmlFor: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="public-event__field">
+      <label htmlFor={htmlFor} className="public-event__field-label">
+        <span className="public-event__field-title">
+          {icon}
+          {label}
+          {required && <b>*</b>}
+        </span>
+        {hint && <small>{hint}</small>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function TierBadge({ tier }: { tier: string | null | undefined }) {
+  const meta = tierMeta(tier);
+  return (
+    <span className={`public-event__tier-badge pe-tone--${meta.key}`}>
+      <meta.icon className="size-3" aria-hidden="true" />
+      {meta.label}
+    </span>
+  );
 }
