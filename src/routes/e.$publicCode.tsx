@@ -26,6 +26,7 @@ type PublicEvent = {
 
 type PublicPlayer = {
   display_name: string;
+  gender: string | null;
   tier: string | null;
   status: string;
   seed: number | null;
@@ -241,7 +242,7 @@ function PublicEventPage() {
               {payload.players.map((player, index) => (
                 <div key={`${player.display_name}-${player.registered_at}`} className="public-event__player-row">
                   <span className="public-event__player-number">{String(index + 1).padStart(2, "0")}</span>
-                  <div className="min-w-0 flex-1"><p className="truncate font-semibold text-arena-ink">{player.display_name}</p><p className="mt-1 text-[11px] uppercase tracking-wider text-arena-dim">{player.status}</p></div>
+                  <div className="min-w-0 flex-1"><p className="truncate font-semibold text-arena-ink">{player.display_name}</p><p className="mt-1 text-[11px] uppercase tracking-wider text-arena-dim">{player.gender === "female" ? "Perempuan" : "Laki-laki"} · {player.status}</p></div>
                   <span className={`public-event__tier-badge public-event__tier-badge--${player.tier || "intermediate"}`}>{formatTier(player.tier)}</span>
                 </div>
               ))}

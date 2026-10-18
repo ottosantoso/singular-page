@@ -7,11 +7,15 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "dev:prod": "vite dev --mode production",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "node --test tests/pairing.test.mjs",
-    "sim:pairing": "node scripts/sim-pairing.mjs"
+    "sim:pairing": "node scripts/sim-pairing.mjs",
+    "db:dev": "powershell -ExecutionPolicy Bypass -File scripts/push-migrations.ps1 -Target dev",
+    "db:prod": "powershell -ExecutionPolicy Bypass -File scripts/push-migrations.ps1 -Target prod",
+    "db:both": "powershell -ExecutionPolicy Bypass -File scripts/push-migrations.ps1 -Target both"
   },
   "overrides": {
     "rolldown": "1.2.1"

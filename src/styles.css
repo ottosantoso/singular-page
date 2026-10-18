@@ -1,4 +1,4 @@
-@import "tailwindcss" source(none);
+﻿@import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
 @import "./home.css";
@@ -144,7 +144,7 @@
   }
 }
 
-/* ===== OTTOPLAY ARENA — tema lapangan olahraga (terang) ===== */
+/* ===== OTTOPLAY ARENA â€” tema lapangan olahraga (terang) ===== */
 @theme inline {
   --color-arena-lime: var(--arena-lime);
   --color-arena-dim: var(--arena-dim);
@@ -379,6 +379,9 @@
 .login-page__message { margin-top: 1rem; border-radius: 12px; padding: .75rem; font-size: .78rem; line-height: 1.4; }
 .login-page__message.is-success { border: 1px solid #bfe6b7; background: #effbea; color: #277621; }
 .login-page__message.is-error { border: 1px solid #f3b7b7; background: #fff1f1; color: #a22a2a; }
+.login-page__resend { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .65rem; color: #42627e; font-size: .75rem; }
+.login-page__resend button { border: 0; background: transparent; color: #329b27; font: 800 .72rem/1.2 "Chakra Petch", sans-serif; cursor: pointer; text-align: right; }
+.login-page__resend button:disabled { color: #8ca3ae; cursor: not-allowed; }
 .login-page__submit { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; width: 100%; min-height: 3rem; margin-top: 1.25rem; border: 0; border-radius: 999px; background: linear-gradient(135deg, #65d33b, #43b62d); color: white; font: 800 .9rem/1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .12em; cursor: pointer; box-shadow: 0 12px 24px rgba(67, 182, 45, .24); transition: .2s ease; }
 .login-page__submit:hover { transform: translateY(-1px); box-shadow: 0 15px 28px rgba(67, 182, 45, .32); }
 .login-page__submit:disabled { cursor: wait; opacity: .65; }
@@ -467,3 +470,4 @@
   .public-event__player-row { padding-inline: .75rem; }
   .public-event__tier-badge { padding-inline: .5rem; font-size: .55rem; }
 }
+
