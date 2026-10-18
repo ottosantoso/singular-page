@@ -1058,6 +1058,9 @@
       if (payload.event.format && [...formatSelect.options].some(option => option.value === payload.event.format)){
         formatSelect.value = payload.event.format;
       }
+      if (payload.event.primary_color) document.documentElement.style.setProperty('--lime', payload.event.primary_color);
+      if (payload.event.secondary_color) document.documentElement.style.setProperty('--line', payload.event.secondary_color);
+      if (payload.event.logo_url) document.querySelectorAll('.masthead-logo').forEach((image) => { image.src = payload.event.logo_url; });
       registeredPlayers = (payload.players || []).map(player => ({
         id: playerId(),
         name: player.display_name,
@@ -4115,5 +4118,6 @@
 </script>
 </body>
 </html>
+
 
 
