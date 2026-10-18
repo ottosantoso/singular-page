@@ -176,9 +176,7 @@ function WorkspacePage() {
       <div className="mx-auto max-w-7xl">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <Link to="/workspace" className="flex items-center gap-3 text-arena-ink" aria-label="Kembali ke workspace">
-            <span className="grid size-11 place-items-center rounded-2xl bg-arena-ink text-sm font-black text-white">
-              OP
-            </span>
+            <img src="/brand/logo-light-128.webp" alt="" width={52} height={48} className="h-12 w-auto drop-shadow-[0_6px_10px_rgba(11,42,92,.25)]" />
             <span>
               <strong className="block font-display text-lg font-bold tracking-wide">
                 OTTOPLAY

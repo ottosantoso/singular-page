@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" href="/brand/favicon-64.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <title>OTTOPLAY ARENA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -508,7 +510,7 @@
           <p class="welcome-copy">Pilih cabang olahraga favoritmu, masukkan para pejuang, lalu biarkan Otto mengatur pertandingan.</p>
         </div>
         <div class="welcome-logo-wrap">
-          <svg class="welcome-badge" viewBox="0 0 80 80" role="img" aria-label="Logo Otto Play Arena"><use href="#ic-badge"/></svg>
+          <img class="welcome-badge" src="/brand/logo-dark-128.webp" width="82" height="78" alt="Logo Otto Play Arena">
           <span class="welcome-divider" aria-hidden="true"></span>
           <div class="welcome-banner-copy">
             <strong>OTTO <em>PLAY</em> ARENA</strong>
@@ -549,7 +551,7 @@
   <header class="arena-top">
     <button type="button" class="back-btn" id="backFromArenaBtn">← Beranda</button>
     <div class="masthead">
-      <img class="masthead-logo" id="arenaSportIcon" src="/arena-logo/padel.svg" width="96" height="96" alt="Logo Otto Play Padel">
+      <img class="masthead-logo" id="arenaSportIcon" src="/brand/logo-dark.webp" width="102" height="96" alt="Logo Otto Play Arena">
       <div class="masthead-text">
         <span class="masthead-sport" id="arenaSportChip">Padel</span>
         <h1 class="masthead-title">OTTO <em>PLAY</em> ARENA</h1>
@@ -841,10 +843,15 @@
   </div><!-- /arenaScreen -->
 
   <div id="historyScreen" style="display:none;">
-    <header>
+    <header class="arena-top">
       <button type="button" class="back-btn" id="backFromHistoryBtn">← Beranda</button>
-      <div class="brand">
-        <img class="brand-banner-sm" src="/__l5e/assets-v1/e6a4dcaf-af23-4b34-bc2a-e98be81d1b1b/otto-play-arena-banner.png" alt="Otto Play Arena">
+      <div class="masthead">
+        <img class="masthead-logo" src="/brand/logo-dark.webp" width="102" height="96" alt="Logo Otto Play Arena">
+        <div class="masthead-text">
+          <span class="masthead-sport">Riwayat</span>
+          <h1 class="masthead-title">OTTO <em>PLAY</em> ARENA</h1>
+          <p class="masthead-tagline">Lihat hasil dan klasemen turnamen yang sudah selesai.</p>
+        </div>
       </div>
     </header>
 
@@ -1013,10 +1020,10 @@
   const arenaSportIcon = document.getElementById('arenaSportIcon');
 
   const sportMeta = {
-    padel: { label: 'Padel', icon: '/__l5e/assets-v1/f2dfac12-7301-4cbd-a714-abc9c864f2c8/padel.png', logo: '/arena-logo/padel.svg' },
-    badminton: { label: 'Badminton', icon: '/__l5e/assets-v1/3a4484e6-ebcd-48fc-87c8-c805f0038667/badminton.png', logo: '/arena-logo/badminton.svg' },
-    tennis: { label: 'Tenis', icon: '/__l5e/assets-v1/7c1c6b62-14f5-4601-8155-e7d38da0bc8e/tennis.png', logo: '/arena-logo/tennis.svg' },
-    tenismeja: { label: 'Tenis Meja', icon: '/__l5e/assets-v1/ebe1b372-7329-4063-849d-0ddb148b5f62/pingpong.png', logo: '/arena-logo/tenismeja.svg' }
+    padel: { label: 'Padel', icon: '/__l5e/assets-v1/f2dfac12-7301-4cbd-a714-abc9c864f2c8/padel.png' },
+    badminton: { label: 'Badminton', icon: '/__l5e/assets-v1/3a4484e6-ebcd-48fc-87c8-c805f0038667/badminton.png' },
+    tennis: { label: 'Tenis', icon: '/__l5e/assets-v1/7c1c6b62-14f5-4601-8155-e7d38da0bc8e/tennis.png' },
+    tenismeja: { label: 'Tenis Meja', icon: '/__l5e/assets-v1/ebe1b372-7329-4063-849d-0ddb148b5f62/pingpong.png' }
   };
   let selectedSport = 'padel';
   const arenaLinkParams = new URLSearchParams(window.location.search);
@@ -1079,8 +1086,6 @@
     document.body.dataset.sport = selectedSport;
     arenaScreen.dataset.sport = selectedSport;
     arenaSportChip.textContent = meta.label;
-    arenaSportIcon.src = meta.logo;
-    arenaSportIcon.alt = 'Logo Otto Play ' + meta.label;
     document.title = 'OTTOPLAY ARENA — ' + meta.label;
   }
 

@@ -341,7 +341,8 @@ function PublicEventPage() {
           to="/"
           className="inline-flex items-center gap-2 font-display text-xs font-bold uppercase tracking-wider text-arena-dim transition hover:text-arena-ink"
         >
-          <ArrowLeft className="size-4" /> OTTOPLAY
+          <ArrowLeft className="size-4" />
+          <img src="/brand/logo-light-128.webp" alt="" width={32} height={29} className="h-7 w-auto" /> OTTOPLAY
         </Link>
 
         <section

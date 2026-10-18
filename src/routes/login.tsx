@@ -119,7 +119,7 @@ function LoginPage() {
       <div className="login-page__layout">
         <section className="login-page__intro">
           <Link to="/" className="login-page__brand" aria-label="Kembali ke OTTOPLAY ARENA">
-            <span className="login-page__brand-mark">OP</span>
+            <span className="login-page__brand-mark"><img src="/brand/logo-light-128.webp" alt="" width={70} height={64} /></span>
             <span>
               <strong>OTTO <em>PLAY</em> ARENA</strong>
               <small>Mainkan strategi, biarkan OTTO beraksi.</small>

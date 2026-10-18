@@ -58,7 +58,7 @@ function PlayerHomePage() {
       <div className="relative z-10 mx-auto max-w-6xl">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <Link to="/player" className="flex items-center gap-3 text-arena-ink" aria-label="Beranda pemain">
-            <span className="grid size-11 place-items-center rounded-2xl bg-arena-ink text-sm font-black text-white">OP</span>
+            <img src="/brand/logo-light-128.webp" alt="" width={52} height={48} className="h-12 w-auto drop-shadow-[0_6px_10px_rgba(11,42,92,.25)]" />
             <span><strong className="block font-display text-lg font-bold tracking-wide">OTTOPLAY</strong><small className="block text-[10px] font-bold uppercase tracking-[0.24em] text-arena-dim">Player hub</small></span>
           </Link>
           <div className="flex items-center gap-2">

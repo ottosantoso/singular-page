@@ -93,7 +93,7 @@ body.welcome-active #welcomeScreen .welcome-logo-wrap {
 }
 body.welcome-active #welcomeScreen .welcome-logo-wrap::before { content: none; }
 body.welcome-active #welcomeScreen .welcome-badge {
-  width: 78px; height: 78px; display: block;
+  width: 82px; height: 78px; display: block; object-fit: contain;
   filter: drop-shadow(0 0 8px rgba(166, 226, 46, .55));
 }
 body.welcome-active #welcomeScreen .welcome-divider { width: 1px; height: 62px; background: rgba(255, 255, 255, .22); }
@@ -238,7 +238,7 @@ body.welcome-active #welcomeScreen .menu-card-history .menu-label { font-size: 1
   body.welcome-active #welcomeScreen .menu-label { font-size: 16px; }
   body.welcome-active #welcomeScreen .menu-sub { font-size: 12px; }
   body.welcome-active #welcomeScreen .welcome-logo-wrap { padding-right: 70px; gap: 12px; }
-  body.welcome-active #welcomeScreen .welcome-badge { width: 60px; height: 60px; }
+  body.welcome-active #welcomeScreen .welcome-badge { width: 63px; height: 60px; }
   body.welcome-active #welcomeScreen .welcome-ball-1 { width: 30px; height: 30px; right: 10px; top: 10px; }
   body.welcome-active #welcomeScreen .welcome-ball-2 { width: 26px; height: 26px; right: 22px; bottom: 10px; }
 }

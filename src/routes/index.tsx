@@ -2,8 +2,6 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { ArrowRight, ChevronRight, Trophy, UserRound, CalendarDays, RefreshCw, Play, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import bannerAsset from '@/assets/otto-play-arena-banner.png.asset.json';
-import padelAsset from '@/assets/padel.png.asset.json';
 import hero from '@/assets/sports-hero.jpg';
 import padelCourt from '@/assets/padel-court.jpg';
 import badmintonCourt from '@/assets/badminton-court.jpg';
@@ -48,7 +46,7 @@ function Home() {
       <nav className="home-nav" aria-label="Navigasi utama">
         <div className="home-width home-nav-inner">
           <Link to="/" className="home-logo" aria-label="OTTO PLAY ARENA Beranda">
-            <span className="home-logo-mark"><img src={padelAsset.url} alt="" width={48} height={48} /></span>
+            <span className="home-logo-mark"><img src="/brand/logo-light-128.webp" alt="" width={56} height={51} /></span>
             <span className="home-wordmark">OTTO <em>PLAY</em><small>A R E N A</small></span>
           </Link>
           <div className="home-badges">
@@ -130,7 +128,7 @@ function Home() {
           <div className="home-step-grid">{steps.map(s => <div className="home-step" key={s.n}><strong>{s.n}</strong><div><h3>{s.title}</h3><p>{s.desc}</p></div></div>)}</div>
         </section>
         <footer className="home-footer">
-          <img src={bannerAsset.url} alt="OTTO PLAY ARENA" width={140} height={48} className="mx-auto mb-3 h-auto w-28 rounded" loading="lazy" />
+          <img src="/brand/logo-light.webp" alt="OTTO PLAY ARENA System" width={87} height={80} className="mx-auto mb-3 h-20 w-auto" loading="lazy" />
           Ottoplay Arena — mainkan strategi, biarkan Otto beraksi.
         </footer>
       </div>

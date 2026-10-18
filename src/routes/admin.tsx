@@ -15,7 +15,6 @@ import {
   LogOut,
   MapPin,
   Menu,
-  Play,
   Radio,
   Search,
   ShieldAlert,
@@ -179,9 +178,7 @@ function AdminShell({
       >
         <div className="flex items-center justify-between px-5 pb-4 pt-6">
           <Link to="/" className="flex items-center gap-3" aria-label="OTTOPLAY ARENA, ke beranda">
-            <span className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-arena-lime to-emerald-700 shadow-lg shadow-black/30">
-              <Play className="size-5 translate-x-px fill-white text-white" aria-hidden="true" />
-            </span>
+            <img src="/brand/logo-dark-128.webp" alt="" width={48} height={46} className="h-12 w-auto drop-shadow-[0_6px_12px_rgba(0,0,0,.45)]" />
             <span className="leading-none">
               <span className="block font-display text-xl font-bold tracking-wide">
                 OTTO<span className="text-lime-300">PLAY</span>
