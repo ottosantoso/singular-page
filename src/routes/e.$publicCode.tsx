@@ -112,6 +112,7 @@ function formatLabel(value: string) {
 function playerStatusLabel(value: string) {
   if (value === "registered") return "Terdaftar";
   if (value === "checked_in") return "Check-in";
+  if (value === "waitlisted") return "Waitlist";
   return value;
 }
 
@@ -142,6 +143,7 @@ function PublicEventPage() {
   const [consent, setConsent] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
@@ -216,10 +218,27 @@ function PublicEventPage() {
       setGender("");
       setPhone("");
       setEmail("");
-      setMessage("Kamu sudah terdaftar. Link ini bisa dipakai lagi untuk melihat hasil pertandingan.");
+      setMessage(
+        data[0].registration_status === "waitlisted"
+          ? "Kapasitas penuh. Kamu masuk waitlist dan akan dipromosikan jika ada slot."
+          : "Kamu sudah terdaftar. Link ini bisa dipakai lagi untuk melihat hasil pertandingan.",
+      );
       await loadEvent();
     }
     setSubmitting(false);
+  }
+
+  async function checkIn() {
+    const token = localStorage.getItem(storageKey);
+    if (!token) return;
+    setCheckingIn(true);
+    const { error: checkInError } = await supabase.rpc("check_in_event_guest", {
+      p_public_code: publicCode,
+      p_registration_token: token,
+    });
+    setMessage(checkInError?.message || "Check-in berhasil. Sampai jumpa di arena!");
+    if (!checkInError) await loadEvent();
+    setCheckingIn(false);
   }
 
   async function cancelRegistration() {
@@ -294,6 +313,8 @@ function PublicEventPage() {
   const theme = sportTheme(ev.sport);
   const registrationOpen = ev.status === "registration";
   const playerCount = payload.players.length;
+  const activePlayerCount = payload.players.filter((player) => player.status !== "waitlisted").length;
+  const waitlistCount = payload.players.filter((player) => player.status === "waitlisted").length;
   const fill = ev.max_players ? Math.min(100, Math.round((playerCount / ev.max_players) * 100)) : null;
   const capacityLabel = ev.max_players
     ? `${playerCount}/${ev.max_players} pemain terdaftar`
@@ -455,7 +476,8 @@ function PublicEventPage() {
               </div>
               <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-arena-ink/10 bg-white px-3 py-1.5 font-display text-sm font-bold text-arena-ink">
                 <UserRound className="size-4 text-arena-lime" />
-                {ev.max_players ? `${playerCount} / ${ev.max_players}` : playerCount}
+                {ev.max_players ? `${activePlayerCount} / ${ev.max_players}` : activePlayerCount}
+                {waitlistCount > 0 && <span className="ml-1 text-[10px] text-amber-700">+{waitlistCount} waitlist</span>}
               </span>
             </div>
 
@@ -529,8 +551,20 @@ function PublicEventPage() {
                   <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50 p-4">
                     <span className="text-xs font-semibold uppercase tracking-wider text-arena-dim">Tier kamu</span>
                     <TierBadge tier={payload.me.tier} />
+                    <span className="ml-auto text-xs font-semibold uppercase tracking-wider text-arena-dim">Status</span>
+                    <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-arena-ink">{playerStatusLabel(payload.me.status)}</span>
                   </div>
                   {message && <p className="public-event__message">{message}</p>}
+                  {registrationOpen && payload.me.status === "registered" && (
+                    <button
+                      type="button"
+                      onClick={() => void checkIn()}
+                      disabled={checkingIn}
+                      className="inline-flex w-full items-center justify-center rounded-full bg-arena-ink px-4 py-3 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-arena-lime hover:text-arena-ink disabled:opacity-50"
+                    >
+                      {checkingIn ? "Memproses..." : "Check-in sekarang"}
+                    </button>
+                  )}
                   {registrationOpen && (
                     <button
                       type="button"

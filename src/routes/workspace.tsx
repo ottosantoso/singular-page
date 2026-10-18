@@ -623,7 +623,10 @@ function EventCard({
 type EventPlayerRow = {
   display_name: string;
   status: string;
+  gender: string | null;
+  tier: string | null;
   registered_at: string;
+  checked_in_at: string | null;
 };
 
 function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () => void }) {
@@ -635,7 +638,7 @@ function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () =
     setLoading(true);
     const result = await supabase
       .from("event_players")
-      .select("display_name, status, registered_at")
+      .select("display_name, status, gender, tier, registered_at, checked_in_at")
       .eq("event_id", event.id)
       .neq("status", "withdrawn")
       .order("registered_at", { ascending: true });
@@ -659,6 +662,23 @@ function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () =
     else await load();
   }
 
+  async function checkIn(displayName: string) {
+    const result = await supabase
+      .from("event_players")
+      .update({ status: "checked_in", checked_in_at: new Date().toISOString() })
+      .eq("event_id", event.id)
+      .eq("display_name", displayName)
+      .eq("status", "registered");
+    if (result.error) setError(result.error.message);
+    else await load();
+  }
+
+  async function promoteWaitlist() {
+    const result = await supabase.rpc("promote_event_waitlist", { p_event_id: event.id, p_limit: 1 });
+    if (result.error) setError(result.error.message);
+    else await load();
+  }
+
   return (
     <DialogFrame title={`Peserta · ${event.name}`} onClose={onClose}>
       {error && <p className="mb-4 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -670,16 +690,30 @@ function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () =
             <div key={player.display_name} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
               <div>
                 <p className="font-semibold text-arena-ink">{player.display_name}</p>
-                <p className="mt-1 text-xs uppercase tracking-wider text-arena-dim">{player.status}</p>
+                <p className="mt-1 text-xs uppercase tracking-wider text-arena-dim">
+                  {player.gender === "female" ? "Perempuan" : "Laki-laki"} · {player.tier ?? "Intermediate"} · {player.status}
+                </p>
               </div>
-              <button type="button" onClick={() => void withdraw(player.display_name)} className="inline-flex items-center gap-2 rounded-full border border-red-200 px-3 py-2 text-xs font-bold uppercase tracking-wider text-red-700">
-                <Trash2 className="size-4" /> Keluarkan
-              </button>
+              <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                {player.status === "registered" && (
+                  <button type="button" onClick={() => void checkIn(player.display_name)} className="rounded-full bg-arena-ink px-3 py-2 text-xs font-bold uppercase tracking-wider text-white">
+                    Check-in
+                  </button>
+                )}
+                <button type="button" onClick={() => void withdraw(player.display_name)} className="inline-flex items-center gap-2 rounded-full border border-red-200 px-3 py-2 text-xs font-bold uppercase tracking-wider text-red-700">
+                  <Trash2 className="size-4" /> Keluarkan
+                </button>
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <p className="rounded-2xl bg-slate-50 p-4 text-sm text-arena-dim">Belum ada peserta aktif.</p>
+      )}
+      {players.some((player) => player.status === "waitlisted") && (
+        <button type="button" onClick={() => void promoteWaitlist()} className="mt-4 w-full rounded-full bg-arena-lime px-4 py-3 text-xs font-bold uppercase tracking-wider text-arena-ink">
+          Promosikan waitlist berikutnya
+        </button>
       )}
     </DialogFrame>
   );
