@@ -972,7 +972,20 @@ export type Database = {
           player_id: string
           public_code: string
           registration_token: string
+          registration_status: string
         }[]
+      }
+      check_in_event_guest: {
+        Args: { p_public_code: string; p_registration_token: string }
+        Returns: {
+          checked_in_at: string
+          display_name: string
+          status: string
+        }[]
+      }
+      promote_event_waitlist: {
+        Args: { p_event_id: string; p_limit?: number }
+        Returns: number
       }
       withdraw_event_guest: {
         Args: { p_public_code: string; p_registration_token: string }
