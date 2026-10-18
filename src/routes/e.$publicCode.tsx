@@ -49,6 +49,10 @@ type PublicEvent = {
   ends_at: string | null;
   venue_name: string | null;
   organization_name: string;
+  logo_url: string | null;
+  banner_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
   max_players: number | null;
 };
 
@@ -329,6 +333,8 @@ function PublicEventPage() {
 
   const ev = payload.event;
   const theme = sportTheme(ev.sport);
+  const brandPrimary = ev.primary_color || theme.accent;
+  const brandSecondary = ev.secondary_color || theme.to;
   const registrationOpen = ev.status === "registration";
   const playerCount = payload.players.length;
   const activePlayerCount = payload.players.filter((player) => player.status !== "waitlisted").length;
@@ -356,7 +362,7 @@ function PublicEventPage() {
     "--pe-accent": theme.accent,
   } as CSSProperties;
   const heroStyle: CSSProperties = {
-    background: `linear-gradient(105deg, ${theme.from} 0%, ${theme.from} 38%, ${theme.to} 100%)`,
+    background: `linear-gradient(105deg, ${brandSecondary} 0%, ${brandSecondary} 38%, ${brandPrimary} 100%)`,
   };
   const heroImageStyle: CSSProperties | null =
     theme.panel === null
@@ -382,7 +388,7 @@ function PublicEventPage() {
           className="inline-flex items-center gap-2 font-display text-xs font-bold uppercase tracking-wider text-arena-dim transition hover:text-arena-ink"
         >
           <ArrowLeft className="size-4" />
-          <img src="/brand/logo-light-128.webp" alt="" width={32} height={29} className="h-7 w-auto" /> OTTOPLAY
+          <img src={ev.logo_url || "/brand/logo-light-128.webp"} alt="" width={32} height={29} className="h-7 w-auto object-contain" /> {ev.organization_name || "OTTOPLAY"}
         </Link>
 
         <section

@@ -649,11 +649,13 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          banner_url: string | null
           id: string
           is_active: boolean
           logo_url: string | null
           name: string
           primary_color: string | null
+          public_description: string | null
           secondary_color: string | null
           slug: string
           sport_label: string | null
@@ -664,11 +666,13 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          banner_url?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
           name: string
           primary_color?: string | null
+          public_description?: string | null
           secondary_color?: string | null
           slug: string
           sport_label?: string | null
@@ -679,11 +683,13 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          banner_url?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
           name?: string
           primary_color?: string | null
+          public_description?: string | null
           secondary_color?: string | null
           slug?: string
           sport_label?: string | null
