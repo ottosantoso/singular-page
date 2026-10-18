@@ -144,6 +144,7 @@ function PublicEventPage() {
   const [submitting, setSubmitting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [claiming, setClaiming] = useState(false);
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
@@ -239,6 +240,23 @@ function PublicEventPage() {
     setMessage(checkInError?.message || "Check-in berhasil. Sampai jumpa di arena!");
     if (!checkInError) await loadEvent();
     setCheckingIn(false);
+  }
+
+  async function claimGuest() {
+    const token = localStorage.getItem(storageKey);
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!token || !user) {
+      setMessage("Login dulu untuk menyimpan event ini ke Player Hub.");
+      return;
+    }
+    setClaiming(true);
+    const { error: claimError } = await supabase.rpc("claim_event_guest", {
+      p_public_code: publicCode,
+      p_registration_token: token,
+    });
+    setMessage(claimError?.message || "Event berhasil dikaitkan ke akunmu.");
+    if (!claimError) await loadEvent();
+    setClaiming(false);
   }
 
   async function cancelRegistration() {
@@ -563,6 +581,16 @@ function PublicEventPage() {
                       className="inline-flex w-full items-center justify-center rounded-full bg-arena-ink px-4 py-3 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-arena-lime hover:text-arena-ink disabled:opacity-50"
                     >
                       {checkingIn ? "Memproses..." : "Check-in sekarang"}
+                    </button>
+                  )}
+                  {payload.me.status !== "withdrawn" && (
+                    <button
+                      type="button"
+                      onClick={() => void claimGuest()}
+                      disabled={claiming}
+                      className="inline-flex w-full items-center justify-center rounded-full border border-arena-ink/15 px-4 py-3 text-xs font-bold uppercase tracking-wider text-arena-ink transition hover:border-arena-lime disabled:opacity-50"
+                    >
+                      {claiming ? "Menghubungkan..." : "Simpan ke Player Hub"}
                     </button>
                   )}
                   {registrationOpen && (
