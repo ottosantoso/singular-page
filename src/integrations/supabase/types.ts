@@ -983,6 +983,20 @@ export type Database = {
           status: string
         }[]
       }
+      claim_event_guest: {
+        Args: { p_public_code: string; p_registration_token: string }
+        Returns: boolean
+      }
+      get_player_dashboard: {
+        Args: Record<string, never>
+        Returns: {
+          events: Json
+          matches: Json
+          profile: Json
+          sports: Json
+          summary: Json
+        }[]
+      }
       promote_event_waitlist: {
         Args: { p_event_id: string; p_limit?: number }
         Returns: number

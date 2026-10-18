@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, ChevronRight, LogOut, Plus, Trophy, Users } from "lucide-react";
+import { BarChart3, CalendarDays, ChevronRight, LogOut, Plus, Trophy, Users } from "lucide-react";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { normalizeOrganizationRole } from "@/lib/permissions";
 
 export const Route = createFileRoute("/player")({
   head: () => ({ meta: [{ title: "Beranda Pemain - OTTOPLAY" }] }),
@@ -24,6 +23,13 @@ type PlayerEvent = {
     starts_at: string | null;
     public_code: string;
   } | null;
+};
+type PlayerDashboard = {
+  profile: { display_name?: string; username?: string };
+  summary: { events: number; matches: number; wins: number; losses: number; draws: number };
+  sports: Array<{ sport: string; matches: number; wins: number; losses: number; draws: number }>;
+  events: Array<{ event_name: string; sport: string; matches: number; wins: number; losses: number; draws: number; starts_at: string | null }>;
+  matches: Array<{ event_name: string; sport: string; round: number; court: number; score_a: number; score_b: number; result: string; played_at: string }>;
 };
 
 function PlayerHomePage() {
@@ -48,11 +54,21 @@ function PlayerHomePage() {
       return (data ?? []) as unknown as PlayerEvent[];
     },
   });
+  const dashboard = useQuery({
+    queryKey: ["player-dashboard", auth.session?.user.id],
+    enabled: Boolean(auth.session && !auth.isAdmin),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_player_dashboard");
+      if (error) throw error;
+      return ((data?.[0] ?? { profile: {}, summary: { events: 0, matches: 0, wins: 0, losses: 0, draws: 0 }, sports: [], events: [], matches: [] }) as unknown) as PlayerDashboard;
+    },
+  });
 
   if (auth.loading || !auth.session) return <LoadingScreen />;
 
   const joinedEvents = events.data ?? [];
   const activeEvents = joinedEvents.filter((item) => item.event && !["finished", "cancelled"].includes(item.event.status));
+  const stats = dashboard.data?.summary ?? { events: 0, matches: 0, wins: 0, losses: 0, draws: 0 };
 
   return (
     <main className="arena-home court-lines min-h-screen px-4 py-5 sm:px-8 sm:py-8">
@@ -79,9 +95,17 @@ function PlayerHomePage() {
         </section>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-3">
-          <Stat icon={<CalendarDays />} label="Event diikuti" value={joinedEvents.length} />
-          <Stat icon={<Trophy />} label="Event aktif" value={activeEvents.length} />
-          <Stat icon={<Users />} label="Status akun" value={normalizeOrganizationRole(auth.organizationRoles[0]) ?? "Viewer"} />
+          <Stat icon={<CalendarDays />} label="Event diikuti" value={stats.events || joinedEvents.length} />
+          <Stat icon={<Trophy />} label="Menang" value={stats.wins} />
+          <Stat icon={<Users />} label="Main" value={stats.matches} />
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
+          <div className="rounded-[22px] border border-arena-ink/10 bg-white/80 p-5 shadow-[0_18px_36px_-30px] shadow-arena-ink/60 sm:p-6">
+            <div className="flex items-center justify-between gap-3"><div><p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-arena-lime">Player identity</p><h2 className="mt-2 font-display text-2xl font-bold text-arena-ink">Statistik lintas olahraga</h2></div><BarChart3 className="size-6 text-arena-lime" /></div>
+            <div className="mt-5 grid gap-3">{dashboard.data?.sports.length ? dashboard.data.sports.map((sport) => <div key={sport.sport} className="rounded-2xl bg-slate-50 p-4"><div className="flex items-center justify-between gap-3"><b className="uppercase text-arena-ink">{sport.sport}</b><span className="text-xs font-bold text-arena-dim">{sport.matches} match</span></div><p className="mt-2 text-sm text-arena-dim">{sport.wins} menang · {sport.losses} kalah · {sport.draws} seri</p></div>) : <p className="rounded-2xl bg-slate-50 p-4 text-sm text-arena-dim">Statistik muncul setelah hasil pertandingan tersimpan.</p>}</div>
+          </div>
+          <div className="rounded-[22px] border border-arena-ink/10 bg-arena-ink p-5 text-white shadow-[0_18px_36px_-30px] shadow-arena-ink/80 sm:p-6"><p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-lime-300">Record</p><h2 className="mt-2 font-display text-2xl font-bold">Ringkasan karier</h2><div className="mt-6 grid grid-cols-3 gap-2 text-center"><div className="rounded-2xl bg-white/10 p-3"><b className="block text-2xl text-lime-300">{stats.wins}</b><small className="text-[10px] uppercase tracking-wider text-white/60">Menang</small></div><div className="rounded-2xl bg-white/10 p-3"><b className="block text-2xl">{stats.losses}</b><small className="text-[10px] uppercase tracking-wider text-white/60">Kalah</small></div><div className="rounded-2xl bg-white/10 p-3"><b className="block text-2xl">{stats.draws}</b><small className="text-[10px] uppercase tracking-wider text-white/60">Seri</small></div></div><p className="mt-5 text-sm leading-6 text-white/65">Hasil dihitung dari Arena yang sudah terhubung ke event dan akunmu.</p></div>
         </section>
 
         <section className="mt-10">
