@@ -51,6 +51,9 @@ type EventRow = {
   max_players: number | null;
 };
 type MemberRow = { user_id: string; role_code: string; status: string; name: string };
+type VenueRow = { id: string; name: string; address: string | null; timezone: string; is_active: boolean };
+type CourtRow = { id: string; venue_id: string; name: string; sport: string; is_active: boolean };
+type StaffRow = { event_id: string; user_id: string; role_code: string; event_name: string; user_name: string };
 
 async function copyToClipboard(value: string) {
   try {
@@ -244,7 +247,7 @@ function WorkspaceShell({
   onCreateOrganization: () => void;
   userId: string;
 }) {
-  const [tab, setTab] = useState<"overview" | "events" | "members" | "settings">("overview");
+  const [tab, setTab] = useState<"overview" | "events" | "operations" | "members" | "settings">("overview");
   const canManage = canOrganizationRole(membership?.role_code, "members.manage");
   const canManageEvents = canOrganizationRole(membership?.role_code, "events.manage");
   return (
@@ -274,6 +277,7 @@ function WorkspaceShell({
             [
               ["overview", "Overview", LayoutDashboard],
               ["events", "Events", CalendarDays],
+              ["operations", "Operations", ClipboardList],
               ["members", "Members", Users],
               ["settings", "Settings", Building2],
             ] as const
@@ -294,6 +298,7 @@ function WorkspaceShell({
       {tab === "events" && (
         <EventsPanel organization={organization} userId={userId} canManage={canManageEvents} />
       )}
+      {tab === "operations" && <OperationsPanel organization={organization} canManage={canManage} />}
       {tab === "members" && <MembersPanel organization={organization} canManage={canManage} />}
       {tab === "settings" && <SettingsPanel organization={organization} canManage={canManage} />}
     </>
@@ -718,6 +723,122 @@ function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () =
     </DialogFrame>
   );
 }
+function OperationsPanel({
+  organization,
+  canManage,
+}: {
+  organization: Organization;
+  canManage: boolean;
+}) {
+  const [venues, setVenues] = useState<VenueRow[]>([]);
+  const [courts, setCourts] = useState<CourtRow[]>([]);
+  const [events, setEvents] = useState<{ id: string; name: string }[]>([]);
+  const [members, setMembers] = useState<{ user_id: string; name: string; role_code: string }[]>([]);
+  const [staff, setStaff] = useState<StaffRow[]>([]);
+  const [venueName, setVenueName] = useState("");
+  const [venueAddress, setVenueAddress] = useState("");
+  const [courtName, setCourtName] = useState("");
+  const [courtSport, setCourtSport] = useState("badminton");
+  const [courtVenue, setCourtVenue] = useState("");
+  const [staffEvent, setStaffEvent] = useState("");
+  const [staffUser, setStaffUser] = useState("");
+  const [staffRole, setStaffRole] = useState("scorer");
+  const [message, setMessage] = useState("");
+
+  async function load() {
+    const [venueRes, eventRes, memberRes] = await Promise.all([
+      supabase.from("venues").select("id, name, address, timezone, is_active").eq("organization_id", organization.id).order("name"),
+      supabase.from("events").select("id, name").eq("organization_id", organization.id).order("starts_at", { ascending: false }),
+      supabase.from("organization_members").select("user_id, role_code").eq("organization_id", organization.id).eq("status", "active"),
+    ]);
+    if (venueRes.error || eventRes.error || memberRes.error) {
+      setMessage(venueRes.error?.message || eventRes.error?.message || memberRes.error?.message || "Gagal memuat operasi.");
+      return;
+    }
+    const nextVenues = (venueRes.data ?? []) as VenueRow[];
+    setVenues(nextVenues);
+    setCourtVenue((current) => current || nextVenues[0]?.id || "");
+    setEvents((eventRes.data ?? []) as { id: string; name: string }[]);
+    setStaffEvent((current) => current || eventRes.data?.[0]?.id || "");
+    const memberRows = (memberRes.data ?? []).filter((row) => ["event_manager", "scorer", "coach"].includes(row.role_code));
+    const ids = memberRows.map((row) => row.user_id);
+    const profileRes = ids.length ? await supabase.from("profiles").select("id, username, display_name").in("id", ids) : { data: [] };
+    const names = new Map((profileRes.data ?? []).map((profile) => [profile.id, profile.display_name || profile.username || profile.id.slice(0, 8)]));
+    setMembers(memberRows.map((row) => ({ ...row, name: names.get(row.user_id) || row.user_id.slice(0, 8) })));
+    const venueIds = nextVenues.map((venue) => venue.id);
+    const courtRes = venueIds.length ? await supabase.from("courts").select("id, venue_id, name, sport, is_active").in("venue_id", venueIds).order("name") : { data: [], error: null };
+    setCourts((courtRes.data ?? []) as CourtRow[]);
+    const eventIds = (eventRes.data ?? []).map((event) => event.id);
+    const staffRes = eventIds.length ? await supabase.from("event_staff").select("event_id, user_id, role_code").in("event_id", eventIds) : { data: [], error: null };
+    const eventNames = new Map((eventRes.data ?? []).map((event) => [event.id, event.name]));
+    const memberNames = new Map((memberRows ?? []).map((row) => [row.user_id, names.get(row.user_id) || row.user_id.slice(0, 8)]));
+    setStaff((staffRes.data ?? []).map((row) => ({ ...row, event_name: eventNames.get(row.event_id) || "Event", user_name: memberNames.get(row.user_id) || row.user_id.slice(0, 8) })) as StaffRow[]);
+  }
+
+  useEffect(() => { void load(); }, [organization.id]);
+
+  async function addVenue(event: FormEvent) {
+    event.preventDefault();
+    const result = await supabase.from("venues").insert({ organization_id: organization.id, name: venueName.trim(), address: venueAddress.trim() || null });
+    if (result.error) setMessage(result.error.message);
+    else { setVenueName(""); setVenueAddress(""); setMessage("Venue ditambahkan."); await load(); }
+  }
+
+  async function addCourt(event: FormEvent) {
+    event.preventDefault();
+    if (!courtVenue) return;
+    const result = await supabase.from("courts").insert({ venue_id: courtVenue, name: courtName.trim(), sport: courtSport });
+    if (result.error) setMessage(result.error.message);
+    else { setCourtName(""); setMessage("Court ditambahkan."); await load(); }
+  }
+
+  async function toggleCourt(court: CourtRow) {
+    const result = await supabase.from("courts").update({ is_active: !court.is_active }).eq("id", court.id);
+    if (result.error) setMessage(result.error.message); else await load();
+  }
+
+  async function assignStaff(event: FormEvent) {
+    event.preventDefault();
+    const result = await supabase.from("event_staff").upsert({ event_id: staffEvent, user_id: staffUser, role_code: staffRole });
+    if (result.error) setMessage(result.error.message);
+    else { setMessage("Staff ditugaskan ke event."); await load(); }
+  }
+
+  async function removeStaff(row: StaffRow) {
+    const result = await supabase.from("event_staff").delete().eq("event_id", row.event_id).eq("user_id", row.user_id);
+    if (result.error) setMessage(result.error.message); else await load();
+  }
+
+  return (
+    <section className="mt-6 grid gap-6">
+      <div className="arena-card">
+        <div className="flex items-center justify-between gap-4">
+          <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-arena-lime">Club operations</p><h2 className="mt-1 font-display text-2xl font-bold">Venue & court</h2></div>
+          <Building2 className="size-7 text-arena-lime" />
+        </div>
+        {message && <p className="mt-4 rounded-2xl bg-slate-100 p-3 text-sm text-arena-dim">{message}</p>}
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="font-display font-bold">Venue terdaftar</p>
+            <div className="mt-3 grid gap-2">{venues.map((venue) => <div key={venue.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-3 text-sm"><span><b>{venue.name}</b><small className="block text-arena-dim">{venue.address || "Alamat belum diisi"}</small></span><span className="text-xs font-bold uppercase text-emerald-700">{venue.is_active ? "Aktif" : "Nonaktif"}</span></div>)}{!venues.length && <p className="text-sm text-arena-dim">Belum ada venue.</p>}</div>
+            {canManage && <form onSubmit={addVenue} className="mt-4 grid gap-2"><input required value={venueName} onChange={(event) => setVenueName(event.target.value)} placeholder="Nama venue" className="auth-input" /><input value={venueAddress} onChange={(event) => setVenueAddress(event.target.value)} placeholder="Alamat (opsional)" className="auth-input" /><button className="btn-arena"><Plus className="size-4" /> Tambah venue</button></form>}
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="font-display font-bold">Court / lapangan</p>
+            <div className="mt-3 grid gap-2">{courts.map((court) => <div key={court.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-3 text-sm"><span><b>{court.name}</b><small className="block text-arena-dim">{venues.find((venue) => venue.id === court.venue_id)?.name || "Venue"} · {court.sport}</small></span>{canManage && <button type="button" onClick={() => void toggleCourt(court)} className="text-xs font-bold uppercase text-arena-dim">{court.is_active ? "Nonaktifkan" : "Aktifkan"}</button>}</div>)}{!courts.length && <p className="text-sm text-arena-dim">Belum ada court.</p>}</div>
+            {canManage && <form onSubmit={addCourt} className="mt-4 grid gap-2"><select required value={courtVenue} onChange={(event) => setCourtVenue(event.target.value)} className="auth-input"><option value="">Pilih venue</option>{venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select><div className="grid gap-2 sm:grid-cols-2"><input required value={courtName} onChange={(event) => setCourtName(event.target.value)} placeholder="Court 1" className="auth-input" /><select value={courtSport} onChange={(event) => setCourtSport(event.target.value)} className="auth-input"><option value="badminton">Badminton</option><option value="padel">Padel</option><option value="tennis">Tenis</option><option value="pingpong">Tenis meja</option></select></div><button className="btn-arena"><Plus className="size-4" /> Tambah court</button></form>}
+          </div>
+        </div>
+      </div>
+      <div className="arena-card">
+        <div className="flex items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-arena-lime">Event staffing</p><h2 className="mt-1 font-display text-2xl font-bold">Penugasan staff</h2></div><Users className="size-7 text-arena-lime" /></div>
+        {canManage && <form onSubmit={assignStaff} className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-4"><select required value={staffEvent} onChange={(event) => setStaffEvent(event.target.value)} className="auth-input"><option value="">Pilih event</option>{events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}</select><select required value={staffUser} onChange={(event) => setStaffUser(event.target.value)} className="auth-input"><option value="">Pilih staff</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{member.name} · {member.role_code}</option>)}</select><select value={staffRole} onChange={(event) => setStaffRole(event.target.value)} className="auth-input"><option value="event_manager">Event Manager</option><option value="scorer">Scorer</option><option value="coach">Coach</option></select><button className="btn-arena"><UserPlus className="size-4" /> Tugaskan</button></form>}
+        <div className="mt-4 grid gap-2">{staff.map((row) => <div key={`${row.event_id}-${row.user_id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm"><span><b>{row.user_name}</b><small className="ml-2 text-arena-dim">{row.event_name}</small></span><span className="flex items-center gap-2"><b className="rounded-full bg-arena-lime/20 px-3 py-1 text-xs uppercase">{row.role_code}</b>{canManage && <button type="button" onClick={() => void removeStaff(row)} className="text-xs font-bold uppercase text-red-700">Hapus</button>}</span></div>)}{!staff.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-arena-dim">Belum ada penugasan staff.</p>}</div>
+      </div>
+    </section>
+  );
+}
+
 function MembersPanel({
   organization,
   canManage,
