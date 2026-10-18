@@ -1,0 +1,159 @@
+/* Arena masthead: kartu header (logo bulat per olahraga + judul + tagline + status ronde).
+   Presentation only. Scoped to #arenaScreen header.arena-top, loaded last in arena.html.
+   Logo: /arena-logo/<sport>.svg. Warna aksen: --mh-accent per [data-sport] (ubah di blok token di bawah). */
+
+#arenaScreen {
+  --mh-accent: #b6f23c;
+}
+#arenaScreen[data-sport='padel'] { --mh-accent: #5ab8ff; }
+#arenaScreen[data-sport='badminton'] { --mh-accent: #b6f23c; }
+#arenaScreen[data-sport='tennis'] { --mh-accent: #ecf04a; }
+#arenaScreen[data-sport='tenismeja'] { --mh-accent: #ff5470; }
+
+#arenaScreen header.arena-top {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 0;
+  margin: 0 0 22px;
+  border: 0;
+}
+#arenaScreen header.arena-top .back-btn {
+  align-self: flex-start;
+  grid-column: auto;
+}
+
+#arenaScreen .masthead {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 22px 14px 16px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--mh-accent) 38%, rgba(255, 255, 255, .22));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 7% 50%, color-mix(in srgb, var(--mh-accent) 20%, transparent), transparent 34%),
+    linear-gradient(135deg, rgba(4, 14, 40, .95), rgba(9, 28, 68, .88));
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 22px 50px -22px rgba(0, 10, 40, .85), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+/* Garis aksen tipis di tepi atas, mengikuti warna olahraga. */
+#arenaScreen .masthead::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: -1;
+  background: linear-gradient(90deg, var(--mh-accent), color-mix(in srgb, var(--mh-accent) 0%, transparent) 70%);
+}
+
+#arenaScreen .masthead-logo {
+  display: block;
+  width: 96px;
+  height: 96px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .55));
+}
+
+#arenaScreen .masthead-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+#arenaScreen .masthead-sport {
+  justify-self: start;
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--mh-accent) 70%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mh-accent) 14%, transparent);
+  color: var(--mh-accent);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+#arenaScreen .masthead-title {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.4vw, 42px);
+  font-weight: 700;
+  letter-spacing: .01em;
+  line-height: 1.05;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .4);
+}
+#arenaScreen .masthead-title em {
+  color: var(--mh-accent);
+  font-style: normal;
+}
+#arenaScreen .masthead-tagline {
+  max-width: 560px;
+  margin: 0;
+  color: rgba(226, 236, 255, .82);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+/* Status ronde: pil kaca gelap di kanan; semua olahraga memakai gaya yang sama. */
+#arenaScreen header.arena-top .masthead .round-badge {
+  justify-self: end;
+  align-self: center;
+  min-height: 46px;
+  padding: 10px 22px;
+  color: #fff;
+  background: rgba(6, 20, 52, .72);
+  border: 1.5px solid var(--mh-accent);
+  border-radius: 999px;
+  box-shadow: 0 0 22px -6px color-mix(in srgb, var(--mh-accent) 75%, transparent), inset 0 1px 0 rgba(255, 255, 255, .1);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+#arenaScreen header.arena-top .masthead .round-badge .live-dot {
+  background: var(--mh-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mh-accent) 28%, transparent);
+}
+#arenaScreen header.arena-top .masthead .round-badge:has(.live-dot[style*='none'])::before {
+  border-color: var(--mh-accent);
+}
+
+@media (max-width: 860px) {
+  #arenaScreen .masthead { gap: 16px; padding-right: 16px; }
+  #arenaScreen .masthead-logo { width: 78px; height: 78px; }
+  #arenaScreen .masthead-tagline { font-size: 12.5px; }
+}
+@media (max-width: 639px) {
+  #arenaScreen .masthead {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px 14px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+  #arenaScreen .masthead-logo { width: 64px; height: 64px; }
+  #arenaScreen .masthead-title { font-size: 24px; }
+  #arenaScreen .masthead-tagline { font-size: 12px; }
+  #arenaScreen header.arena-top .masthead .round-badge {
+    grid-column: 1 / -1;
+    justify-self: start;
+    min-height: 40px;
+    padding: 8px 16px;
+    font-size: 12px;
+    white-space: normal;
+  }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  #arenaScreen header.arena-top { margin-bottom: 14px; gap: 10px; }
+  #arenaScreen .masthead-tagline { display: none; }
+}

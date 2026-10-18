@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Otto Play TENIS">
+  <defs>
+    <radialGradient id="disc" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#16356f"/>
+      <stop offset="1" stop-color="#071636"/>
+    </radialGradient>
+    <path id="top" d="M 29 100 A 71 71 0 0 1 171 100"/>
+    <path id="bottom" d="M 17 100 A 83 83 0 0 0 183 100"/>
+  </defs>
+  <circle cx="100" cy="100" r="97" fill="#04102b"/>
+  <circle cx="100" cy="100" r="93" fill="none" stroke="#ecf04a" stroke-width="6"/>
+  <circle cx="100" cy="100" r="62" fill="none" stroke="#ecf04a" stroke-width="2" stroke-opacity=".85"/>
+  <circle cx="100" cy="100" r="58" fill="url(#disc)"/>
+  <g font-family="'Arial Black','Helvetica Neue',Arial,sans-serif" font-weight="900" fill="#ecf04a" text-anchor="middle">
+    <text font-size="21" letter-spacing="2.4"><textPath href="#top" startOffset="50%">OTTO PLAY</textPath></text>
+    <text font-size="19" letter-spacing="2"><textPath href="#bottom" startOffset="50%">TENIS</textPath></text>
+  </g>
+  <g fill="#ecf04a">
+    <path d="M24 100l3.2-3.2L30.4 100l-3.2 3.2zM176 100l-3.2-3.2-3.2 3.2 3.2 3.2z"/>
+  </g>
+  <g transform="translate(58 58) scale(3.5)" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="12" cy="8.2" rx="5.6" ry="7.2" fill="#fff" fill-opacity=".16"/>
+      <path d="M12 1.7v13M10.2 1.9v12.8M13.8 1.9v12.8M7.3 5.3h9.4M6.9 8.2h10.2M7.3 11.1h9.4" stroke-width=".9"/>
+      <path d="M10.4 15.2 12 18l1.6-2.8M12 18v4.3"/>
+  </g>
+</svg>

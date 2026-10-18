@@ -475,6 +475,7 @@
 <link rel="stylesheet" href="/arena-sport-themes.css">
 <link rel="stylesheet" href="/arena-menu-redesign.css">
 <link rel="stylesheet" href="/arena-tier.css">
+<link rel="stylesheet" href="/arena-masthead.css">
 </head>
 <body class="welcome-active">
 <div class="score-toast-wrap" id="scoreToastWrap" aria-live="polite"></div>
@@ -545,14 +546,17 @@
   <div id="arenaScreen" style="display:none;">
   <div class="sport-deco" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 
-  <header>
+  <header class="arena-top">
     <button type="button" class="back-btn" id="backFromArenaBtn">← Beranda</button>
-    <div class="brand">
-      <img class="brand-banner-sm" src="/__l5e/assets-v1/e6a4dcaf-af23-4b34-bc2a-e98be81d1b1b/otto-play-arena-banner.png" alt="Otto Play Arena">
-      <span class="arena-icon-frame"><img class="arena-sport-icon" id="arenaSportIcon" src="/__l5e/assets-v1/f2dfac12-7301-4cbd-a714-abc9c864f2c8/padel.png" alt="Ikon Padel"></span>
-      <span class="sport-chip" id="arenaSportChip">Padel</span>
+    <div class="masthead">
+      <img class="masthead-logo" id="arenaSportIcon" src="/arena-logo/padel.svg" width="96" height="96" alt="Logo Otto Play Padel">
+      <div class="masthead-text">
+        <span class="masthead-sport" id="arenaSportChip">Padel</span>
+        <h1 class="masthead-title">OTTO <em>PLAY</em> ARENA</h1>
+        <p class="masthead-tagline">Mainkan strategi, biarkan Otto beraksi. Rotasi otomatis penuh strategi sampai game berakhir.</p>
+      </div>
+      <div class="round-badge" id="roundBadge"><span class="live-dot" style="display:none;"></span>belum mulai</div>
     </div>
-    <div class="round-badge" id="roundBadge"><span class="live-dot" style="display:none;"></span>belum mulai</div>
   </header>
 
   <div class="layout">
@@ -1009,10 +1013,10 @@
   const arenaSportIcon = document.getElementById('arenaSportIcon');
 
   const sportMeta = {
-    padel: { label: 'Padel', icon: '/__l5e/assets-v1/f2dfac12-7301-4cbd-a714-abc9c864f2c8/padel.png' },
-    badminton: { label: 'Badminton', icon: '/__l5e/assets-v1/3a4484e6-ebcd-48fc-87c8-c805f0038667/badminton.png' },
-    tennis: { label: 'Tenis', icon: '/__l5e/assets-v1/7c1c6b62-14f5-4601-8155-e7d38da0bc8e/tennis.png' },
-    tenismeja: { label: 'Tenis Meja', icon: '/__l5e/assets-v1/ebe1b372-7329-4063-849d-0ddb148b5f62/pingpong.png' }
+    padel: { label: 'Padel', icon: '/__l5e/assets-v1/f2dfac12-7301-4cbd-a714-abc9c864f2c8/padel.png', logo: '/arena-logo/padel.svg' },
+    badminton: { label: 'Badminton', icon: '/__l5e/assets-v1/3a4484e6-ebcd-48fc-87c8-c805f0038667/badminton.png', logo: '/arena-logo/badminton.svg' },
+    tennis: { label: 'Tenis', icon: '/__l5e/assets-v1/7c1c6b62-14f5-4601-8155-e7d38da0bc8e/tennis.png', logo: '/arena-logo/tennis.svg' },
+    tenismeja: { label: 'Tenis Meja', icon: '/__l5e/assets-v1/ebe1b372-7329-4063-849d-0ddb148b5f62/pingpong.png', logo: '/arena-logo/tenismeja.svg' }
   };
   let selectedSport = 'padel';
   const arenaLinkParams = new URLSearchParams(window.location.search);
@@ -1075,8 +1079,8 @@
     document.body.dataset.sport = selectedSport;
     arenaScreen.dataset.sport = selectedSport;
     arenaSportChip.textContent = meta.label;
-    arenaSportIcon.src = meta.icon;
-    arenaSportIcon.alt = 'Ikon ' + meta.label;
+    arenaSportIcon.src = meta.logo;
+    arenaSportIcon.alt = 'Logo Otto Play ' + meta.label;
     document.title = 'OTTOPLAY ARENA — ' + meta.label;
   }
 
