@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { loginIdToEmail, useAuth } from "@/lib/auth";
+import { canOrganizationRole } from "@/lib/permissions";
 
 export const Route = createFileRoute("/workspace")({ component: WorkspacePage });
 
@@ -244,12 +245,8 @@ function WorkspaceShell({
   userId: string;
 }) {
   const [tab, setTab] = useState<"overview" | "events" | "members" | "settings">("overview");
-  const canManage = ["organization_owner", "organization_admin"].includes(
-    membership?.role_code ?? "",
-  );
-  const canManageEvents = ["organization_owner", "organization_admin", "event_manager"].includes(
-    membership?.role_code ?? "",
-  );
+  const canManage = canOrganizationRole(membership?.role_code, "members.manage");
+  const canManageEvents = canOrganizationRole(membership?.role_code, "events.manage");
   return (
     <>
       <section className="mt-8 rounded-[28px] bg-arena-ink p-6 text-white shadow-2xl shadow-arena-ink/20 sm:p-8">
