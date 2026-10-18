@@ -1003,6 +1003,17 @@ export type Database = {
           summary: Json
         }[]
       }
+      get_organization_report: {
+        Args: {
+          p_event_id?: string | null
+          p_from?: string | null
+          p_organization_id: string
+          p_sport?: string | null
+          p_to?: string | null
+          p_venue_id?: string | null
+        }
+        Returns: Json
+      }
       promote_event_waitlist: {
         Args: { p_event_id: string; p_limit?: number }
         Returns: number

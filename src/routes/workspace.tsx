@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowRight,
+  BarChart3,
   Building2,
   CalendarDays,
   Check,
@@ -57,6 +58,13 @@ type MemberRow = { user_id: string; role_code: string; status: string; name: str
 type VenueRow = { id: string; name: string; address: string | null; timezone: string; is_active: boolean };
 type CourtRow = { id: string; venue_id: string; name: string; sport: string; is_active: boolean };
 type StaffRow = { event_id: string; user_id: string; role_code: string; event_name: string; user_name: string };
+type ReportData = {
+  summary: { events: number; participants: number; matches: number; checked_in: number; registered: number; waitlisted: number; team_a_wins: number; team_b_wins: number };
+  by_event: Array<{ id: string; name: string; sport: string; status: string; participants: number; checked_in: number; matches: number }>;
+  by_sport: Array<{ sport: string; matches: number; events: number }>;
+  by_venue: Array<{ id: string; name: string; events: number; matches: number }>;
+  by_court: Array<{ id: string; name: string; venue_name: string; matches: number }>;
+};
 
 async function copyToClipboard(value: string) {
   try {
@@ -253,6 +261,7 @@ function WorkspaceShell({
   const [tab, setTab] = useState<"overview" | "events" | "operations" | "members" | "settings">("overview");
   const canManage = canOrganizationRole(membership?.role_code, "members.manage");
   const canManageEvents = canOrganizationRole(membership?.role_code, "events.manage");
+  const canViewReports = membership?.role_code === "organization_owner" || membership?.role_code === "organization_admin";
   return (
     <>
       <section className="mt-8 rounded-[28px] bg-arena-ink p-6 text-white shadow-2xl shadow-arena-ink/20 sm:p-8">
@@ -281,6 +290,7 @@ function WorkspaceShell({
               ["overview", "Overview", LayoutDashboard],
               ["events", "Events", CalendarDays],
               ["operations", "Operations", ClipboardList],
+              ...(canViewReports ? [["reports", "Reports", BarChart3] as const] : []),
               ["members", "Members", Users],
               ["settings", "Settings", Building2],
             ] as const
@@ -302,6 +312,7 @@ function WorkspaceShell({
         <EventsPanel organization={organization} userId={userId} canManage={canManageEvents} />
       )}
       {tab === "operations" && <OperationsPanel organization={organization} canManage={canManage} />}
+      {tab === "reports" && canViewReports && <ReportsPanel organization={organization} />}
       {tab === "members" && <MembersPanel organization={organization} canManage={canManage} />}
       {tab === "settings" && <SettingsPanel organization={organization} canManage={canManage} />}
     </>
@@ -343,6 +354,88 @@ function WorkspacePicker({
       </button>
     </label>
   );
+}
+
+function ReportsPanel({ organization }: { organization: Organization }) {
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [venues, setVenues] = useState<VenueRow[]>([]);
+  const [eventId, setEventId] = useState("");
+  const [venueId, setVenueId] = useState("");
+  const [sport, setSport] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("events").select("id, name, sport, format, status, starts_at, public_code, max_players").eq("organization_id", organization.id).order("starts_at", { ascending: false }),
+      supabase.from("venues").select("id, name, address, timezone, is_active").eq("organization_id", organization.id).order("name"),
+    ]).then(([eventResult, venueResult]) => {
+      setEvents((eventResult.data ?? []) as EventRow[]);
+      setVenues((venueResult.data ?? []) as VenueRow[]);
+    });
+  }, [organization.id]);
+
+  async function loadReport() {
+    setLoading(true);
+    setError("");
+    const result = await supabase.rpc("get_organization_report", {
+      p_organization_id: organization.id,
+      p_event_id: eventId || null,
+      p_venue_id: venueId || null,
+      p_sport: sport || null,
+      p_from: from ? new Date(`${from}T00:00:00`).toISOString() : null,
+      p_to: to ? new Date(`${to}T23:59:59.999`).toISOString() : null,
+    });
+    if (result.error) setError(result.error.message);
+    else setReport((result.data ?? null) as ReportData | null);
+    setLoading(false);
+  }
+
+  useEffect(() => { void loadReport(); }, [organization.id]);
+  const summary = report?.summary;
+  const attendance = summary && summary.registered ? Math.round((summary.checked_in / summary.registered) * 100) : 0;
+  const sports = [...new Set(events.map((event) => event.sport))].filter(Boolean);
+  return (
+    <section className="mt-6 space-y-5">
+      <div className="arena-card">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-arena-lime">Organization intelligence</p>
+            <h2 className="mt-1 font-display text-2xl font-bold">Reports organisasi</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-arena-dim">Pantau aktivitas event, peserta, pertandingan, kehadiran, dan utilisasi venue dari satu dashboard.</p>
+          </div>
+          <BarChart3 className="size-8 text-arena-lime" />
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <select value={eventId} onChange={(e) => setEventId(e.target.value)} className="arena-input"><option value="">Semua event</option>{events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}</select>
+          <select value={venueId} onChange={(e) => setVenueId(e.target.value)} className="arena-input"><option value="">Semua venue</option>{venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select>
+          <select value={sport} onChange={(e) => setSport(e.target.value)} className="arena-input"><option value="">Semua olahraga</option>{sports.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="arena-input" aria-label="Dari tanggal" />
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="arena-input" aria-label="Sampai tanggal" />
+        </div>
+        <button onClick={() => void loadReport()} className="mt-3 rounded-full bg-arena-ink px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white">Terapkan filter</button>
+      </div>
+      {error && <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+      {loading ? <div className="arena-card text-sm text-arena-dim">Memuat laporan...</div> : report && <>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Metric label="Event" value={summary?.events ?? 0} /><Metric label="Peserta" value={summary?.participants ?? 0} /><Metric label="Pertandingan" value={summary?.matches ?? 0} /><Metric label="Kehadiran" value={`${attendance}%`} /><Metric label="Menang A / B" value={`${summary?.team_a_wins ?? 0} / ${summary?.team_b_wins ?? 0}`} />
+        </div>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <ReportTable title="Per event" headers={["Event", "Peserta", "Check-in", "Match"]} rows={report.by_event.map((row) => [row.name, row.participants, row.checked_in, row.matches])} />
+          <ReportTable title="Per venue" headers={["Venue", "Event", "Match"]} rows={report.by_venue.map((row) => [row.name, row.events, row.matches])} />
+          <ReportTable title="Per olahraga" headers={["Olahraga", "Event", "Match"]} rows={report.by_sport.map((row) => [row.sport, row.events, row.matches])} />
+          <ReportTable title="Utilisasi court" headers={["Venue / Court", "Match"]} rows={report.by_court.map((row) => [`${row.venue_name} / ${row.name}`, row.matches])} />
+        </div>
+      </>}
+    </section>
+  );
+}
+
+function ReportTable({ title, headers, rows }: { title: string; headers: string[]; rows: Array<Array<string | number>> }) {
+  return <div className="arena-card overflow-hidden"><h3 className="font-display text-lg font-bold">{title}</h3><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[360px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-arena-dim"><tr>{headers.map((header) => <th key={header} className="border-b border-arena-ink/10 px-2 py-2 font-bold">{header}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row, index) => <tr key={`${title}-${index}`} className="border-b border-arena-ink/5 last:border-0">{row.map((cell, cellIndex) => <td key={`${index}-${cellIndex}`} className="px-2 py-3 font-semibold">{cell}</td>)}</tr>) : <tr><td colSpan={headers.length} className="px-2 py-4 text-arena-dim">Belum ada data pada filter ini.</td></tr>}</tbody></table></div></div>;
 }
 
 function Overview({
