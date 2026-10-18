@@ -36,7 +36,10 @@ type Organization = {
   name: string;
   slug: string;
   logo_url: string | null;
+  banner_url: string | null;
   primary_color: string | null;
+  secondary_color: string | null;
+  public_description: string | null;
   subscription_plan: string;
 };
 type Membership = { organization_id: string; role_code: string; status: string };
@@ -140,7 +143,7 @@ function WorkspacePage() {
     }
     const orgRes = await supabase
       .from("organizations")
-      .select("id, name, slug, logo_url, primary_color, subscription_plan")
+      .select("id, name, slug, logo_url, banner_url, primary_color, secondary_color, public_description, subscription_plan")
       .in("id", ids)
       .order("name");
     if (orgRes.error) setError(orgRes.error.message);
@@ -1037,8 +1040,57 @@ function SettingsPanel({
   organization: Organization;
   canManage: boolean;
 }) {
+  const [logoUrl, setLogoUrl] = useState(organization.logo_url ?? "");
+  const [bannerUrl, setBannerUrl] = useState(organization.banner_url ?? "");
+  const [primaryColor, setPrimaryColor] = useState(organization.primary_color ?? "#b8f34a");
+  const [secondaryColor, setSecondaryColor] = useState(organization.secondary_color ?? "#0b2a5c");
+  const [description, setDescription] = useState(organization.public_description ?? "");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function uploadAsset(file: File, type: "logo" | "banner") {
+    const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${organization.id}/${type}.${extension}`;
+    const upload = await supabase.storage.from("organization-branding").upload(path, file, { upsert: true, contentType: file.type || "image/png" });
+    if (upload.error) throw upload.error;
+    return supabase.storage.from("organization-branding").getPublicUrl(path).data.publicUrl;
+  }
+
+  async function saveBranding(event: FormEvent) {
+    event.preventDefault();
+    if (!canManage) return;
+    setSaving(true);
+    setMessage("");
+    try {
+      const result = await supabase.from("organizations").update({ logo_url: logoUrl.trim() || null, banner_url: bannerUrl.trim() || null, primary_color: primaryColor, secondary_color: secondaryColor, public_description: description.trim() || null }).eq("id", organization.id);
+      if (result.error) throw result.error;
+      setMessage("Branding organisasi tersimpan.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Branding belum dapat disimpan.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <section className="mt-6 arena-card">
+    <section className="mt-6 grid gap-6">
+      <form onSubmit={saveBranding} className="arena-card">
+      <p className="text-xs font-bold uppercase tracking-[0.2em] text-arena-lime">Club identity</p>
+      <h2 className="mt-1 font-display text-2xl font-bold">Branding organisasi</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-arena-dim">Logo, warna, dan deskripsi ini dipakai di halaman publik club serta dapat diteruskan ke event dan leaderboard.</p>
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <Field label="Logo URL"><input value={logoUrl} onChange={(event) => setLogoUrl(event.target.value)} placeholder="https://.../logo.png" className="auth-input" /></Field>
+        <Field label="Banner URL"><input value={bannerUrl} onChange={(event) => setBannerUrl(event.target.value)} placeholder="https://.../banner.jpg" className="auth-input" /></Field>
+        <Field label="Upload logo"><input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={!canManage} onChange={async (event) => { const file = event.target.files?.[0]; if (file) setLogoUrl(await uploadAsset(file, "logo")); }} className="auth-input" /></Field>
+        <Field label="Upload banner"><input type="file" accept="image/png,image/jpeg,image/webp" disabled={!canManage} onChange={async (event) => { const file = event.target.files?.[0]; if (file) setBannerUrl(await uploadAsset(file, "banner")); }} className="auth-input" /></Field>
+        <Field label="Warna utama"><div className="flex gap-2"><input type="color" value={primaryColor} onChange={(event) => setPrimaryColor(event.target.value)} className="h-12 w-16 rounded-xl border border-arena-ink/10 bg-white p-1" /><input value={primaryColor} onChange={(event) => setPrimaryColor(event.target.value)} className="auth-input" /></div></Field>
+        <Field label="Warna sekunder"><div className="flex gap-2"><input type="color" value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="h-12 w-16 rounded-xl border border-arena-ink/10 bg-white p-1" /><input value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="auth-input" /></div></Field>
+      </div>
+      <Field label="Deskripsi publik"><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={280} placeholder="Cerita singkat tentang club atau venue kamu" className="auth-input min-h-28 resize-y" /></Field>
+      {message && <p className="mt-4 rounded-2xl bg-slate-100 p-3 text-sm text-arena-dim">{message}</p>}
+      {canManage ? <button disabled={saving} className="btn-arena mt-4">{saving ? "Menyimpan..." : "Simpan branding"}</button> : <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-arena-dim">Hanya owner/admin yang dapat mengubah branding.</p>}
+      </form>
+      <section className="arena-card">
       <p className="text-xs font-bold uppercase tracking-[0.2em] text-arena-lime">
         Workspace identity
       </p>
@@ -1063,6 +1115,8 @@ function SettingsPanel({
           </p>
         </div>
       </div>
+      <a href={`/club/${organization.slug}`} className="mt-5 inline-flex w-fit rounded-full bg-arena-ink px-5 py-3 text-xs font-bold uppercase tracking-wider text-white">Lihat halaman publik club</a>
+    </section>
     </section>
   );
 }
