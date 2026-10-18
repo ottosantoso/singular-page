@@ -386,7 +386,7 @@ function Overview({
         </div>
         <div className="mt-3 space-y-2">
           {events.length ? (
-            events.map((event) => <EventLine key={event.id} event={event} />)
+            events.map((event) => <EventLine key={event.id} event={event} organizationId={organization.id} />)
           ) : (
             <p className="rounded-2xl bg-slate-50 p-5 text-sm text-arena-dim">
               Belum ada event. Buat event pertama untuk mulai menghubungkan Arena.
@@ -404,7 +404,8 @@ function Overview({
           bekerja seperti sebelumnya.
         </p>
         <a
-          href="/arena.html"
+          href={events[0] ? `/arena.html?organization_id=${encodeURIComponent(organization.id)}&event_id=${encodeURIComponent(events[0].id)}&sport=${encodeURIComponent(events[0].sport)}&public_code=${encodeURIComponent(events[0].public_code)}&return_to=${encodeURIComponent("/workspace")}` : "#events"}
+          onClick={(event) => { if (!events[0]) { event.preventDefault(); onEvents(); } }}
           className="mt-6 inline-flex items-center gap-2 rounded-full bg-arena-ink px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white"
         >
           Buka Arena <ArrowRight className="size-4" />
@@ -1134,7 +1135,8 @@ function Metric({ label, value }: { label: string; value: string | number }) {
     </div>
   );
 }
-function EventLine({ event }: { event: EventRow }) {
+function EventLine({ event, organizationId }: { event: EventRow; organizationId: string }) {
+  const arenaUrl = `/arena.html?organization_id=${encodeURIComponent(organizationId)}&event_id=${encodeURIComponent(event.id)}&sport=${encodeURIComponent(event.sport)}&public_code=${encodeURIComponent(event.public_code)}&return_to=${encodeURIComponent("/workspace")}`;
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-arena-ink/10 bg-white/75 p-4">
       <div>
@@ -1143,9 +1145,12 @@ function EventLine({ event }: { event: EventRow }) {
           {event.sport} · {event.format}
         </p>
       </div>
-      <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider">
-        {event.status}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider">
+          {event.status}
+        </span>
+        <a href={arenaUrl} className="rounded-full bg-arena-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white">Arena</a>
+      </div>
     </div>
   );
 }

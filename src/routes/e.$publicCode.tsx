@@ -54,6 +54,7 @@ type PublicEvent = {
 
 type PublicPlayer = {
   display_name: string;
+  gender: string | null;
   tier: string | null;
   status: string;
   seed: number | null;
@@ -472,7 +473,7 @@ function PublicEventPage() {
                           <span className="mr-1.5 font-display text-[11px] text-arena-dim">{String(index + 1).padStart(2, "0")}</span>
                           {player.display_name}
                         </p>
-                        <p className="mt-0.5 text-[11px] uppercase tracking-wider text-arena-dim">{playerStatusLabel(player.status)}</p>
+                        <p className="mt-0.5 text-[11px] uppercase tracking-wider text-arena-dim">{player.gender === "female" ? "Perempuan" : "Laki-laki"} · {playerStatusLabel(player.status)}</p>
                       </div>
                       <TierBadge tier={player.tier} />
                     </li>

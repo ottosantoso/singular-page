@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowRight, Eye, EyeOff, Loader2, LogIn, UserPlus, UserRound, Trophy, Table2, CircleDot, Goal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +6,7 @@ import { loginIdToEmail, useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
-    meta: [{ title: "Masuk â€” OTTOPLAY ARENA" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Masuk Ã¢â‚¬â€ OTTOPLAY ARENA" }, { name: "robots", content: "noindex" }],
   }),
   component: LoginPage,
 });
@@ -23,6 +23,8 @@ function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [resendSeconds, setResendSeconds] = useState(0);
   const returnTo =
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("returnTo") || ""
@@ -30,6 +32,51 @@ function LoginPage() {
   const verified =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("verified") === "1";
 
+  useEffect(() => {
+    const targetEmail = localStorage.getItem("ottoplay:last-verification-email") || "";
+    const until = targetEmail ? Number(localStorage.getItem(`ottoplay:verification-resend:${targetEmail}`) || 0) : 0;
+    if (targetEmail && until > Date.now()) {
+      setVerificationEmail(targetEmail);
+      setResendSeconds(Math.ceil((until - Date.now()) / 1000));
+    }
+    const timer = window.setInterval(() => {
+      setResendSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function startResendCooldown(targetEmail: string) {
+    const until = Date.now() + 5 * 60 * 1000;
+    localStorage.setItem(`ottoplay:verification-resend:${targetEmail.toLowerCase()}`, String(until));
+    localStorage.setItem("ottoplay:last-verification-email", targetEmail.toLowerCase());
+    setVerificationEmail(targetEmail);
+    setResendSeconds(300);
+  }
+
+  function getVerificationRedirect() {
+    const baseUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? window.location.origin
+      : (import.meta.env["VITE_PUBLIC_APP_URL"]?.trim() || window.location.origin);
+    return `${baseUrl.replace(/\/$/, "")}/auth-callback?next=${encodeURIComponent("/login?verified=1")}`;
+  }
+
+  async function resendVerificationEmail() {
+    const targetEmail = verificationEmail.trim().toLowerCase();
+    if (!targetEmail || resendSeconds > 0) return;
+    setSubmitting(true);
+    setError("");
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: targetEmail,
+      options: { emailRedirectTo: getVerificationRedirect() },
+    });
+    if (resendError) setError(resendError.message);
+    else {
+      startResendCooldown(targetEmail);
+      setMessage("Link verifikasi baru sudah dikirim. Periksa inbox atau folder spam.");
+    }
+    setSubmitting(false);
+  }
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const authError = params.get("error_description") || params.get("error");
@@ -75,7 +122,7 @@ function LoginPage() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${(import.meta.env["VITE_PUBLIC_APP_URL"]?.trim() || window.location.origin).replace(/\/$/, "")}/auth-callback?next=${encodeURIComponent("/login?verified=1")}`,
+          emailRedirectTo: getVerificationRedirect(),
           data: {
             username: username.trim().toLowerCase(),
             display_name: displayName.trim() || username.trim(),
@@ -92,6 +139,7 @@ function LoginPage() {
       else {
         setMode("login");
         setPassword("");
+        startResendCooldown(email.trim());
         setMessage("Akun berhasil dibuat. Cek email, klik link verifikasi, lalu masuk dengan username dan password tadi.");
       }
     } else {
@@ -101,6 +149,12 @@ function LoginPage() {
       });
       if (signInError) {
         const lower = signInError.message.toLowerCase();
+        if (lower.includes("email not confirmed") && username.includes("@")) {
+          const targetEmail = username.trim().toLowerCase();
+          const until = Number(localStorage.getItem(`ottoplay:verification-resend:${targetEmail}`) || 0);
+          setVerificationEmail(targetEmail);
+          setResendSeconds(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+        }
         setError(
           lower.includes("email not confirmed")
             ? "Email belum diverifikasi. Cek inbox lalu klik link verifikasi."
@@ -163,6 +217,12 @@ function LoginPage() {
             </Field>
             {mode === "login" && <div className="login-page__options"><label><input type="checkbox" defaultChecked /> <span>Ingat saya</span></label><button type="button" onClick={() => setMessage("Gunakan link reset password dari Supabase untuk mengganti password.")}>Lupa password?</button></div>}
             {message && <p className="login-page__message is-success">{message}</p>}
+            {verificationEmail && <div className="login-page__resend">
+              <span>Belum menerima email verifikasi?</span>
+              <button type="button" onClick={resendVerificationEmail} disabled={submitting || resendSeconds > 0}>
+                {resendSeconds > 0 ? `Kirim ulang dalam ${Math.floor(resendSeconds / 60)}:${String(resendSeconds % 60).padStart(2, "0")}` : "Kirim ulang email"}
+              </button>
+            </div>}
             {error && <p className="login-page__message is-error">{error}</p>}
             <button type="submit" disabled={submitting} className="login-page__submit">{submitting && <Loader2 className="animate-spin" />}{mode === "login" ? "Masuk" : "Buat akun"}<ArrowRight /></button>
           </form>
@@ -187,3 +247,9 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     </label>
   );
 }
+
+
+
+
+
+

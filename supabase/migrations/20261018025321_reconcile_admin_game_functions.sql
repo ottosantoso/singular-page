@@ -1,0 +1,2 @@
+-- Compatibility marker for the migration already applied in development.
+-- The canonical implementation is kept in 20261018025416_reconcile_admin_game_functions.sql.

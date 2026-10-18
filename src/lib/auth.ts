@@ -14,7 +14,7 @@ export function loginIdToEmail(input: string): string {
   return v.includes("@") ? v : `${v}@${LOGIN_EMAIL_DOMAIN}`;
 }
 
-type Profile = { username: string | null; roles: string[]; organizationRoles: string[] };
+type Profile = { username: string | null; isActive: boolean; roles: string[]; organizationRoles: string[] };
 
 /**
  * Sesi + role user saat ini.
@@ -50,7 +50,7 @@ export function useAuth() {
     (async () => {
       const [roles, prof, orgRoles] = await Promise.all([
         supabase.from("user_roles").select("role_code").eq("user_id", userId),
-        supabase.from("profiles").select("username").eq("id", userId).maybeSingle(),
+        supabase.from("profiles").select("username, is_active").eq("id", userId).maybeSingle(),
         supabase
           .from("organization_members")
           .select("role_code")
@@ -58,8 +58,14 @@ export function useAuth() {
           .eq("status", "active"),
       ]);
       if (cancelled) return;
+      if (prof.data && prof.data.is_active === false) {
+        setProfile(null);
+        await supabase.auth.signOut();
+        return;
+      }
       setProfile({
         username: prof.data?.username ?? null,
+        isActive: prof.data?.is_active !== false,
         roles: (roles.data ?? []).map((r) => r.role_code),
         organizationRoles: (orgRoles.data ?? []).map((r) => r.role_code),
       });
