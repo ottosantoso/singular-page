@@ -1003,7 +1003,43 @@ export type Database = {
           summary: Json
         }[]
       }
-      get_organization_report: {
+      get_organization_quota: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      platform_set_organization_quota: {
+        Args: {
+          p_organization_id: string
+          p_plan_code: string
+          p_status?: string
+          p_max_venues?: number | null
+          p_max_courts?: number | null
+          p_max_active_events?: number | null
+          p_max_players_per_event?: number | null
+          p_max_staff?: number | null
+          p_note?: string | null
+        }
+        Returns: Json
+      }
+      platform_list_subscription_plans: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      create_subscription_invoice: {
+        Args: {
+          p_organization_id: string
+          p_plan_code: string
+          p_period_start: string
+          p_period_end: string
+          p_due_at: string
+          p_notes?: string | null
+        }
+        Returns: Json
+      }
+      platform_review_payment: {
+        Args: { p_invoice_id: string; p_status: string; p_note?: string | null }
+        Returns: boolean
+      }      get_organization_report: {
         Args: {
           p_event_id?: string | null
           p_from?: string | null

@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Building2,
   CalendarClock,
+  CreditCard,
   CheckCircle2,
   ChevronRight,
   Clock,
@@ -37,6 +38,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { GamePreview } from "@/components/admin/game-preview";
 import { Pagination } from "@/components/admin/pagination";
 import { PlatformUsers } from "@/components/admin/platform-users";
+import { PlatformBilling } from "@/components/admin/platform-billing";
 import { SPORT_THEMES, SportIcon, sportTheme } from "@/components/sport-icons";
 import hero from "@/assets/sports-hero.jpg";
 
@@ -50,7 +52,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Section = "games" | "users";
+type Section = "games" | "users" | "billing";
 type AuthState = ReturnType<typeof useAuth>;
 
 const TABS: { key: StatusFilter; label: string }[] = [
@@ -63,6 +65,7 @@ const TABS: { key: StatusFilter; label: string }[] = [
 const SECTIONS: { key: Section; label: string; icon: LucideIcon }[] = [
   { key: "games", label: "Permainan", icon: Gamepad2 },
   { key: "users", label: "Pengguna", icon: Users },
+  { key: "billing", label: "Billing & Quota", icon: CreditCard },
 ];
 
 function AdminPage() {
@@ -393,6 +396,8 @@ function Dashboard({ section, onSection }: { section: Section; onSection: (next:
 
       {section === "users" ? (
         <PlatformUsers />
+      ) : section === "billing" ? (
+        <PlatformBilling />
       ) : (
         <>
           <section className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Ringkasan">
