@@ -18,6 +18,7 @@ import { Route as KlasemenRouteImport } from './routes/klasemen'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlayerRouteImport } from './routes/player'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
+import { Route as ClubSlugRouteImport } from './routes/club.$slug'
 import { Route as EPublicCodeRouteImport } from './routes/e.$publicCode'
 
 const IndexRoute = IndexRouteImport.update({
@@ -65,6 +66,11 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
   path: '/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClubSlugRoute = ClubSlugRouteImport.update({
+  id: '/club/$slug',
+  path: '/club/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EPublicCodeRoute = EPublicCodeRouteImport.update({
   id: '/e/$publicCode',
   path: '/e/$publicCode',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/player': typeof PlayerRoute
   '/workspace': typeof WorkspaceRoute
+  '/club/$slug': typeof ClubSlugRoute
   '/e/$publicCode': typeof EPublicCodeRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/player': typeof PlayerRoute
   '/workspace': typeof WorkspaceRoute
+  '/club/$slug': typeof ClubSlugRoute
   '/e/$publicCode': typeof EPublicCodeRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/player': typeof PlayerRoute
   '/workspace': typeof WorkspaceRoute
+  '/club/$slug': typeof ClubSlugRoute
   '/e/$publicCode': typeof EPublicCodeRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/player'
     | '/workspace'
+    | '/club/$slug'
     | '/e/$publicCode'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/player'
     | '/workspace'
+    | '/club/$slug'
     | '/e/$publicCode'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/player'
     | '/workspace'
+    | '/club/$slug'
     | '/e/$publicCode'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PlayerRoute: typeof PlayerRoute
   WorkspaceRoute: typeof WorkspaceRoute
+  ClubSlugRoute: typeof ClubSlugRoute
   EPublicCodeRoute: typeof EPublicCodeRoute
 }
 
@@ -225,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/club/$slug': {
+      id: '/club/$slug'
+      path: '/club/$slug'
+      fullPath: '/club/$slug'
+      preLoaderRoute: typeof ClubSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/e/$publicCode': {
       id: '/e/$publicCode'
       path: '/e/$publicCode'
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PlayerRoute: PlayerRoute,
   WorkspaceRoute: WorkspaceRoute,
+  ClubSlugRoute: ClubSlugRoute,
   EPublicCodeRoute: EPublicCodeRoute,
 }
 export const routeTree = rootRouteImport
