@@ -4,6 +4,7 @@ import { CalendarDays, ChevronRight, LogOut, Plus, Trophy, Users } from "lucide-
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { normalizeOrganizationRole } from "@/lib/permissions";
 
 export const Route = createFileRoute("/player")({
   head: () => ({ meta: [{ title: "Beranda Pemain - OTTOPLAY" }] }),
@@ -80,7 +81,7 @@ function PlayerHomePage() {
         <section className="mt-6 grid gap-4 sm:grid-cols-3">
           <Stat icon={<CalendarDays />} label="Event diikuti" value={joinedEvents.length} />
           <Stat icon={<Trophy />} label="Event aktif" value={activeEvents.length} />
-          <Stat icon={<Users />} label="Status akun" value="Viewer" />
+          <Stat icon={<Users />} label="Status akun" value={normalizeOrganizationRole(auth.organizationRoles[0]) ?? "Viewer"} />
         </section>
 
         <section className="mt-10">
