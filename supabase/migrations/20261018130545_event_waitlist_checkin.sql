@@ -98,12 +98,12 @@ begin
   if v_event_id is null then raise exception 'Event tidak tersedia' using errcode = 'P0002'; end if;
 
   return query
-  update public.event_players
-  set status = 'checked_in', checked_in_at = coalesce(checked_in_at, now())
-  where event_id = v_event_id
-    and registration_token_hash = encode(extensions.digest(trim(p_registration_token), 'sha256'), 'hex')
-    and status = 'registered'
-  returning event_players.display_name, event_players.status, event_players.checked_in_at;
+  update public.event_players as ep
+  set status = 'checked_in', checked_in_at = coalesce(ep.checked_in_at, now())
+  where ep.event_id = v_event_id
+    and ep.registration_token_hash = encode(extensions.digest(trim(p_registration_token), 'sha256'), 'hex')
+    and ep.status = 'registered'
+  returning ep.display_name, ep.status, ep.checked_in_at;
   if not found then
     raise exception 'Peserta tidak ditemukan atau masih waitlist' using errcode = 'P0002';
   end if;

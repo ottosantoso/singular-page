@@ -1010,6 +1010,7 @@
   let state = null;
   let setupMode = 'individual';
   let registeredPlayers = [];
+  let linkedEventPlayers = [];
 
   // --- Navigasi antar layar (Beranda / Arena / Riwayat) & pemilihan cabang olahraga ---
 
@@ -1072,12 +1073,13 @@
       if (payload.event.primary_color) document.documentElement.style.setProperty('--lime', payload.event.primary_color);
       if (payload.event.secondary_color) document.documentElement.style.setProperty('--line', payload.event.secondary_color);
       if (payload.event.logo_url) document.querySelectorAll('.masthead-logo').forEach((image) => { image.src = payload.event.logo_url; });
-      registeredPlayers = (payload.players || []).map(player => ({
+      linkedEventPlayers = (payload.players || []).map(player => ({
         id: playerId(),
         name: player.display_name,
         gender: player.gender || 'male',
         tier: player.tier || ''
       }));
+      registeredPlayers = linkedEventPlayers.map(player => ({ ...player }));
       renderRegisteredPlayers();
       syncStatus.textContent = registeredPlayers.length
         ? registeredPlayers.length + ' pemain event dimuat.'
@@ -2055,6 +2057,14 @@
       isApplyingRemote = true;
       if (stateRes.data){
         state = stateRes.data;
+        if (linkedEventPlayers.length){
+          const currentPlayers = Array.isArray(state.players) ? state.players : [];
+          const existingNames = new Set(currentPlayers.map(player => String(player?.name || '').trim().toLowerCase()));
+          const missingEventPlayers = linkedEventPlayers.filter(player => !existingNames.has(player.name.trim().toLowerCase()));
+          if (missingEventPlayers.length){
+            state.players = currentPlayers.concat(missingEventPlayers.map(player => ({ ...player })));
+          }
+        }
         lastSyncedAt = tsRes.data || null;
         hydrateUIFromState();
         if (!opts.silent) syncStatus.textContent = 'Data ' + arenaCode + ' dimuat ✓';
