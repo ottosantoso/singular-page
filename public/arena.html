@@ -2127,8 +2127,12 @@
   async function logMatchesToCloud(round, matches){
     if (!isConnected() || !matches || !matches.length) return;
     try {
-      await sb.rpc('kocok_log_matches', { p_code: arenaCode, p_pin: arenaPin, p_round: round, p_matches: matches });
-    } catch (e){ /* gagal catat history match, tidak fatal buat jalannya turnamen */ }
+      const { error } = await sb.rpc('kocok_log_matches', { p_code: arenaCode, p_pin: arenaPin, p_round: round, p_matches: matches });
+      if (error) throw error;
+    } catch (e){
+      syncStatus.textContent = 'Gagal simpan hasil pertandingan: ' + (e.message || e);
+      throw e;
+    }
   }
 
   /* --- Persist klasemen ke database Otto (biar tidak hilang saat refresh) --- */
