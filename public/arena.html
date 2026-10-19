@@ -1940,23 +1940,29 @@
 
   function isConnected(){ return !!(sb && arenaCode && arenaPin); }
 
+  async function flushStateToCloud(){
+    if (!isConnected() || isApplyingRemote || !state) return false;
+    clearTimeout(saveTimer);
+    try {
+      syncStatus.textContent = 'Menyimpan hasil final ke cloud...';
+      const { data, error } = await sb.rpc('kocok_save_state', { p_code: arenaCode, p_pin: arenaPin, p_state: state });
+      if (error) throw error;
+      lastSyncedAt = data;
+      syncStatus.textContent = 'Hasil tersimpan ✓ ' + new Date(lastSyncedAt).toLocaleTimeString('id-ID');
+      return true;
+    } catch (e){
+      syncStatus.textContent = 'Gagal simpan hasil ke cloud: ' + (e.message || e);
+      return false;
+    }
+  }
+
   function saveSessionToCloud(){
     saveLocalSnapshot();
     markSessionActivity();
     if (!isApplyingRemote) scheduleLiveSave();
     if (!isConnected() || isApplyingRemote) return;
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
-      try {
-        syncStatus.textContent = 'Menyimpan ke cloud...';
-        const { data, error } = await sb.rpc('kocok_save_state', { p_code: arenaCode, p_pin: arenaPin, p_state: state });
-        if (error) throw error;
-        lastSyncedAt = data;
-        syncStatus.textContent = 'Tersimpan ✓ ' + new Date(lastSyncedAt).toLocaleTimeString('id-ID');
-      } catch (e){
-        syncStatus.textContent = 'Gagal simpan ke cloud: ' + (e.message || e);
-      }
-    }, 500);
+    saveTimer = setTimeout(() => { void flushStateToCloud(); }, 500);
   }
 
   function hydrateUIFromState(){
@@ -3026,8 +3032,8 @@
   async function concludeTournament(commitCurrent){
     if (commitCurrent){
       commitScores(state.current);
-      logMatchesToCloud(state.round, state.current);
-      persistRoundToDb(state.round, state.current);
+      await logMatchesToCloud(state.round, state.current);
+      await persistRoundToDb(state.round, state.current);
     }
     if (state.roundStartTime){
       state.roundHistory.push({ round: state.round, ms: Date.now() - state.roundStartTime });
@@ -3038,10 +3044,13 @@
     renderFinal();
     saveSessionToCloud();
     if (isConnected()){
+      await flushStateToCloud();
       try {
         await sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state });
         await loadHistory({ silent: true });
-      } catch (e){ /* arsip gagal, turnamen tetap selesai secara lokal */ }
+      } catch (e){
+        syncStatus.textContent = 'Hasil tersimpan, tetapi arsip turnamen gagal: ' + (e.message || e);
+      }
     }
   }
 
@@ -3346,30 +3355,37 @@
 
   // Klik "Selesai" KHUSUS 1 lapangan (idx) — lapangan itu jadi read-only (finished),
   // lapangan lain tetap jalan normal. Begitu SEMUA lapangan finished, otomatis ke layar final.
-  function finishCourt(idx){
+  async function finishCourt(idx){
     const m = state.current[idx];
     if (!m || m.finished) return;
 
     commitSingleMatch(m);
-    if (!isMatchUntouched(m)) persistRoundToDb(m.round || state.round, [m]);
+    if (!isMatchUntouched(m)){
+      await logMatchesToCloud(m.round || state.round, [m]);
+      await persistRoundToDb(m.round || state.round, [m]);
+    }
     m.finished = true;
 
     render();
     saveSessionToCloud();
-    finalizeIfAllCourtsDone();
+    await finalizeIfAllCourtsDone();
   }
 
   // Dipanggil setiap ada lapangan yang selesai: kalau semua lapangan sudah selesai, turnamen ditutup & diarsip.
-  function finalizeIfAllCourtsDone(){
+  async function finalizeIfAllCourtsDone(){
     if (!state || state.finished || !allCourtsFinished()) return;
     state.finished = true;
     state.roundStartTime = null;
     renderFinal();
     saveSessionToCloud();
     if (isConnected()){
-      sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state })
-        .then(() => loadHistory({ silent: true }))
-        .catch(() => { /* arsip gagal, turnamen tetap selesai secara lokal */ });
+      await flushStateToCloud();
+      try {
+        await sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state });
+        await loadHistory({ silent: true });
+      } catch (e){
+        syncStatus.textContent = 'Hasil tersimpan, tetapi arsip turnamen gagal: ' + (e.message || e);
+      }
     }
   }
   // Klik "Selesai Semua Lapangan" (khusus >1 lapangan) — menyelesaikan SEMUA lapangan yang
@@ -3397,11 +3413,15 @@
     msg += '\n\nKlik OK untuk menyelesaikan, atau Cancel untuk kembali.';
     if (!window.confirm(msg)) return;
 
-    pending.forEach(m => {
+    const pendingWrites = pending.map(async m => {
       commitSingleMatch(m);
-      if (!isMatchUntouched(m)) persistRoundToDb(m.round || state.round, [m]);
+      if (!isMatchUntouched(m)){
+        await logMatchesToCloud(m.round || state.round, [m]);
+        await persistRoundToDb(m.round || state.round, [m]);
+      }
       m.finished = true;
     });
+    await Promise.all(pendingWrites);
 
     state.finished = true;
     state.roundStartTime = null;
@@ -3409,13 +3429,17 @@
     renderFinal();
     saveSessionToCloud();
     if (isConnected()){
-      sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state })
-        .then(() => loadHistory({ silent: true }))
-        .catch(() => { /* arsip gagal, turnamen tetap selesai secara lokal */ });
+      await flushStateToCloud();
+      try {
+        await sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state });
+        await loadHistory({ silent: true });
+      } catch (e){
+        syncStatus.textContent = 'Hasil tersimpan, tetapi arsip turnamen gagal: ' + (e.message || e);
+      }
     }
   }
   const finishAllBtn = document.getElementById('finishAllBtn');
-  if (finishAllBtn) finishAllBtn.addEventListener('click', finishAllCourts);
+  if (finishAllBtn) finishAllBtn.addEventListener('click', () => { void finishAllCourts(); });
   // ===== akhir logic Langkah 14 =====
 
   // ===== LANGKAH 15 — logic mode "Custom" (dipakai HANYA saat setupMode === 'custom') =====
@@ -4145,6 +4169,8 @@
 </script>
 </body>
 </html>
+
+
 
 
 
