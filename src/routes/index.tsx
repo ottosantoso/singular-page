@@ -63,29 +63,8 @@ function Home() {
                 <Button asChild><a href="/arena.html">Mulai bermain <ArrowRight /></a></Button>
               </DialogContent>
             </Dialog>
-            <Dialog>
-              <DialogTrigger asChild><Button variant="outline" className="home-button"><UserRound />Login</Button></DialogTrigger>
-              <DialogContent>
-                <DialogTitle>Masuk ke Arena</DialogTitle>
-                <DialogDescription>Main lokal tanpa akun, atau sambungkan arena dengan kode dan PIN melalui “Main bareng di beberapa HP” di halaman Arena.</DialogDescription>
-                <Button asChild><a href="/arena.html">Buka Arena <ArrowRight /></a></Button>
-              </DialogContent>
-            </Dialog>
-            {/* <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button> */}
-             <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="home-button opacity-60">
-                  <ShieldCheck />Admin Platform
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogTitle>Under Maintenance</DialogTitle>
-                <DialogDescription>
-                  Fitur Admin Platform sedang dalam masa pengembangan. Silakan kembali lagi nanti setelah pembaruan selesai.
-                </DialogDescription>
-                <Button variant="outline" className="w-full mt-4">Tutup</Button>
-              </DialogContent>
-            </Dialog>
+            <Button asChild variant="outline" className="home-button"><Link to="/login"><UserRound />Login</Link></Button>
+            <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button>
           </div>
         </div>
       </nav>
