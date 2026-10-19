@@ -1011,6 +1011,7 @@
   let setupMode = 'individual';
   let registeredPlayers = [];
   let linkedEventPlayers = [];
+  let linkedEventClosed = false;
 
   // --- Navigasi antar layar (Beranda / Arena / Riwayat) & pemilihan cabang olahraga ---
 
@@ -1066,6 +1067,12 @@
       if (error) throw error;
       const payload = Array.isArray(data) ? data[0] : data;
       if (!payload?.event) return;
+      if (payload.event.status === 'completed') {
+        linkedEventClosed = true;
+        syncStatus.textContent = 'Event sudah selesai. Membuka halaman hasil...';
+        if (linkedPublicCode) window.location.replace('/e/' + encodeURIComponent(linkedPublicCode));
+        return;
+      }
       if (sportMeta[payload.event.sport]) selectedSport = payload.event.sport;
       if (payload.event.format && [...formatSelect.options].some(option => option.value === payload.event.format)){
         formatSelect.value = payload.event.format;
@@ -2806,6 +2813,7 @@
   async function bootstrapArena(){
     if (linkedPublicCode){
       await preloadLinkedEvent();
+      if (linkedEventClosed) return;
       await connectArena({ silent: true });
     } else {
       initSession();
