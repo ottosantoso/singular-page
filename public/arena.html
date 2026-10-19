@@ -2262,12 +2262,12 @@
     const code = ottoKlasemenCode(selectedSport);
     const sport = selectedSport || 'padel';
     try {
-      await ottoDb.from('arena_rooms').upsert({
+      const roomUp = await ottoDb.from('arena_rooms').upsert({
         code: code,
         name: 'Arena ' + code,
         sport: sport
       }, { onConflict: 'code' });
-
+      if (roomUp && roomUp.error) throw roomUp.error;
 
       const players = playerNames().map(name => ({ arena_code: code, name }));
       if (players.length){
@@ -2275,7 +2275,10 @@
         // simpan ulang tanpa tier supaya daftar pemain tetap tersimpan seperti biasa.
         const withTier = players.map(row => ({ ...row, tier: tierNameOf(row.name) || null }));
         const up = await ottoDb.from('arena_players').upsert(withTier, { onConflict: 'arena_code,name' });
-        if (up && up.error) await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
+        if (up && up.error){
+          const fallbackUp = await ottoDb.from('arena_players').upsert(players, { onConflict: 'arena_code,name' });
+          if (fallbackUp && fallbackUp.error) throw fallbackUp.error;
+        }
       }
 
       const rows = matches.map((m, i) => {
@@ -2302,7 +2305,8 @@
       // Statistik per pemain hanya dihitung saat ronde ditutup (final). Selama live, rally log
       // sudah ikut tersimpan di kolom events baris pertandingannya.
       if (status !== 'final'){ refreshKlasemenLink(); return; }
-      await ottoDb.from('arena_player_stats').delete().eq('arena_code', code).eq('round', round);
+      const statsDelete = await ottoDb.from('arena_player_stats').delete().eq('arena_code', code).eq('round', round);
+      if (statsDelete && statsDelete.error) throw statsDelete.error;
 
       try {
         const agg = {};
@@ -2330,8 +2334,11 @@
 
       refreshKlasemenLink();
     } catch (e){
-      // Gagal simpan klasemen online: turnamen tetap jalan, tapi jejaknya dicatat biar bisa dicek.
-      try { console.warn('[arena] gagal simpan ke database klasemen', e && (e.message || e)); } catch (e3) {}
+      try {
+        syncStatus.textContent = 'Gagal menyimpan pertandingan: ' + (e.message || e);
+        console.warn('[arena] gagal simpan ke database klasemen', e && (e.message || e));
+      } catch (e3) {}
+      throw e;
     }
   }
 
@@ -2991,7 +2998,7 @@
   }
 
   skipBtn.addEventListener('click', () => {
-    advanceRound(false);
+    void advanceRound(false);
   });
 
   nextBtn.addEventListener('click', () => {
@@ -3006,7 +3013,7 @@
         if (!ok) return;
       }
     }
-    advanceRound(true);
+    void advanceRound(true);
   });
 
   finishBtn.addEventListener('click', async () => {
@@ -3058,13 +3065,13 @@
     }
   }
 
-  function advanceRound(shouldCommit){
+  async function advanceRound(shouldCommit){
     // Batas waktu sesi: tidak ada ronde baru kalau host memilih "selesaikan" dan jatah "1 ronde lagi" habis.
-    if (!sessionConsumeSlot(0)){ concludeTournament(shouldCommit); return; }
+    if (!sessionConsumeSlot(0)){ await concludeTournament(shouldCommit); return; }
     if (shouldCommit){
       commitScores(state.current);
-      logMatchesToCloud(state.round, state.current);
-      persistRoundToDb(state.round, state.current);
+      await logMatchesToCloud(state.round, state.current);
+      await persistRoundToDb(state.round, state.current);
     }
     const now = Date.now();
     if (state.roundStartTime){
@@ -3174,7 +3181,13 @@
   function commitSingleMatch(m){
     if (isMatchUntouched(m)) return; // belum ada pemain ATAU skor masih 0-0 (belum sempat dimainkan) — jangan dihitung "main"
     if (!state.matchHistory) state.matchHistory = [];
-    state.matchHistory.push({ round: m.round || state.round, matches: [JSON.parse(JSON.stringify(m))] });
+    const round = m.round || state.round;
+    const snapshot = { round, matches: [JSON.parse(JSON.stringify(m))] };
+    const existingIdx = state.matchHistory.findIndex(entry =>
+      entry.round === round && entry.matches?.length === 1 && entry.matches[0]?.court === m.court
+    );
+    if (existingIdx >= 0) state.matchHistory[existingIdx] = snapshot;
+    else state.matchHistory.push(snapshot);
     recomputeLeaderboard();
   }
 
@@ -3298,15 +3311,18 @@
 
   // Klik "Simpan & Lanjutkan" KHUSUS 1 lapangan (idx) — cuma lapangan ini yang lanjut,
   // lapangan lain sama sekali tidak ikut ter-generate ulang atau terganggu.
-  function advanceCourt(idx){
+  async function advanceCourt(idx){
     const m = state.current[idx];
     if (!m || m.finished) return;
 
     // Batas waktu sesi: kalau host memilih "selesaikan", lapangan ini ditutup, bukan lanjut ke pertandingan baru.
-    if (!sessionConsumeSlot(idx)){ finishCourt(idx); return; }
+    if (!sessionConsumeSlot(idx)){ await finishCourt(idx); return; }
 
     commitSingleMatch(m);
-    if (!isMatchUntouched(m)) persistRoundToDb(m.round || state.round, [m]);
+    if (!isMatchUntouched(m)){
+      await logMatchesToCloud(m.round || state.round, [m]);
+      await persistRoundToDb(m.round || state.round, [m]);
+    }
 
     if (state.mode === 'custom'){
       // Mode Custom: "Simpan & Lanjutkan" biasa (tanpa klik "Next Player") balik ke papan
@@ -3336,7 +3352,7 @@
   // Klik "Selesai" di satu lapangan pada rotasi Serentak: skor lapangan itu dikunci (ikut tersimpan saat ronde
   // disimpan), lapangan tidak dipakai lagi mulai ronde berikutnya, dan pratinjau ronde berikutnya disusun ulang
   // dengan lapangan yang lebih sedikit. Lapangan lain tidak terganggu. Lapangan terakhir ditutup = turnamen selesai.
-  function closeCourtSync(idx){
+  async function closeCourtSync(idx){
     const m = state.current[idx];
     if (!m || m.finished || !canCloseCourtSync()) return;
     const stillOpen = state.current.filter(x => !x.finished).length;
@@ -3347,9 +3363,14 @@
         'Lapangan lain tetap lanjut serentak.');
     if (!ok) return;
 
+    commitSingleMatch(m);
+    if (!isMatchUntouched(m)){
+      await logMatchesToCloud(m.round || state.round, [m]);
+      await persistRoundToDb(m.round || state.round, [m]);
+    }
     m.finished = true;
     m.closedEarly = true;
-    if (isLast){ concludeTournament(true); return; }
+    if (isLast){ await concludeTournament(false); return; }
 
     state.courtsRequested = Math.max(1, Math.min(state.courtsRequested, state.current.length) - 1);
     regenerateNextRound(); // pratinjau lama dibatalkan dari riwayat partner/lawan, lalu disusun ulang
@@ -3395,7 +3416,7 @@
   // Klik "Selesai Semua Lapangan" (khusus >1 lapangan) — menyelesaikan SEMUA lapangan yang
   // belum selesai sekaligus lalu langsung ke layar final. Logika per-lapangan (finishCourt /
   // advanceCourt) tidak diubah; lapangan yang SUDAH selesai sebelumnya tidak dihitung ulang.
-  function finishAllCourts(){
+  async function finishAllCourts(){
     if (!state || state.finished || !state.current || state.current.length < 2) return;
     const pending = state.current.filter(m => !m.finished);
     if (!pending.length) return;
@@ -3723,13 +3744,13 @@
     });
 
     const courtSaveBtn = card.querySelector('[data-court-save]');
-    if (courtSaveBtn) courtSaveBtn.addEventListener('click', () => advanceCourt(idx));
+    if (courtSaveBtn) courtSaveBtn.addEventListener('click', () => { void advanceCourt(idx); });
 
     const courtFinishBtn = card.querySelector('[data-court-finish]');
-    if (courtFinishBtn) courtFinishBtn.addEventListener('click', () => finishCourt(idx));
+    if (courtFinishBtn) courtFinishBtn.addEventListener('click', () => { void finishCourt(idx); });
 
     const courtCloseBtn = card.querySelector('[data-court-close]');
-    if (courtCloseBtn) courtCloseBtn.addEventListener('click', () => closeCourtSync(idx));
+    if (courtCloseBtn) courtCloseBtn.addEventListener('click', () => { void closeCourtSync(idx); });
 
     const nextPlayerBtn = card.querySelector('[data-next-player]');
     if (nextPlayerBtn) nextPlayerBtn.addEventListener('click', () => {
