@@ -1003,6 +1003,30 @@ export type Database = {
           summary: Json
         }[]
       }
+      platform_list_invoices: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      list_subscription_plans: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      list_organization_invoices: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      submit_payment_proof: {
+        Args: { p_invoice_id: string; p_file_path: string; p_transferred_amount?: number | null; p_transferred_at?: string | null; p_sender_name?: string | null; p_note?: string | null }
+        Returns: boolean
+      }
+      get_subscription_mode: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      platform_set_subscription_mode: {
+        Args: { p_enabled: boolean }
+        Returns: Json
+      }
       get_organization_quota: {
         Args: { p_organization_id: string }
         Returns: Json
@@ -1017,6 +1041,7 @@ export type Database = {
           p_max_active_events?: number | null
           p_max_players_per_event?: number | null
           p_max_staff?: number | null
+                    p_max_members?: number | null
           p_note?: string | null
         }
         Returns: Json
@@ -1039,7 +1064,8 @@ export type Database = {
       platform_review_payment: {
         Args: { p_invoice_id: string; p_status: string; p_note?: string | null }
         Returns: boolean
-      }      get_organization_report: {
+      }
+      get_organization_report: {
         Args: {
           p_event_id?: string | null
           p_from?: string | null

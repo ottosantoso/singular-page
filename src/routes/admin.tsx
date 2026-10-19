@@ -45,7 +45,7 @@ import hero from "@/assets/sports-hero.jpg";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Panel Admin — OTTOPLAY ARENA" },
+      { title: "Panel Admin â€” OTTOPLAY ARENA" },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -103,7 +103,7 @@ function GuardView({ auth }: { auth: AuthState }) {
           {auth.session && (
             <div className="flex items-center gap-3">
               <span className="text-xs text-arena-dim">
-                Masuk sebagai <strong className="text-arena-ink">{auth.username ?? "…"}</strong>
+                Masuk sebagai <strong className="text-arena-ink">{auth.username ?? "â€¦"}</strong>
               </span>
               <button
                 type="button"
@@ -118,7 +118,7 @@ function GuardView({ auth }: { auth: AuthState }) {
 
         {auth.loading || !auth.session ? (
           <div className="flex items-center justify-center gap-2 py-24 text-sm text-arena-dim">
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Memeriksa akses…
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Memeriksa aksesâ€¦
           </div>
         ) : (
           <div className="mx-auto max-w-md rounded-[22px] border border-arena-ink/10 bg-white/85 p-6 text-center">
@@ -159,7 +159,7 @@ function AdminShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
-  const username = auth.username ?? "…";
+  const username = auth.username ?? "â€¦";
   const current = SECTIONS.find((item) => item.key === section);
 
   return (
@@ -249,7 +249,7 @@ function AdminShell({
         </nav>
 
         <div className="px-5 pb-5 pt-4">
-          <p className="text-center text-[11px] italic text-white/50">Play • Score • Connect</p>
+          <p className="text-center text-[11px] italic text-white/50">Play â€¢ Score â€¢ Connect</p>
           <div className="mt-3 grid grid-cols-4 gap-1 border-t border-white/10 pt-3">
             {(["padel", "badminton", "tennis", "tenismeja"] as const).map((key) => (
               <div key={key} className="flex flex-col items-center gap-1 text-white/60">
@@ -478,7 +478,7 @@ function Dashboard({ section, onSection }: { section: Section; onSection: (next:
           <div ref={listRef} className="mt-4 scroll-mt-20">
             {query.isLoading ? (
               <div className="flex items-center justify-center gap-2 py-16 text-sm text-arena-dim">
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Memuat…
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Memuatâ€¦
               </div>
             ) : query.isError ? (
               <p className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
@@ -550,7 +550,7 @@ function StatCard({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-semibold text-arena-dim">{label}</span>
-        <span className="block font-display text-3xl font-bold tabular-nums leading-tight text-arena-ink">{value ?? "–"}</span>
+        <span className="block font-display text-3xl font-bold tabular-nums leading-tight text-arena-ink">{value ?? "â€“"}</span>
         <span className="block truncate text-[11px] text-arena-dim">{hint}</span>
       </span>
       <ChevronRight className="size-5 shrink-0 text-arena-dim transition group-hover:translate-x-0.5 group-hover:text-arena-lime" aria-hidden="true" />
@@ -581,7 +581,7 @@ function GameRow({ game, onOpen }: { game: GameListItem; onOpen: () => void }) {
           <StatusBadge status={game.status} />
         </div>
         <p className="mt-1 text-sm font-semibold text-arena-ink">
-          {sportLabel(game.sport)} · {formatLabel(game.mode, game.format)}
+          {sportLabel(game.sport)} Â· {formatLabel(game.mode, game.format)}
         </p>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-arena-dim">
           <span className="inline-flex items-center gap-1">
@@ -590,14 +590,14 @@ function GameRow({ game, onOpen }: { game: GameListItem; onOpen: () => void }) {
           {(game.courts || game.round) && (
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-3.5" aria-hidden="true" />
-              {[game.courts ? `${game.courts} lapangan` : "", game.round ? `ronde ${game.round}` : ""].filter(Boolean).join(" · ")}
+              {[game.courts ? `${game.courts} lapangan` : "", game.round ? `ronde ${game.round}` : ""].filter(Boolean).join(" Â· ")}
             </span>
           )}
         </p>
         <p className="mt-0.5 flex items-center gap-1 text-xs text-arena-dim">
           <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">
-            {game.owner ? `Host ${game.owner}` : "Host tidak tercatat"} ·{" "}
+            {game.owner ? `Host ${game.owner}` : "Host tidak tercatat"} Â·{" "}
             {finished ? (game.auto_closed ? "ditutup otomatis " : "selesai ") : "aktivitas "}
             {relativeTime(finished ? (game.finished_at ?? game.last_activity_at) : game.last_activity_at)}
           </span>

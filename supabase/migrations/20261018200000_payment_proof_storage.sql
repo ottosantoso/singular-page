@@ -1,0 +1,8 @@
+﻿-- Private storage for manual payment proofs.
+insert into storage.buckets (id, name, "public") values ('payment-proofs', 'payment-proofs', false) on conflict (id) do update set "public" = false;
+create or replace function public.can_manage_payment_proof(p_name text) returns boolean language sql security definer set search_path=public as $$ select public.has_role(auth.uid(),'platform_admin') or (p_name ~ '^[0-9a-fA-F-]{36}/' and exists(select 1 from public.subscription_invoices i join public.organization_members om on om.organization_id=i.organization_id where i.id=(split_part(p_name,'/',1))::uuid and om.user_id=auth.uid() and om.status='active' and om.role_code in ('organization_owner','organization_admin'))); $$;
+create policy payment_proofs_storage_read on storage.objects for select to authenticated using (bucket_id='payment-proofs' and public.can_manage_payment_proof(name));
+create policy payment_proofs_storage_insert on storage.objects for insert to authenticated with check (bucket_id='payment-proofs' and public.can_manage_payment_proof(name));
+create policy payment_proofs_insert_owner on public.payment_proofs for insert to authenticated with check (submitted_by=auth.uid() and exists(select 1 from public.subscription_invoices i join public.organization_members om on om.organization_id=i.organization_id where i.id=invoice_id and om.user_id=auth.uid() and om.status='active' and om.role_code in ('organization_owner','organization_admin')));
+revoke all on function public.can_manage_payment_proof(text) from public, anon;
+grant execute on function public.can_manage_payment_proof(text) to authenticated;
