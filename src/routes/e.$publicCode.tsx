@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type R
 import {
   ArrowLeft,
   ArrowRight,
+  BarChart3,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -73,6 +74,58 @@ type PublicPayload = {
   matches: Array<Record<string, unknown>>;
   history: Array<Record<string, unknown>>;
 };
+
+type PublicMatch = {
+  id?: number | string;
+  round?: number;
+  court?: number;
+  team_a?: string[];
+  team_b?: string[];
+  score_a?: number | null;
+  score_b?: number | null;
+  winner?: string | null;
+  status?: string;
+  played_at?: string;
+};
+
+type PublicStanding = { name: string; points: number; games: number; wins: number };
+
+function buildPublicStandings(players: PublicPlayer[], matches: PublicMatch[]) {
+  const table = new Map<string, PublicStanding>();
+  const ensure = (name: string) => {
+    if (!table.has(name)) table.set(name, { name, points: 0, games: 0, wins: 0 });
+    return table.get(name)!;
+  };
+  players.forEach((player) => ensure(player.display_name));
+  matches
+    .filter((match) => match.status !== "live" && match.score_a != null && match.score_b != null)
+    .forEach((match) => {
+      const scoreA = Number(match.score_a ?? 0);
+      const scoreB = Number(match.score_b ?? 0);
+      const aWon = scoreA > scoreB;
+      const bWon = scoreB > scoreA;
+      (match.team_a ?? []).forEach((name) => {
+        const row = ensure(name);
+        row.points += scoreA;
+        row.games += 1;
+        if (aWon) row.wins += 1;
+      });
+      (match.team_b ?? []).forEach((name) => {
+        const row = ensure(name);
+        row.points += scoreB;
+        row.games += 1;
+        if (bWon) row.wins += 1;
+      });
+    });
+  return [...table.values()].sort((a, b) => b.points - a.points || b.wins - a.wins || a.name.localeCompare(b.name));
+}
+
+function publicMatchWon(match: PublicMatch, name: string) {
+  const scoreA = Number(match.score_a ?? 0);
+  const scoreB = Number(match.score_b ?? 0);
+  if (scoreA === scoreB || (match.score_a == null || match.score_b == null)) return null;
+  return (match.team_a ?? []).includes(name) ? scoreA > scoreB : scoreB > scoreA;
+}
 
 type TierMeta = { key: string; label: string; note: string; icon: LucideIcon };
 
@@ -299,14 +352,7 @@ function PublicEventPage() {
 
   const shareUrl = typeof window !== "undefined" ? window.location.href : `/e/${publicCode}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Ikut event ${payload?.event?.name || "OTTOPLAY"}: ${shareUrl}`)}`;
-  const matchRows = (payload?.matches ?? []) as Array<{
-    round?: number;
-    court?: number;
-    team_a?: string[];
-    team_b?: string[];
-    score_a?: number;
-    score_b?: number;
-  }>;
+  const matchRows = (payload?.matches ?? []) as PublicMatch[];
 
   if (loading && !payload) {
     return (
@@ -339,6 +385,41 @@ function PublicEventPage() {
   const playerCount = payload.players.length;
   const activePlayerCount = payload.players.filter((player) => player.status !== "waitlisted").length;
   const waitlistCount = payload.players.filter((player) => player.status === "waitlisted").length;
+  const finalMatches = matchRows.filter(
+    (match) => match.status !== "live" && match.score_a != null && match.score_b != null,
+  );
+  const standings = buildPublicStandings(payload.players, matchRows);
+  const meName = payload.me?.display_name ?? "";
+  const myMatches = finalMatches.filter(
+    (match) => (match.team_a ?? []).includes(meName) || (match.team_b ?? []).includes(meName),
+  );
+  const myWins = myMatches.filter((match) => publicMatchWon(match, meName) === true).length;
+  const myPoints = myMatches.reduce((sum, match) => {
+    return sum + ((match.team_a ?? []).includes(meName) ? Number(match.score_a ?? 0) : Number(match.score_b ?? 0));
+  }, 0);
+  const myPartners = new Map<string, { games: number; wins: number }>();
+  const myRivals = new Map<string, { games: number; wins: number }>();
+  myMatches.forEach((match) => {
+    const mineIsA = (match.team_a ?? []).includes(meName);
+    const partners = (mineIsA ? match.team_a : match.team_b).filter((name) => name !== meName);
+    const rivals = mineIsA ? match.team_b : match.team_a;
+    const won = publicMatchWon(match, meName) === true;
+    partners.forEach((name) => {
+      const row = myPartners.get(name) ?? { games: 0, wins: 0 };
+      row.games += 1;
+      if (won) row.wins += 1;
+      myPartners.set(name, row);
+    });
+    rivals.forEach((name) => {
+      const row = myRivals.get(name) ?? { games: 0, wins: 0 };
+      row.games += 1;
+      if (won) row.wins += 1;
+      myRivals.set(name, row);
+    });
+  });
+  const favoritePartner = [...myPartners.entries()].sort((a, b) => b[1].games - a[1].games)[0];
+  const strongestRival = [...myRivals.entries()].sort((a, b) => b[1].games - a[1].games)[0];
+  const myStandingIndex = standings.findIndex((standing) => standing.name === meName);
   const fill = ev.max_players ? Math.min(100, Math.round((playerCount / ev.max_players) * 100)) : null;
   const capacityLabel = ev.max_players
     ? `${playerCount}/${ev.max_players} pemain terdaftar`
@@ -519,7 +600,7 @@ function PublicEventPage() {
                           <span className="mr-1.5 font-display text-[11px] text-arena-dim">{String(index + 1).padStart(2, "0")}</span>
                           {player.display_name}
                         </p>
-                        <p className="mt-0.5 text-[11px] uppercase tracking-wider text-arena-dim">{player.gender === "female" ? "Perempuan" : "Laki-laki"} · {playerStatusLabel(player.status)}</p>
+                        <p className="mt-0.5 text-[11px] uppercase tracking-wider text-arena-dim">{player.gender === "female" ? "Perempuan" : "Laki-laki"} - {playerStatusLabel(player.status)}</p>
                       </div>
                       <TierBadge tier={player.tier} />
                     </li>
@@ -742,6 +823,86 @@ function PublicEventPage() {
         </section>
 
         <section className="mt-6 overflow-hidden rounded-[24px] border border-arena-ink/10 bg-white/90 p-6 shadow-[0_18px_40px_-32px_rgba(17,45,72,.6)] sm:p-7">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="grid size-11 place-items-center rounded-2xl bg-lime-100 text-lime-700">
+                <Medal className="size-5" />
+              </span>
+              <div>
+                <h2 className="font-display text-xl font-bold">Klasemen pejuang</h2>
+                <p className="mt-0.5 text-xs text-arena-dim">Sama seperti laporan Arena: poin, jumlah main, dan kemenangan.</p>
+              </div>
+            </div>
+            {finalMatches.length > 0 && (
+              <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-arena-dim">
+                {finalMatches.length} laga final
+              </span>
+            )}
+          </div>
+          {standings.length === 0 ? (
+            <p className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-arena-dim">Klasemen akan muncul setelah skor pertama disimpan.</p>
+          ) : (
+            <div className="mt-5 overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-sm">
+                <thead className="text-[10px] font-bold uppercase tracking-wider text-arena-dim">
+                  <tr className="border-b border-slate-100">
+                    <th className="px-3 py-3">#</th>
+                    <th className="px-3 py-3">Pejuang</th>
+                    <th className="px-3 py-3">Main</th>
+                    <th className="px-3 py-3">Menang</th>
+                    <th className="px-3 py-3">Win rate</th>
+                    <th className="px-3 py-3">Poin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {standings.map((standing, index) => (
+                    <tr key={standing.name} className={`border-b border-slate-50 ${standing.name === meName ? "bg-lime-50/70" : ""}`}>
+                      <td className="px-3 py-3 font-display font-bold text-arena-dim">{String(index + 1).padStart(2, "0")}</td>
+                      <td className="px-3 py-3 font-semibold text-arena-ink">
+                        {standing.name}{standing.name === meName && <span className="ml-2 rounded-full bg-lime-100 px-2 py-1 text-[10px] text-lime-800">Kamu</span>}
+                      </td>
+                      <td className="px-3 py-3 text-arena-dim">{standing.games}</td>
+                      <td className="px-3 py-3 text-arena-dim">{standing.wins}</td>
+                      <td className="px-3 py-3 text-arena-dim">{standing.games ? `${Math.round((standing.wins / standing.games) * 100)}%` : "-"}</td>
+                      <td className="px-3 py-3 font-display font-bold text-arena-ink">{standing.points}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {payload.me && (
+          <section className="mt-6 overflow-hidden rounded-[24px] border border-arena-ink/10 bg-[#0b2737] p-6 text-white shadow-[0_18px_40px_-32px_rgba(17,45,72,.6)] sm:p-7">
+            <div className="flex items-center gap-3">
+              <span className="grid size-11 place-items-center rounded-2xl bg-white/10 text-lime-300"><BarChart3 className="size-5" /></span>
+              <div>
+                <h2 className="font-display text-xl font-bold">Analisa kamu</h2>
+                <p className="mt-0.5 text-xs text-white/60">Ringkasan performa dari pertandingan yang kamu ikuti.</p>
+              </div>
+            </div>
+            {myMatches.length === 0 ? (
+              <p className="mt-5 rounded-2xl bg-white/10 p-4 text-sm text-white/70">Belum ada pertandingan yang melibatkan {meName}.</p>
+            ) : (
+              <>
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <ReportStat label="Peringkat" value={myStandingIndex >= 0 ? `#${myStandingIndex + 1}` : "-"} />
+                  <ReportStat label="Main" value={String(myMatches.length)} />
+                  <ReportStat label="Menang" value={`${myWins} (${Math.round((myWins / myMatches.length) * 100)}%)`} />
+                  <ReportStat label="Poin" value={String(myPoints)} />
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <InsightCard label="Partner paling sering" value={favoritePartner ? `${favoritePartner[0]} - ${favoritePartner[1].games}x` : "Belum ada"} />
+                  <InsightCard label="Lawan paling sering" value={strongestRival ? `${strongestRival[0]} - ${strongestRival[1].games}x` : "Belum ada"} />
+                </div>
+              </>
+            )}
+          </section>
+
+        )}
+
+        <section className="mt-6 overflow-hidden rounded-[24px] border border-arena-ink/10 bg-white/90 p-6 shadow-[0_18px_40px_-32px_rgba(17,45,72,.6)] sm:p-7">
           <div className="flex items-center gap-3">
             <span className="grid size-11 place-items-center rounded-2xl bg-amber-100 text-amber-600">
               <Trophy className="size-5" />
@@ -757,8 +918,7 @@ function PublicEventPage() {
           </div>
           {matchRows.length > 0 && (
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {matchRows
-                .slice(-12)
+              {[...matchRows]
                 .reverse()
                 .map((match, index) => (
                   <div key={`${match.round ?? 0}-${match.court ?? index}`} className="rounded-2xl bg-slate-50 p-4">
@@ -828,6 +988,23 @@ function FormField({
   );
 }
 
+function ReportStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-white/10 p-4">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-white/55">{label}</p>
+      <p className="mt-2 font-display text-xl font-bold text-white">{value}</p>
+    </div>
+  );
+}
+
+function InsightCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-white/55">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+    </div>
+  );
+}
 function TierBadge({ tier }: { tier: string | null | undefined }) {
   const meta = tierMeta(tier);
   return (
