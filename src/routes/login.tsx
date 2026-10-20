@@ -54,9 +54,13 @@ function LoginPage() {
   }
 
   function getVerificationRedirect() {
-    const baseUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-      ? window.location.origin
-      : (import.meta.env["VITE_PUBLIC_APP_URL"]?.trim() || window.location.origin);
+    const currentOrigin = window.location.origin;
+    const configuredUrl = import.meta.env["VITE_PUBLIC_APP_URL"]?.trim() || "";
+    const currentHostIsLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const configuredUrlIsLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i.test(configuredUrl.replace(/\/$/, ""));
+    const baseUrl = configuredUrl && (!configuredUrlIsLocal || currentHostIsLocal)
+      ? configuredUrl
+      : currentOrigin;
     return `${baseUrl.replace(/\/$/, "")}/auth-callback?next=${encodeURIComponent("/login?verified=1")}`;
   }
 
