@@ -613,7 +613,7 @@ function EventCard({
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Ikut ${event.name}: ${fullPublicUrl}`)}`;
 
   async function deleteEvent() {
-    if (!window.confirm(`Hapus event Ã¢â‚¬Å“${event.name}Ã¢â‚¬Â? Peserta dan staff event juga akan ikut dihapus.`)) return;
+    if (!window.confirm(`Hapus event “${event.name}”? Peserta dan staff event juga akan ikut dihapus.`)) return;
     setDeleting(true);
     const result = await supabase.from("events").delete().eq("id", event.id);
     setDeleting(false);
@@ -640,9 +640,9 @@ function EventCard({
             </span>
             <h3 className="mt-3 font-display text-xl font-bold">{event.name}</h3>
             <p className="mt-1 text-sm text-arena-dim">
-              {event.sport} Ã‚Â· {event.format}
+              {event.sport} · {event.format}
               {event.starts_at
-                ? ` Ã‚Â· ${new Date(event.starts_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}`
+                ? ` · ${new Date(event.starts_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}`
                 : ""}
             </p>
           </div>
@@ -791,7 +791,7 @@ function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () =
   }
 
   return (
-    <DialogFrame title={`Peserta Ã‚Â· ${event.name}`} onClose={onClose}>
+    <DialogFrame title={`Peserta · ${event.name}`} onClose={onClose}>
       {error && <p className="mb-4 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {loading ? (
         <p className="text-sm text-arena-dim">Memuat peserta...</p>
@@ -802,7 +802,7 @@ function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () =
               <div>
                 <p className="font-semibold text-arena-ink">{player.display_name}</p>
                 <p className="mt-1 text-xs uppercase tracking-wider text-arena-dim">
-                  {player.gender === "female" ? "Perempuan" : "Laki-laki"} Ã‚Â· {player.tier ?? "Intermediate"} Ã‚Â· {player.status}
+                  {player.gender === "female" ? "Perempuan" : "Laki-laki"} · {player.tier ?? "Intermediate"} · {player.status}
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap justify-end gap-2">
@@ -931,14 +931,14 @@ function OperationsPanel({
           </div>
           <div className="rounded-2xl bg-slate-50 p-4">
             <p className="font-display font-bold">Court / lapangan</p>
-            <div className="mt-3 grid gap-2">{courts.map((court) => <div key={court.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-3 text-sm"><span><b>{court.name}</b><small className="block text-arena-dim">{venues.find((venue) => venue.id === court.venue_id)?.name || "Venue"} Ã‚Â· {court.sport}</small></span>{canManage && <button type="button" onClick={() => void toggleCourt(court)} className="text-xs font-bold uppercase text-arena-dim">{court.is_active ? "Nonaktifkan" : "Aktifkan"}</button>}</div>)}{!courts.length && <p className="text-sm text-arena-dim">Belum ada court.</p>}</div>
+            <div className="mt-3 grid gap-2">{courts.map((court) => <div key={court.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-3 text-sm"><span><b>{court.name}</b><small className="block text-arena-dim">{venues.find((venue) => venue.id === court.venue_id)?.name || "Venue"} · {court.sport}</small></span>{canManage && <button type="button" onClick={() => void toggleCourt(court)} className="text-xs font-bold uppercase text-arena-dim">{court.is_active ? "Nonaktifkan" : "Aktifkan"}</button>}</div>)}{!courts.length && <p className="text-sm text-arena-dim">Belum ada court.</p>}</div>
             {canManage && <form onSubmit={addCourt} className="mt-4 grid gap-2"><select required value={courtVenue} onChange={(event) => setCourtVenue(event.target.value)} className="auth-input"><option value="">Pilih venue</option>{venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select><div className="grid gap-2 sm:grid-cols-2"><input required value={courtName} onChange={(event) => setCourtName(event.target.value)} placeholder="Court 1" className="auth-input" /><select value={courtSport} onChange={(event) => setCourtSport(event.target.value)} className="auth-input"><option value="badminton">Badminton</option><option value="padel">Padel</option><option value="tennis">Tenis</option><option value="pingpong">Tenis meja</option></select></div><button className="btn-arena"><Plus className="size-4" /> Tambah court</button></form>}
           </div>
         </div>
       </div>
       <div className="arena-card">
         <div className="flex items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-arena-lime">Event staffing</p><h2 className="mt-1 font-display text-2xl font-bold">Penugasan staff</h2></div><Users className="size-7 text-arena-lime" /></div>
-        {canManage && <form onSubmit={assignStaff} className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-4"><select required value={staffEvent} onChange={(event) => setStaffEvent(event.target.value)} className="auth-input"><option value="">Pilih event</option>{events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}</select><select required value={staffUser} onChange={(event) => setStaffUser(event.target.value)} className="auth-input"><option value="">Pilih staff</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{member.name} Ã‚Â· {member.role_code}</option>)}</select><select value={staffRole} onChange={(event) => setStaffRole(event.target.value)} className="auth-input"><option value="event_manager">Event Manager</option><option value="scorer">Scorer</option><option value="coach">Coach</option></select><button className="btn-arena"><UserPlus className="size-4" /> Tugaskan</button></form>}
+        {canManage && <form onSubmit={assignStaff} className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-4"><select required value={staffEvent} onChange={(event) => setStaffEvent(event.target.value)} className="auth-input"><option value="">Pilih event</option>{events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}</select><select required value={staffUser} onChange={(event) => setStaffUser(event.target.value)} className="auth-input"><option value="">Pilih staff</option>{members.map((member) => <option key={member.user_id} value={member.user_id}>{member.name} · {member.role_code}</option>)}</select><select value={staffRole} onChange={(event) => setStaffRole(event.target.value)} className="auth-input"><option value="event_manager">Event Manager</option><option value="scorer">Scorer</option><option value="coach">Coach</option></select><button className="btn-arena"><UserPlus className="size-4" /> Tugaskan</button></form>}
         <div className="mt-4 grid gap-2">{staff.map((row) => <div key={`${row.event_id}-${row.user_id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm"><span><b>{row.user_name}</b><small className="ml-2 text-arena-dim">{row.event_name}</small></span><span className="flex items-center gap-2"><b className="rounded-full bg-arena-lime/20 px-3 py-1 text-xs uppercase">{row.role_code}</b>{canManage && <button type="button" onClick={() => void removeStaff(row)} className="text-xs font-bold uppercase text-red-700">Hapus</button>}</span></div>)}{!staff.length && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-arena-dim">Belum ada penugasan staff.</p>}</div>
       </div>
     </section>
@@ -1451,7 +1451,7 @@ function EventLine({ event, organizationId }: { event: EventRow; organizationId:
       <div>
         <p className="font-semibold">{event.name}</p>
         <p className="mt-1 text-xs text-arena-dim">
-          {event.sport} Ã‚Â· {event.format}
+          {event.sport} · {event.format}
         </p>
       </div>
       <div className="flex items-center gap-2">
