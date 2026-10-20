@@ -900,7 +900,7 @@
   const SUPABASE_URL = localDevelopment ? 'https://owptsovberbfwvvdxjiu.supabase.co' : 'https://qibsdczvxqmbjrtmvgtj.supabase.co';
   const SUPABASE_ANON_KEY = localDevelopment
     ? 'sb_publishable_-hVUEfg8kNj7oYNgiI0ORw_9iKnD0Wa'
-    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJxaWJzZGN6dnhxbWJqcnRtdmd0aiIsImlhdCI6MTc4ODE1OTIwMywiZXhwIjoyMTAzNzM1MjAzfQ.xRd_82fgnGaCYQOpXiQBxsan9Rxv1deMdFuVbKxGDxc';
+    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpYnNkY3p2eHFtYmpydG12Z3RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxNTkyMDMsImV4cCI6MjEwMzczNTIwM30.xRd_82fgnGaCYQOpXiQBxsan9Rxv1deMdFuVbKxGDxc';
   let sb = null;
   try {
     if (window.supabase && window.supabase.createClient){
@@ -1940,19 +1940,85 @@
 
   function isConnected(){ return !!(sb && arenaCode && arenaPin); }
 
-  async function flushStateToCloud(){
+  // opts.quiet = true: pemanggil (finalizeToCloud) yang menampilkan peringatan/retry sendiri.
+  async function flushStateToCloud(opts){
     if (!isConnected() || isApplyingRemote || !state) return false;
     clearTimeout(saveTimer);
     try {
-      syncStatus.textContent = 'Menyimpan hasil final ke cloud...';
+      syncStatus.textContent = 'Menyimpan ke cloud...';
       const { data, error } = await sb.rpc('kocok_save_state', { p_code: arenaCode, p_pin: arenaPin, p_state: state });
       if (error) throw error;
       lastSyncedAt = data;
-      syncStatus.textContent = 'Hasil tersimpan ✓ ' + new Date(lastSyncedAt).toLocaleTimeString('id-ID');
+      syncStatus.textContent = 'Tersimpan ✓ ' + new Date(lastSyncedAt).toLocaleTimeString('id-ID');
       return true;
     } catch (e){
-      syncStatus.textContent = 'Gagal simpan hasil ke cloud: ' + (e.message || e);
+      syncStatus.textContent = 'Gagal simpan ke cloud: ' + describeCloudError(e);
+      if (!(opts && opts.quiet)) warnCloudSaveFailedOnce(e);
       return false;
+    }
+  }
+
+  // Ubah error Supabase/Postgres jadi pesan yang bisa ditindaklanjuti panitia.
+  function describeCloudError(e){
+    const raw = String((e && (e.message || e.error_description)) || e || '');
+    const code = String((e && (e.code || e.status)) || '');
+    if (code === '401' || /invalid api key|jwt|apikey/i.test(raw)){
+      return 'Kunci akses aplikasi ditolak server (401). Hubungi admin aplikasi. Detail: ' + raw;
+    }
+    if (code === '42501' || /ditolak/i.test(raw)){
+      return 'Akun ini tidak punya izin menyimpan untuk event ini, atau sesi login sudah habis. Login ulang di Workspace lalu buka Arena lagi. Detail: ' + raw;
+    }
+    return raw;
+  }
+
+  // Peringatan sekali per sesi halaman supaya kegagalan simpan tidak luput saat pertandingan berjalan.
+  let cloudSaveWarned = false;
+  function warnCloudSaveFailedOnce(e){
+    if (cloudSaveWarned) return;
+    cloudSaveWarned = true;
+    try {
+      window.alert('Data pertandingan BELUM tersimpan ke server.\n' + describeCloudError(e) +
+        '\n\nPertandingan tetap bisa dilanjutkan di perangkat ini, tapi jangan tutup halaman atau hapus data browser.');
+    } catch (err){ /* alert diblokir browser: status di layar tetap tampil */ }
+  }
+
+  // Penyimpanan akhir turnamen: state final (menutup event) lalu arsip. Dua hal yang dulu hilang diam-diam:
+  // (1) supabase-js TIDAK melempar saat gagal, melainkan mengembalikan { error }, jadi harus dicek eksplisit;
+  // (2) kalau gagal, panitia harus diberi tahu dan boleh mencoba lagi, bukan dibiarkan melihat "TURNAMEN KELAR!".
+  async function finalizeToCloud(){
+    if (!isConnected()){
+      const msg = 'Arena belum tersambung ke cloud (Kode/PIN belum disambungkan), jadi hasil hanya ada di perangkat ini.';
+      syncStatus.textContent = 'Hasil BELUM tersimpan: ' + msg;
+      try { window.alert('HASIL BELUM TERSIMPAN KE SERVER.\n' + msg); } catch (err){}
+      return false;
+    }
+    let stateSaved = false; // setelah state final tersimpan event sudah "completed"; retry hanya mengulang arsip
+    for (let attempt = 1; ; attempt++){
+      let failure = null;
+      if (!stateSaved){
+        stateSaved = await flushStateToCloud({ quiet: true });
+        if (!stateSaved) failure = syncStatus.textContent || 'Gagal simpan hasil ke cloud.';
+      }
+      if (stateSaved){
+        try {
+          const { error } = await sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state });
+          if (error) throw error;
+          syncStatus.textContent = 'Hasil & arsip turnamen tersimpan ✓ ' + new Date().toLocaleTimeString('id-ID');
+          try { await loadHistory({ silent: true }); } catch (err){}
+          return true;
+        } catch (e){
+          failure = 'Hasil tersimpan, tetapi arsip turnamen gagal: ' + describeCloudError(e);
+        }
+      }
+      syncStatus.textContent = failure;
+      if (attempt < 3){
+        await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+        continue;
+      }
+      let retry = false;
+      try { retry = window.confirm('HASIL BELUM TERSIMPAN KE SERVER.\n' + failure + '\n\nJangan tutup halaman ini. Coba simpan lagi?'); } catch (err){}
+      if (!retry) return false;
+      attempt = 0;
     }
   }
 
@@ -3054,15 +3120,7 @@
     timerAlert.style.display = 'none';
     renderFinal();
     saveSessionToCloud();
-    if (isConnected()){
-      await flushStateToCloud();
-      try {
-        await sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state });
-        await loadHistory({ silent: true });
-      } catch (e){
-        syncStatus.textContent = 'Hasil tersimpan, tetapi arsip turnamen gagal: ' + (e.message || e);
-      }
-    }
+    await finalizeToCloud();
   }
 
   async function advanceRound(shouldCommit){
@@ -3403,15 +3461,7 @@
     state.roundStartTime = null;
     renderFinal();
     saveSessionToCloud();
-    if (isConnected()){
-      await flushStateToCloud();
-      try {
-        await sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state });
-        await loadHistory({ silent: true });
-      } catch (e){
-        syncStatus.textContent = 'Hasil tersimpan, tetapi arsip turnamen gagal: ' + (e.message || e);
-      }
-    }
+    await finalizeToCloud();
   }
   // Klik "Selesai Semua Lapangan" (khusus >1 lapangan) — menyelesaikan SEMUA lapangan yang
   // belum selesai sekaligus lalu langsung ke layar final. Logika per-lapangan (finishCourt /
@@ -3453,15 +3503,7 @@
     timerAlert.style.display = 'none';
     renderFinal();
     saveSessionToCloud();
-    if (isConnected()){
-      await flushStateToCloud();
-      try {
-        await sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state });
-        await loadHistory({ silent: true });
-      } catch (e){
-        syncStatus.textContent = 'Hasil tersimpan, tetapi arsip turnamen gagal: ' + (e.message || e);
-      }
-    }
+    await finalizeToCloud();
   }
   const finishAllBtn = document.getElementById('finishAllBtn');
   if (finishAllBtn) finishAllBtn.addEventListener('click', () => { void finishAllCourts(); });
