@@ -232,6 +232,11 @@ function PublicEventPage() {
 
   async function register(event: FormEvent) {
     event.preventDefault();
+    if (!payload?.event || payload.event.status !== "registration") {
+      setShowForm(false);
+      setMessage("Pendaftaran event sudah ditutup.");
+      return;
+    }
     if (!gender) {
       setMessage("Pilih jenis kelamin dulu.");
       return;
@@ -619,7 +624,7 @@ function PublicEventPage() {
                 <p className="mt-1 max-w-xs text-sm leading-6 text-arena-dim">
                   Jadilah yang pertama untuk bergabung dan rasakan keseruan pertandingan!
                 </p>
-                {!payload.me && (
+                {!payload.me && registrationOpen && (
                   <button
                     type="button"
                     onClick={openForm}
@@ -812,9 +817,15 @@ function PublicEventPage() {
                 </form>
               ) : (
                 <div className="grid gap-3">
-                  <button type="button" onClick={() => setShowForm(true)} className="btn-arena w-full justify-center">
-                    Daftar sebagai pemain
-                  </button>
+                  {registrationOpen ? (
+                    <button type="button" onClick={() => setShowForm(true)} className="btn-arena w-full justify-center">
+                      Daftar sebagai pemain
+                    </button>
+                  ) : (
+                    <p className="rounded-2xl bg-slate-50 px-4 py-3 text-center text-sm font-semibold text-arena-dim">
+                      Pendaftaran event sudah ditutup. Halaman ini tetap bisa dipakai untuk melihat hasil dan ranking.
+                    </p>
+                  )}
                   {message && <p className="public-event__message">{message}</p>}
                 </div>
               )}
