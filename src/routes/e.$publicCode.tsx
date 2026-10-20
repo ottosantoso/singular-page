@@ -170,6 +170,7 @@ function playerStatusLabel(value: string) {
   if (value === "registered") return "Terdaftar";
   if (value === "checked_in") return "Check-in";
   if (value === "waitlisted") return "Waitlist";
+  if (value === "playing") return "Bermain";
   return value;
 }
 
@@ -390,6 +391,25 @@ function PublicEventPage() {
   const playerCount = payload.players.length;
   const activePlayerCount = payload.players.filter((player) => player.status !== "waitlisted").length;
   const waitlistCount = payload.players.filter((player) => player.status === "waitlisted").length;
+  const arenaPlayerNames = [...new Set(matchRows.flatMap((match) => [...(match.team_a ?? []), ...(match.team_b ?? [])]))];
+  const registeredPlayerByName = new Map(payload.players.map((player) => [player.display_name.toLowerCase(), player]));
+  const arenaPlayers = arenaPlayerNames.map((name, index) => {
+    const registered = registeredPlayerByName.get(name.toLowerCase());
+    return {
+      display_name: name,
+      gender: registered?.gender ?? null,
+      tier: registered?.tier ?? null,
+      status: "playing",
+      seed: registered?.seed ?? index + 1,
+      registered_at: registered?.registered_at ?? `arena-${index}`,
+      checked_in_at: registered?.checked_in_at ?? null,
+    } satisfies PublicPlayer;
+  });
+  const displayedPlayers = registrationOpen ? payload.players : arenaPlayers;
+  const displayedPlayerCount = registrationOpen ? activePlayerCount : arenaPlayers.length;
+  const hostAddedCount = registrationOpen
+    ? 0
+    : arenaPlayers.filter((player) => !registeredPlayerByName.has(player.display_name.toLowerCase())).length;
   const finalMatches = matchRows.filter(
     (match) => match.status !== "live" && match.score_a != null && match.score_b != null,
   );
@@ -426,9 +446,15 @@ function PublicEventPage() {
   const strongestRival = [...myRivals.entries()].sort((a, b) => b[1].games - a[1].games)[0];
   const myStandingIndex = standings.findIndex((standing) => standing.name === meName);
   const fill = ev.max_players ? Math.min(100, Math.round((playerCount / ev.max_players) * 100)) : null;
-  const capacityLabel = ev.max_players
-    ? `${playerCount}/${ev.max_players} pemain terdaftar`
-    : `${playerCount} pemain terdaftar`;
+  const capacityLabel = registrationOpen
+    ? ev.max_players
+      ? `${activePlayerCount}/${ev.max_players} pendaftar`
+      : `${activePlayerCount} pendaftar`
+    : `${arenaPlayers.length} pemain bermain`;
+  const participantTitle = registrationOpen ? "Pendaftar Event" : "Peserta Pertandingan";
+  const participantSubtitle = registrationOpen
+    ? "Peserta yang mendaftar melalui link event"
+    : "Pemain yang benar-benar masuk ke pertandingan Arena";
 
   const start = ev.starts_at ? new Date(ev.starts_at) : null;
   const end = ev.ends_at ? new Date(ev.ends_at) : null;
@@ -580,20 +606,25 @@ function PublicEventPage() {
                   <Users className="size-5" />
                 </span>
                 <div>
-                  <h2 className="font-display text-xl font-bold">Daftar pemain</h2>
-                  <p className="text-xs text-arena-dim">Peserta yang sudah bergabung di event ini</p>
+                  <h2 className="font-display text-xl font-bold">{participantTitle}</h2>
+                  <p className="text-xs text-arena-dim">{participantSubtitle}</p>
                 </div>
               </div>
               <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-arena-ink/10 bg-white px-3 py-1.5 font-display text-sm font-bold text-arena-ink">
                 <UserRound className="size-4 text-arena-lime" />
-                {ev.max_players ? `${activePlayerCount} / ${ev.max_players}` : activePlayerCount}
-                {waitlistCount > 0 && <span className="ml-1 text-[10px] text-amber-700">+{waitlistCount} waitlist</span>}
+                {registrationOpen && ev.max_players ? `${displayedPlayerCount} / ${ev.max_players}` : displayedPlayerCount}
+                {registrationOpen && waitlistCount > 0 && <span className="ml-1 text-[10px] text-amber-700">+{waitlistCount} waitlist</span>}
               </span>
             </div>
+            {!registrationOpen && hostAddedCount > 0 && (
+              <p className="border-b border-arena-ink/10 px-6 py-3 text-xs text-arena-dim">
+                {payload.players.filter((player) => player.status !== "waitlisted").length} mendaftar melalui link event - {hostAddedCount} ditambahkan host
+              </p>
+            )}
 
-            {payload.players.length ? (
+            {displayedPlayers.length ? (
               <ul className="grid gap-2 p-5">
-                {payload.players.map((player, index) => {
+                {displayedPlayers.map((player, index) => {
                   const meta = tierMeta(player.tier);
                   return (
                     <li key={`${player.display_name}-${player.registered_at}`} className="public-event__player-row">
