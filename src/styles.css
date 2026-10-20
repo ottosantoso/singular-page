@@ -144,7 +144,7 @@
   }
 }
 
-/* ===== OTTOPLAY ARENA â€” tema lapangan olahraga (terang) ===== */
+/* ===== OTTOPLAY ARENA — tema lapangan olahraga (terang) ===== */
 @theme inline {
   --color-arena-lime: var(--arena-lime);
   --color-arena-dim: var(--arena-dim);
@@ -459,3 +459,46 @@
   .public-event__form-grid { grid-template-columns: 1fr; gap: 1rem; }
   .public-event__player-row { padding-inline: .75rem; }
   .public-event__tier-badge { padding-inline: .5rem; font-size: .55rem; }
+
+/* ===== Field form Workspace (Edit/Buat event, profil publik, staff, billing) =====
+   Kelas .auth-input sebelumnya hanya bergaya di dalam .login-page__form, sehingga di dialog Workspace
+   input/select tampil polos tanpa kotak. Di layer "components" supaya utility Tailwind (mt-3, min-h-28, dll.)
+   dan gaya khusus halaman login tetap menang. */
+@layer components {
+  .auth-input {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    border: 1.5px solid oklch(0.26 0.05 250 / 0.2);
+    border-radius: 0.85rem;
+    background-color: #fff;
+    padding: 0.65rem 0.9rem;
+    color: var(--arena-ink);
+    font-size: 0.95rem;
+    line-height: 1.35;
+    outline: none;
+    box-shadow: 0 1px 2px oklch(0.26 0.05 250 / 0.06);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .auth-input::placeholder { color: oklch(0.52 0.03 250 / 0.6); }
+  .auth-input:hover { border-color: oklch(0.26 0.05 250 / 0.38); }
+  .auth-input:focus {
+    border-color: var(--arena-lime);
+    box-shadow: 0 0 0 3px oklch(0.62 0.19 143 / 0.2);
+  }
+  .auth-input:disabled {
+    background-color: oklch(0.96 0.01 250);
+    color: var(--arena-dim);
+    cursor: not-allowed;
+  }
+  select.auth-input {
+    appearance: none;
+    cursor: pointer;
+    padding-right: 2.4rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2355708a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7.5l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    background-size: 1rem;
+  }
+}
