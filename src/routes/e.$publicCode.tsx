@@ -88,12 +88,12 @@ type PublicMatch = {
   played_at?: string;
 };
 
-type PublicStanding = { name: string; points: number; games: number; wins: number };
+type PublicStanding = { name: string; points: number; games: number; wins: number; pointDiff: number };
 
 function buildPublicStandings(players: PublicPlayer[], matches: PublicMatch[]) {
   const table = new Map<string, PublicStanding>();
   const ensure = (name: string) => {
-    if (!table.has(name)) table.set(name, { name, points: 0, games: 0, wins: 0 });
+    if (!table.has(name)) table.set(name, { name, points: 0, games: 0, wins: 0, pointDiff: 0 });
     return table.get(name)!;
   };
   players.forEach((player) => ensure(player.display_name));
@@ -107,17 +107,19 @@ function buildPublicStandings(players: PublicPlayer[], matches: PublicMatch[]) {
       (match.team_a ?? []).forEach((name) => {
         const row = ensure(name);
         row.points += scoreA;
+        row.pointDiff += scoreA - scoreB;
         row.games += 1;
         if (aWon) row.wins += 1;
       });
       (match.team_b ?? []).forEach((name) => {
         const row = ensure(name);
         row.points += scoreB;
+        row.pointDiff += scoreB - scoreA;
         row.games += 1;
         if (bWon) row.wins += 1;
       });
     });
-  return [...table.values()].sort((a, b) => b.points - a.points || b.wins - a.wins || a.name.localeCompare(b.name));
+  return [...table.values()].sort((a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff || a.name.localeCompare(b.name));
 }
 
 function publicMatchWon(match: PublicMatch, name: string) {
@@ -445,7 +447,7 @@ function PublicEventPage() {
   const favoritePartner = [...myPartners.entries()].sort((a, b) => b[1].games - a[1].games)[0];
   const strongestRival = [...myRivals.entries()].sort((a, b) => b[1].games - a[1].games)[0];
   const myStandingIndex = standings.findIndex((standing) => standing.name === meName);
-  const fill = ev.max_players ? Math.min(100, Math.round((playerCount / ev.max_players) * 100)) : null;
+  const fill = ev.max_players ? Math.min(100, Math.round((displayedPlayerCount / ev.max_players) * 100)) : null;
   const capacityLabel = registrationOpen
     ? ev.max_players
       ? `${activePlayerCount}/${ev.max_players} pendaftar`
@@ -893,6 +895,7 @@ function PublicEventPage() {
                     <th className="px-3 py-3">Main</th>
                     <th className="px-3 py-3">Menang</th>
                     <th className="px-3 py-3">Win rate</th>
+                    <th className="px-3 py-3">Selisih</th>
                     <th className="px-3 py-3">Poin</th>
                   </tr>
                 </thead>
@@ -906,6 +909,7 @@ function PublicEventPage() {
                       <td className="px-3 py-3 text-arena-dim">{standing.games}</td>
                       <td className="px-3 py-3 text-arena-dim">{standing.wins}</td>
                       <td className="px-3 py-3 text-arena-dim">{standing.games ? `${Math.round((standing.wins / standing.games) * 100)}%` : "-"}</td>
+                      <td className="px-3 py-3 font-display font-bold text-arena-ink">{standing.pointDiff > 0 ? `+${standing.pointDiff}` : standing.pointDiff}</td>
                       <td className="px-3 py-3 font-display font-bold text-arena-ink">{standing.points}</td>
                     </tr>
                   ))}

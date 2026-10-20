@@ -1518,7 +1518,7 @@
       courtsRequested: courts, round: 1, finished: false,
       sitOutCount: Object.fromEntries(unitIds.map(u => [u, 0])),
       partnerCount: {}, opponentCount: {},
-      leaderboard: Object.fromEntries(players.map(player => [player.name, { points: 0, games: 0, wins: 0 }])),
+      leaderboard: Object.fromEntries(players.map(player => [player.name, { points: 0, games: 0, wins: 0, pointDiff: 0 }])),
       current: null, next: null, currentSitOut: [], nextSitOut: [],
       paused: [],
       roundDurationMin: (durMin && durMin > 0) ? durMin : null,
@@ -2049,7 +2049,9 @@
         : (player.tier && !tierByKey(player.tier) ? Object.assign({}, player, { tier: '' }) : player));
       Object.keys(state.leaderboard || {}).forEach(name => {
         if (typeof state.leaderboard[name].wins !== 'number') state.leaderboard[name].wins = 0;
+        if (typeof state.leaderboard[name].pointDiff !== 'number') state.leaderboard[name].pointDiff = 0;
       });
+      if (state.matchHistory.length) recomputeLeaderboard();
     }
     if (state && !state.finished){
       setSetupMode(state.mode);
@@ -2775,7 +2777,7 @@
     historyList.innerHTML = '';
     historyRows.forEach(row => {
       const summary = row.summary || {};
-      const lbRows = Object.entries(summary.leaderboard || {}).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+      const lbRows = Object.entries(summary.leaderboard || {}).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.points - a.points || (b.wins || 0) - (a.wins || 0) || (b.pointDiff || 0) - (a.pointDiff || 0) || a.name.localeCompare(b.name));
       const champion = lbRows[0];
       const dateLabel = new Date(row.finished_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
       const item = document.createElement('div');
@@ -2806,7 +2808,7 @@
   }
 
   function buildHistoryDetailHtml(summary){
-    const rows = Object.entries(summary.leaderboard || {}).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+    const rows = Object.entries(summary.leaderboard || {}).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.points - a.points || (b.wins || 0) - (a.wins || 0) || (b.pointDiff || 0) - (a.pointDiff || 0) || a.name.localeCompare(b.name));
     if (!rows.length) return '<div class="empty-lb">Tidak ada data klasemen.</div>';
     let html = '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">poin</th></tr></thead><tbody>';
     rows.forEach((r, i) => {
@@ -2930,7 +2932,7 @@
 
   function addNewPlayer(name, missedRounds){
     state.players.push({ id: playerId(), name, gender: 'male' });
-    state.leaderboard[name] = { points: 0, games: 0, wins: 0 };
+    state.leaderboard[name] = { points: 0, games: 0, wins: 0, pointDiff: 0 };
     state.sitOutCount[name] = missedRounds;
     applyGamesFloor([name]);
     regenerateNextRound();
@@ -2947,8 +2949,8 @@
       { id: playerId(), name: name1, gender: 'male' },
       { id: playerId(), name: name2, gender: 'male' }
     );
-    state.leaderboard[name1] = { points: 0, games: 0, wins: 0 };
-    state.leaderboard[name2] = { points: 0, games: 0, wins: 0 };
+    state.leaderboard[name1] = { points: 0, games: 0, wins: 0, pointDiff: 0 };
+    state.leaderboard[name2] = { points: 0, games: 0, wins: 0, pointDiff: 0 };
     state.sitOutCount[pairId] = missedRounds;
     applyGamesFloor([pairId]);
     regenerateNextRound();
@@ -3157,7 +3159,7 @@
 
   function recomputeLeaderboard(){
     const lb = {};
-    playerNames().forEach(name => { lb[name] = { points: 0, games: 0, wins: 0 }; });
+    playerNames().forEach(name => { lb[name] = { points: 0, games: 0, wins: 0, pointDiff: 0 }; });
     (state.matchHistory || []).forEach(entry => {
       (entry.matches || []).forEach(m => {
         const sa = parseInt(m.scoreA, 10) || 0;
@@ -3166,12 +3168,12 @@
         const bWins = sb > sa;
         const mult = pointMultiplier(m); // Super Mexicano: Lapangan 1 = ×2 (menang/kalah tetap dari skor asli)
         (m.teamA || []).forEach(p => {
-          if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0 };
-          lb[p].points += sa * mult; lb[p].games += 1; if (aWins) lb[p].wins += 1;
+          if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0, pointDiff: 0 };
+          lb[p].points += sa * mult; lb[p].pointDiff += sa - sb; lb[p].games += 1; if (aWins) lb[p].wins += 1;
         });
         (m.teamB || []).forEach(p => {
-          if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0 };
-          lb[p].points += sb * mult; lb[p].games += 1; if (bWins) lb[p].wins += 1;
+          if (!lb[p]) lb[p] = { points: 0, games: 0, wins: 0, pointDiff: 0 };
+          lb[p].points += sb * mult; lb[p].pointDiff += sb - sa; lb[p].games += 1; if (bWins) lb[p].wins += 1;
         });
       });
     });
@@ -4006,11 +4008,11 @@
   }
 
   function renderLeaderboard(){
-    const rows = Object.entries(state.leaderboard).map(([name, d]) => ({ name, wins: 0, ...d })).sort((a, b) => b.points - a.points || (b.wins || 0) - (a.wins || 0) || a.name.localeCompare(b.name));
+    const rows = Object.entries(state.leaderboard).map(([name, d]) => ({ name, wins: 0, ...d })).sort((a, b) => b.points - a.points || (b.wins || 0) - (a.wins || 0) || (b.pointDiff || 0) - (a.pointDiff || 0) || a.name.localeCompare(b.name));
     if (!rows.length){ leaderboardEl.innerHTML = '<div class="empty-lb">Belum ada data.</div>'; return; }
-    let html = '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">menang</th><th style="text-align:right">poin</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">menang</th><th style="text-align:right">selisih</th><th style="text-align:right">poin</th></tr></thead><tbody>';
     rows.forEach((r, i) => {
-      html += `<tr><td class="rank">${i + 1}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td class="pts">${r.points}</td></tr>`;
+      html += `<tr><td class="rank">${i + 1}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${(r.pointDiff || 0) > 0 ? '+' + r.pointDiff : (r.pointDiff || 0)}</td><td class="pts">${r.points}</td></tr>`;
     });
     html += '</tbody></table>';
     leaderboardEl.innerHTML = html;
@@ -4022,7 +4024,7 @@
     roundBadge.innerHTML = '<span class="live-dot" style="display:none;"></span>Turnamen selesai';
     managePlayersCard.style.display = 'none';
 
-    const rows = Object.entries(state.leaderboard).map(([name, d]) => ({ name, wins: 0, ...d })).sort((a, b) => b.points - a.points || (b.wins || 0) - (a.wins || 0) || a.name.localeCompare(b.name));
+    const rows = Object.entries(state.leaderboard).map(([name, d]) => ({ name, wins: 0, ...d })).sort((a, b) => b.points - a.points || (b.wins || 0) - (a.wins || 0) || (b.pointDiff || 0) - (a.pointDiff || 0) || a.name.localeCompare(b.name));
     const champion = rows[0];
     const runners = rows.slice(1, 3);
     const rest = rows.slice(3);
@@ -4061,9 +4063,9 @@
     }
 
     if (rest.length){
-      html += '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">menang</th><th style="text-align:right">kalah</th><th style="text-align:right">win rate</th><th style="text-align:right">poin</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">menang</th><th style="text-align:right">kalah</th><th style="text-align:right">win rate</th><th style="text-align:right">selisih</th><th style="text-align:right">poin</th></tr></thead><tbody>';
       rest.forEach((r, i) => {
-        html += `<tr><td class="rank">${i + 4}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${lossOf(r)}</td><td style="text-align:right;color:var(--line-dim)">${winRateOf(r)}%</td><td class="pts">${r.points}</td></tr>`;
+        html += `<tr><td class="rank">${i + 4}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${lossOf(r)}</td><td style="text-align:right;color:var(--line-dim)">${winRateOf(r)}%</td><td style="text-align:right;color:var(--line-dim)">${(r.pointDiff || 0) > 0 ? '+' + r.pointDiff : (r.pointDiff || 0)}</td><td class="pts">${r.points}</td></tr>`;
       });
       html += '</tbody></table>';
     }

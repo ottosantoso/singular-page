@@ -52,7 +52,7 @@ type PlayerStatRow = {
   foul_count: number;
 };
 
-type Standing = { name: string; points: number; games: number; wins: number };
+type Standing = { name: string; points: number; games: number; wins: number; pointDiff: number };
 
 type ActionSummary = {
   name: string;
@@ -85,7 +85,7 @@ function pairKey(a: string, b: string) {
 
 function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
   const table = new Map<string, Standing>();
-  players.forEach((name) => table.set(name, { name, points: 0, games: 0, wins: 0 }));
+  players.forEach((name) => table.set(name, { name, points: 0, games: 0, wins: 0, pointDiff: 0 }));
 
   matches.forEach((m) => {
     const teamA = m.team_a ?? [];
@@ -94,16 +94,18 @@ function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
     const bWon = (m.score_b ?? 0) > (m.score_a ?? 0);
 
     teamA.forEach((name) => {
-      const row = table.get(name) ?? { name, points: 0, games: 0, wins: 0 };
+      const row = table.get(name) ?? { name, points: 0, games: 0, wins: 0, pointDiff: 0 };
       row.games += 1;
       row.points += m.score_a ?? 0;
+      row.pointDiff += (m.score_a ?? 0) - (m.score_b ?? 0);
       if (aWon) row.wins += 1;
       table.set(name, row);
     });
     teamB.forEach((name) => {
-      const row = table.get(name) ?? { name, points: 0, games: 0, wins: 0 };
+      const row = table.get(name) ?? { name, points: 0, games: 0, wins: 0, pointDiff: 0 };
       row.games += 1;
       row.points += m.score_b ?? 0;
+      row.pointDiff += (m.score_b ?? 0) - (m.score_a ?? 0);
       if (bWon) row.wins += 1;
       table.set(name, row);
     });
@@ -452,7 +454,7 @@ function DetailPemain() {
 
       const standings = buildStandings(players, matches);
       const trendNames = [...standings]
-        .sort((a, b) => b.points - a.points || b.wins - a.wins)
+        .sort((a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff)
         .slice(0, 5)
         .map((s) => s.name);
       const partnerships = buildPartnerStats(matches);
@@ -481,7 +483,7 @@ function DetailPemain() {
   const data = query.data;
 
   const rankedStandingsRaw = data
-    ? [...data.standings].sort((a, b) => b.points - a.points || b.wins - a.wins || a.name.localeCompare(b.name))
+    ? [...data.standings].sort((a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff || a.name.localeCompare(b.name))
     : [];
   // Rank secara adil walau jumlah main tiap orang beda: pakai rata-rata poin per
   // game, bukan total poin mentah. Supaya nggak ada yang nangkring di atas cuma

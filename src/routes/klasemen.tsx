@@ -56,6 +56,7 @@ type Standing = {
   points: number;
   games: number;
   wins: number;
+  pointDiff: number;
 };
 
 type PlayerStatRow = {
@@ -78,7 +79,7 @@ type PlayerReport = {
 function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
   const table = new Map<string, Standing>();
   const ensure = (name: string) => {
-    if (!table.has(name)) table.set(name, { name, points: 0, games: 0, wins: 0 });
+    if (!table.has(name)) table.set(name, { name, points: 0, games: 0, wins: 0, pointDiff: 0 });
     return table.get(name)!;
   };
   players.forEach(ensure);
@@ -88,18 +89,20 @@ function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
     m.team_a.forEach((p) => {
       const row = ensure(p);
       row.points += m.score_a;
+      row.pointDiff += m.score_a - m.score_b;
       row.games += 1;
       if (aWins) row.wins += 1;
     });
     m.team_b.forEach((p) => {
       const row = ensure(p);
       row.points += m.score_b;
+      row.pointDiff += m.score_b - m.score_a;
       row.games += 1;
       if (bWins) row.wins += 1;
     });
   });
   return [...table.values()].sort(
-    (a, b) => b.points - a.points || b.wins - a.wins || a.name.localeCompare(b.name),
+    (a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff || a.name.localeCompare(b.name),
   );
 }
 
@@ -444,6 +447,7 @@ function Klasemen() {
                         <th>Main</th>
                         <th>Menang</th>
                         <th>Win Rate</th>
+                        <th>Selisih</th>
                         <th>Poin</th>
                       </tr>
                     </thead>
@@ -469,6 +473,7 @@ function Klasemen() {
                               <span className="w-9 text-right font-display text-xs font-bold text-arena-ink">{winRate.toFixed(0)}%</span>
                             </div>
                           </td>
+                          <td className="font-display font-bold text-arena-ink">{standing.pointDiff > 0 ? `+${standing.pointDiff}` : standing.pointDiff}</td>
                           <td>
                             <div className="flex items-center gap-3">
                               <span className="font-display text-base font-bold text-arena-ink">{standing.points}</span>
