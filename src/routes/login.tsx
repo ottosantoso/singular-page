@@ -6,7 +6,7 @@ import { loginIdToEmail, useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
-    meta: [{ title: "Masuk Ã¢â‚¬â€ OTTOPLAY ARENA" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Masuk — OTTOPLAY ARENA" }, { name: "robots", content: "noindex" }],
   }),
   component: LoginPage,
 });

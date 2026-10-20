@@ -144,7 +144,7 @@
   }
 }
 
-/* ===== OTTOPLAY ARENA â€” tema lapangan olahraga (terang) ===== */
+/* ===== OTTOPLAY ARENA — tema lapangan olahraga (terang) ===== */
 @theme inline {
   --color-arena-lime: var(--arena-lime);
   --color-arena-dim: var(--arena-dim);
