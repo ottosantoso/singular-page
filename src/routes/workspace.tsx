@@ -1371,25 +1371,25 @@ function CreateEventDialog({
             </select>
           </Field>
         </div>
+        <Field label="Status awal">
+          <select value={status} onChange={(event) => setStatus(event.target.value)} className="auth-input">
+            <option value="registration">Registration - siap dibagikan</option>
+            <option value="draft">Draft - belum dipublikasikan</option>
+          </select>
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Status awal">
-            <select value={status} onChange={(event) => setStatus(event.target.value)} className="auth-input">
-              <option value="registration">Registration - siap dibagikan</option>
-              <option value="draft">Draft - belum dipublikasikan</option>
-            </select>
-          </Field>
           <Field label="Maksimal pemain">
             <input type="number" min="4" max="200" value={maxPlayers} onChange={(event) => setMaxPlayers(event.target.value)} className="auth-input" />
           </Field>
+          <Field label="Mulai (opsional)">
+            <input
+              type="datetime-local"
+              value={startsAt}
+              onChange={(event) => setStartsAt(event.target.value)}
+              className="auth-input"
+            />
+          </Field>
         </div>
-        <Field label="Mulai (opsional)">
-          <input
-            type="datetime-local"
-            value={startsAt}
-            onChange={(event) => setStartsAt(event.target.value)}
-            className="auth-input"
-          />
-        </Field>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button className="btn-arena w-full">{editingEvent ? "Simpan perubahan" : "Buat event"}</button>
       </form>
@@ -1414,7 +1414,7 @@ function DialogFrame({
 }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-arena-ink/40 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-[26px] bg-white p-6 shadow-2xl">
+      <div className="max-h-[calc(100dvh-3rem)] w-full max-w-lg overflow-y-auto rounded-[26px] bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-2xl font-bold">{title}</h2>
           <button onClick={onClose} className="rounded-full p-2 text-arena-dim hover:bg-slate-100">
