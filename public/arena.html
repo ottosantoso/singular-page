@@ -4089,17 +4089,37 @@
       viewEl.style.display = 'block';
     });
 
-    formEl.querySelector('.btn-save-round').addEventListener('click', async () => {
+    formEl.querySelector('.btn-save-round').addEventListener('click', async (event) => {
+      const saveBtn = event.currentTarget;
       const scoreAInputs = formEl.querySelectorAll('.edit-score-a');
       const scoreBInputs = formEl.querySelectorAll('.edit-score-b');
+      const previousScores = entry.matches.map(m => ({ scoreA: m.scoreA, scoreB: m.scoreB }));
       entry.matches.forEach((m, i) => {
         m.scoreA = Math.max(0, parseInt(scoreAInputs[i].value, 10) || 0);
         m.scoreB = Math.max(0, parseInt(scoreBInputs[i].value, 10) || 0);
       });
-      recomputeLeaderboard();
-      saveSessionToCloud();
-      await persistRoundToDb(round, entry.matches);
-      renderFinal();
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Menyimpan...';
+      try {
+        recomputeLeaderboard();
+        await logMatchesToCloud(round, entry.matches);
+        await persistRoundToDb(round, entry.matches);
+        if (isConnected()){
+          const { error } = await sb.rpc('kocok_update_latest_summary', {
+            p_code: arenaCode,
+            p_pin: arenaPin,
+            p_summary: state
+          });
+          if (error) throw error;
+        }
+        renderFinal();
+      } catch (e){
+        entry.matches.forEach((m, i) => Object.assign(m, previousScores[i]));
+        recomputeLeaderboard();
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Simpan Perubahan';
+        syncStatus.textContent = 'Gagal menyimpan perubahan skor: ' + (e.message || e);
+      }
     });
   }
 })();
