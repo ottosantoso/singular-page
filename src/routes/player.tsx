@@ -4,6 +4,14 @@ import { BarChart3, CalendarDays, ChevronRight, LogOut, Plus, Trophy, Users } fr
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import {
+  eventStatusLabel,
+  participantStatusLabel,
+  planLabel,
+  roleLabel,
+  subscriptionStatusLabel,
+} from "@/lib/labels";
+import { filterActiveEvents } from "@/lib/player-events";
 
 export const Route = createFileRoute("/player")({
   head: () => ({ meta: [{ title: "Beranda Pemain - OTTOPLAY" }] }),
@@ -23,6 +31,13 @@ type PlayerEvent = {
     starts_at: string | null;
     public_code: string;
   } | null;
+};
+type WorkspaceStatus = {
+  organizationId: string;
+  name: string;
+  roleCode: string;
+  planCode: string;
+  subscriptionStatus: string | null;
 };
 type PlayerDashboard = {
   profile: { display_name?: string; username?: string };
@@ -64,10 +79,55 @@ function PlayerHomePage() {
     },
   });
 
+  const workspaces = useQuery({
+    queryKey: ["player-workspaces", auth.session?.user.id],
+    enabled: Boolean(auth.session && !auth.isAdmin),
+    queryFn: async (): Promise<WorkspaceStatus[]> => {
+      const userId = auth.session!.user.id;
+      const memberRes = await supabase
+        .from("organization_members")
+        .select("organization_id, role_code")
+        .eq("user_id", userId)
+        .eq("status", "active");
+      if (memberRes.error) throw memberRes.error;
+      const members = memberRes.data ?? [];
+      if (members.length === 0) return [];
+      const orgRes = await supabase
+        .from("organizations")
+        .select("id, name, subscription_plan")
+        .in(
+          "id",
+          members.map((member) => member.organization_id),
+        )
+        .order("name");
+      if (orgRes.error) throw orgRes.error;
+      return Promise.all(
+        (orgRes.data ?? []).map(async (org) => {
+          // Sumber kebenaran paket: organization_subscriptions (lewat RPC kuota).
+          // Bila RPC gagal, jatuh ke kolom organizations.subscription_plan.
+          const quota = await supabase.rpc("get_organization_quota", {
+            p_organization_id: org.id,
+          });
+          const info = (quota.error ? null : quota.data) as {
+            plan_code?: string;
+            status?: string;
+          } | null;
+          return {
+            organizationId: org.id,
+            name: org.name,
+            roleCode: members.find((member) => member.organization_id === org.id)?.role_code ?? "",
+            planCode: info?.plan_code ?? org.subscription_plan,
+            subscriptionStatus: info?.status ?? null,
+          };
+        }),
+      );
+    },
+  });
+
   if (auth.loading || !auth.session) return <LoadingScreen />;
 
   const joinedEvents = events.data ?? [];
-  const activeEvents = joinedEvents.filter((item) => item.event && !["finished", "cancelled"].includes(item.event.status));
+  const activeEvents = filterActiveEvents(joinedEvents);
   const stats = dashboard.data?.summary ?? { events: 0, matches: 0, wins: 0, losses: 0, draws: 0 };
 
   return (
@@ -108,6 +168,16 @@ function PlayerHomePage() {
           <div className="rounded-[22px] border border-arena-ink/10 bg-arena-ink p-5 text-white shadow-[0_18px_36px_-30px] shadow-arena-ink/80 sm:p-6"><p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-lime-300">Record</p><h2 className="mt-2 font-display text-2xl font-bold">Ringkasan karier</h2><div className="mt-6 grid grid-cols-3 gap-2 text-center"><div className="rounded-2xl bg-white/10 p-3"><b className="block text-2xl text-lime-300">{stats.wins}</b><small className="text-[10px] uppercase tracking-wider text-white/60">Menang</small></div><div className="rounded-2xl bg-white/10 p-3"><b className="block text-2xl">{stats.losses}</b><small className="text-[10px] uppercase tracking-wider text-white/60">Kalah</small></div><div className="rounded-2xl bg-white/10 p-3"><b className="block text-2xl">{stats.draws}</b><small className="text-[10px] uppercase tracking-wider text-white/60">Seri</small></div></div><p className="mt-5 text-sm leading-6 text-white/65">Hasil dihitung dari Arena yang sudah terhubung ke event dan akunmu.</p></div>
         </section>
 
+        <AccountStatusCard
+          username={auth.username || auth.session.user.email || ""}
+          activeEvents={activeEvents.length}
+          joinedEvents={joinedEvents.length}
+          eventsLoading={events.isLoading}
+          loading={workspaces.isLoading}
+          failed={workspaces.isError}
+          workspaces={workspaces.data ?? []}
+        />
+
         <section className="mt-10">
           <div className="flex items-end justify-between gap-3"><div><p className="font-display text-xs font-bold uppercase tracking-[0.24em] text-arena-lime">My events</p><h2 className="mt-2 font-display text-2xl font-bold text-arena-ink">Event yang kamu ikuti</h2></div></div>
           {events.isLoading ? <p className="mt-5 rounded-2xl border border-arena-ink/10 bg-white/70 p-6 text-sm text-arena-dim">Memuat event...</p> : events.isError ? <p className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">Daftar event belum dapat dimuat. Link event publik tetap bisa dibuka kapan saja.</p> : joinedEvents.length === 0 ? <EmptyEvents /> : <div className="mt-5 grid gap-4 md:grid-cols-2">{joinedEvents.map((item) => item.event && <EventCard key={`${item.event_id}-${item.display_name}`} playerEvent={item} />)}</div>}
@@ -119,7 +189,84 @@ function PlayerHomePage() {
 
 function EventCard({ playerEvent }: { playerEvent: PlayerEvent }) {
   const event = playerEvent.event!;
-  return <Link to="/e/$publicCode" params={{ publicCode: event.public_code }} className="group rounded-[22px] border border-arena-ink/10 bg-white/85 p-5 transition hover:-translate-y-0.5 hover:border-arena-lime hover:shadow-[0_18px_36px_-28px] hover:shadow-arena-ink/70"><div className="flex items-start justify-between gap-3"><div><span className="text-[10px] font-bold uppercase tracking-[0.2em] text-arena-lime">{event.sport} · {event.status}</span><h3 className="mt-2 font-display text-xl font-bold text-arena-ink">{event.name}</h3><p className="mt-1 text-sm text-arena-dim">Sebagai {playerEvent.display_name} · {event.format}</p></div><ChevronRight className="size-5 text-arena-dim transition group-hover:translate-x-1 group-hover:text-arena-lime" /></div><p className="mt-5 text-xs font-semibold text-arena-dim">{event.starts_at ? new Date(event.starts_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "Waktu belum ditentukan"}</p></Link>;
+  return <Link to="/e/$publicCode" params={{ publicCode: event.public_code }} className="group rounded-[22px] border border-arena-ink/10 bg-white/85 p-5 transition hover:-translate-y-0.5 hover:border-arena-lime hover:shadow-[0_18px_36px_-28px] hover:shadow-arena-ink/70"><div className="flex items-start justify-between gap-3"><div><span className="text-[10px] font-bold uppercase tracking-[0.2em] text-arena-lime">{event.sport} · {eventStatusLabel(event.status)}</span><h3 className="mt-2 font-display text-xl font-bold text-arena-ink">{event.name}</h3><p className="mt-1 text-sm text-arena-dim">Sebagai {playerEvent.display_name} · {event.format} · {participantStatusLabel(playerEvent.status)}</p></div><ChevronRight className="size-5 text-arena-dim transition group-hover:translate-x-1 group-hover:text-arena-lime" /></div><p className="mt-5 text-xs font-semibold text-arena-dim">{event.starts_at ? new Date(event.starts_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "Waktu belum ditentukan"}</p></Link>;
+}
+
+function AccountStatusCard({
+  username,
+  activeEvents,
+  joinedEvents,
+  eventsLoading,
+  loading,
+  failed,
+  workspaces,
+}: {
+  username: string;
+  activeEvents: number;
+  joinedEvents: number;
+  eventsLoading: boolean;
+  loading: boolean;
+  failed: boolean;
+  workspaces: WorkspaceStatus[];
+}) {
+  return (
+    <section
+      aria-labelledby="account-status-title"
+      className="mt-6 rounded-[22px] border border-arena-ink/10 bg-white/80 p-5 shadow-[0_18px_36px_-30px] shadow-arena-ink/60 sm:p-6"
+    >
+      <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-arena-lime">
+        Akun
+      </p>
+      <h2
+        id="account-status-title"
+        className="mt-2 font-display text-2xl font-bold text-arena-ink"
+      >
+        Status akun
+      </h2>
+      <p className="mt-2 break-words text-sm text-arena-dim">
+        {username}
+        {eventsLoading
+          ? ""
+          : ` · ${activeEvents} event aktif dari ${joinedEvents} event diikuti`}
+      </p>
+      <div className="mt-5">
+        {loading ? (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-arena-dim">Memuat workspace...</p>
+        ) : failed ? (
+          <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Daftar workspace belum dapat dimuat. Coba muat ulang halaman ini.
+          </p>
+        ) : workspaces.length === 0 ? (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-arena-dim">
+            Kamu belum tergabung di workspace mana pun. Akunmu berstatus {roleLabel("player")}.
+          </p>
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {workspaces.map((workspace) => (
+              <li key={workspace.organizationId} className="rounded-2xl bg-slate-50 p-4">
+                <b className="block break-words font-display text-lg text-arena-ink">
+                  {workspace.name}
+                </b>
+                <p className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
+                  <span className="rounded-full bg-arena-ink px-3 py-1 text-white">
+                    {roleLabel(workspace.roleCode)}
+                  </span>
+                  <span className="rounded-full border border-arena-ink/15 bg-white px-3 py-1 text-arena-ink">
+                    Paket {planLabel(workspace.planCode)}
+                  </span>
+                  {workspace.subscriptionStatus ? (
+                    <span className="rounded-full border border-arena-ink/15 bg-white px-3 py-1 text-arena-dim">
+                      {subscriptionStatusLabel(workspace.subscriptionStatus)}
+                    </span>
+                  ) : null}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
 }
 
 function EmptyEvents() { return <div className="mt-5 rounded-[22px] border border-dashed border-arena-ink/15 bg-white/60 p-8 text-center"><Trophy className="mx-auto size-8 text-arena-lime" /><h3 className="mt-3 font-display text-lg font-bold text-arena-ink">Belum ada event</h3><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-arena-dim">Saat kamu mendaftar lewat QR atau shortlink event, event tersebut akan muncul di sini.</p></div>; }
