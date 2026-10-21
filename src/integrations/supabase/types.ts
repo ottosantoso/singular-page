@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.18"
   }
   graphql_public: {
     Tables: {
@@ -242,9 +242,9 @@ export type Database = {
           consent_to_show_name: boolean
           created_at: string
           display_name: string
-          gender: string | null
           email: string | null
           event_id: string
+          gender: string | null
           phone: string | null
           photo_url: string | null
           player_user_id: string | null
@@ -259,9 +259,9 @@ export type Database = {
           consent_to_show_name?: boolean
           created_at?: string
           display_name: string
-          gender?: string | null
           email?: string | null
           event_id: string
+          gender?: string | null
           phone?: string | null
           photo_url?: string | null
           player_user_id?: string | null
@@ -276,9 +276,9 @@ export type Database = {
           consent_to_show_name?: boolean
           created_at?: string
           display_name?: string
-          gender?: string | null
           email?: string | null
           event_id?: string
+          gender?: string | null
           phone?: string | null
           photo_url?: string | null
           player_user_id?: string | null
@@ -645,11 +645,86 @@ export type Database = {
           },
         ]
       }
-      organizations: {
+      organization_subscriptions: {
         Row: {
           created_at: string
-          created_by: string
+          ends_at: string | null
+          id: string
+          note: string | null
+          organization_id: string
+          override_max_active_events: number | null
+          override_max_courts: number | null
+          override_max_members: number | null
+          override_max_players_per_event: number | null
+          override_max_staff: number | null
+          override_max_venues: number | null
+          plan_code: string
+          starts_at: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          note?: string | null
+          organization_id: string
+          override_max_active_events?: number | null
+          override_max_courts?: number | null
+          override_max_members?: number | null
+          override_max_players_per_event?: number | null
+          override_max_staff?: number | null
+          override_max_venues?: number | null
+          plan_code: string
+          starts_at?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          note?: string | null
+          organization_id?: string
+          override_max_active_events?: number | null
+          override_max_courts?: number | null
+          override_max_members?: number | null
+          override_max_players_per_event?: number | null
+          override_max_staff?: number | null
+          override_max_venues?: number | null
+          plan_code?: string
+          starts_at?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_subscriptions_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
           banner_url: string | null
+          created_at: string
+          created_by: string
           id: string
           is_active: boolean
           logo_url: string | null
@@ -664,9 +739,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          banner_url?: string | null
           created_at?: string
           created_by: string
-          banner_url?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -681,9 +756,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          banner_url?: string | null
           created_at?: string
           created_by?: string
-          banner_url?: string | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -696,6 +771,77 @@ export type Database = {
           subscription_plan?: string
           timezone?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_proofs: {
+        Row: {
+          file_path: string
+          id: string
+          invoice_id: string
+          note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sender_name: string | null
+          status: string
+          submitted_by: string
+          transferred_amount: number | null
+          transferred_at: string | null
+        }
+        Insert: {
+          file_path: string
+          id?: string
+          invoice_id: string
+          note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_name?: string | null
+          status?: string
+          submitted_by: string
+          transferred_amount?: number | null
+          transferred_at?: string | null
+        }
+        Update: {
+          file_path?: string
+          id?: string
+          invoice_id?: string
+          note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_name?: string | null
+          status?: string
+          submitted_by?: string
+          transferred_amount?: number | null
+          transferred_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_proofs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          id: boolean
+          subscription_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          subscription_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          subscription_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -744,6 +890,130 @@ export type Database = {
           description?: string | null
           label?: string
           sort_order?: number
+        }
+        Relationships: []
+      }
+      subscription_invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          due_at: string
+          id: string
+          invoice_number: string
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          plan_code: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          verified_by: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          due_at: string
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          organization_id: string
+          paid_at?: string | null
+          period_end: string
+          period_start: string
+          plan_code: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_at?: string
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          organization_id?: string
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          plan_code?: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "organization_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_active_events: number
+          max_courts: number
+          max_members: number
+          max_players_per_event: number
+          max_staff: number
+          max_venues: number
+          name: string
+          price_monthly: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_active_events?: number
+          max_courts?: number
+          max_members?: number
+          max_players_per_event?: number
+          max_staff?: number
+          max_venues?: number
+          name: string
+          price_monthly?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_active_events?: number
+          max_courts?: number
+          max_members?: number
+          max_players_per_event?: number
+          max_staff?: number
+          max_venues?: number
+          name?: string
+          price_monthly?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -832,34 +1102,17 @@ export type Database = {
         Args: { p_limit?: number; p_search?: string; p_status?: string }
         Returns: Json
       }
-      platform_list_users: {
-        Args: Record<PropertyKey, never>
+      can_manage_payment_proof: { Args: { p_name: string }; Returns: boolean }
+      check_in_event_guest: {
+        Args: { p_public_code: string; p_registration_token: string }
         Returns: {
-          user_id: string
-          email: string | null
-          username: string | null
-          display_name: string | null
-          is_active: boolean
-          email_confirmed_at: string | null
-          created_at: string
-          global_roles: Json
-          memberships: Json
+          checked_in_at: string
+          display_name: string
+          status: string
         }[]
       }
-      platform_list_organizations: {
-        Args: Record<PropertyKey, never>
-        Returns: { organization_id: string; organization_name: string; slug: string }[]
-      }
-      platform_set_user_status: {
-        Args: { p_user_id: string; p_is_active: boolean }
-        Returns: boolean
-      }
-      platform_set_user_role: {
-        Args: { p_user_id: string; p_role_code: string; p_enabled?: boolean }
-        Returns: boolean
-      }
-      platform_set_membership_role: {
-        Args: { p_user_id: string; p_organization_id: string; p_role_code: string; p_enabled?: boolean }
+      claim_event_guest: {
+        Args: { p_public_code: string; p_registration_token: string }
         Returns: boolean
       }
       close_abandoned_arena_sessions: {
@@ -869,6 +1122,7 @@ export type Database = {
       create_organization: {
         Args: { p_name: string; p_slug: string; p_timezone?: string }
         Returns: {
+          banner_url: string | null
           created_at: string
           created_by: string
           id: string
@@ -876,6 +1130,7 @@ export type Database = {
           logo_url: string | null
           name: string
           primary_color: string | null
+          public_description: string | null
           secondary_color: string | null
           slug: string
           sport_label: string | null
@@ -890,6 +1145,64 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_subscription_invoice: {
+        Args: {
+          p_due_at: string
+          p_notes?: string
+          p_organization_id: string
+          p_period_end: string
+          p_period_start: string
+          p_plan_code: string
+        }
+        Returns: {
+          amount: number
+          created_at: string
+          due_at: string
+          id: string
+          invoice_number: string
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          plan_code: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          verified_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscription_invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_organization_quota: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      get_organization_report: {
+        Args: {
+          p_event_id?: string
+          p_from?: string
+          p_organization_id: string
+          p_sport?: string
+          p_to?: string
+          p_venue_id?: string
+        }
+        Returns: Json
+      }
+      get_player_dashboard: {
+        Args: never
+        Returns: {
+          events: Json
+          matches: Json
+          profile: Json
+          sports: Json
+          summary: Json
+        }[]
+      }
       get_public_event: {
         Args: { p_public_code: string; p_registration_token?: string }
         Returns: {
@@ -900,6 +1213,15 @@ export type Database = {
           players: Json
         }[]
       }
+      get_public_organization: {
+        Args: { p_slug: string }
+        Returns: {
+          events: Json
+          organization: Json
+          venues: Json
+        }[]
+      }
+      get_subscription_mode: { Args: never; Returns: Json }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_organization_admin: {
         Args: { p_organization_id: string }
@@ -960,125 +1282,259 @@ export type Database = {
         Args: { p_code: string; p_pin: string; p_state: Json }
         Returns: string
       }
-      register_event_guest: {
-        Args: {
-          p_consent_to_show_name?: boolean
-          p_display_name: string
-          p_gender: string
-          p_email?: string
-          p_phone?: string
-          p_photo_url?: string
-          p_public_code: string
-          p_tier?: string
-        }
-        Returns: {
-          display_name: string
-          event_id: string
-          event_name: string
-          player_id: string
-          public_code: string
-          registration_token: string
-          registration_status: string
-        }[]
-      }
-      check_in_event_guest: {
-        Args: { p_public_code: string; p_registration_token: string }
-        Returns: {
-          checked_in_at: string
-          display_name: string
-          status: string
-        }[]
-      }
-      claim_event_guest: {
-        Args: { p_public_code: string; p_registration_token: string }
+      kocok_update_latest_summary: {
+        Args: { p_code: string; p_pin: string; p_summary: Json }
         Returns: boolean
-      }
-      get_player_dashboard: {
-        Args: Record<string, never>
-        Returns: {
-          events: Json
-          matches: Json
-          profile: Json
-          sports: Json
-          summary: Json
-        }[]
-      }
-      platform_list_invoices: {
-        Args: Record<string, never>
-        Returns: Json
-      }
-      list_subscription_plans: {
-        Args: Record<string, never>
-        Returns: Json
       }
       list_organization_invoices: {
         Args: { p_organization_id: string }
-        Returns: Json
+        Returns: {
+          amount: number
+          created_at: string
+          due_at: string
+          id: string
+          invoice_number: string
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          plan_code: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          verified_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "subscription_invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      submit_payment_proof: {
-        Args: { p_invoice_id: string; p_file_path: string; p_transferred_amount?: number | null; p_transferred_at?: string | null; p_sender_name?: string | null; p_note?: string | null }
+      list_subscription_plans: {
+        Args: never
+        Returns: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_active_events: number
+          max_courts: number
+          max_members: number
+          max_players_per_event: number
+          max_staff: number
+          max_venues: number
+          name: string
+          price_monthly: number
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "subscription_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      platform_list_invoices: {
+        Args: never
+        Returns: {
+          amount: number
+          created_at: string
+          due_at: string
+          id: string
+          invoice_number: string
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          plan_code: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          verified_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "subscription_invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      platform_list_organizations: {
+        Args: never
+        Returns: {
+          organization_id: string
+          organization_name: string
+          slug: string
+        }[]
+      }
+      platform_list_subscription_plans: {
+        Args: never
+        Returns: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_active_events: number
+          max_courts: number
+          max_members: number
+          max_players_per_event: number
+          max_staff: number
+          max_venues: number
+          name: string
+          price_monthly: number
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "subscription_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      platform_list_users: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          email_confirmed_at: string
+          global_roles: Json
+          is_active: boolean
+          memberships: Json
+          user_id: string
+          username: string
+        }[]
+      }
+      platform_review_payment: {
+        Args: { p_invoice_id: string; p_note?: string; p_status: string }
         Returns: boolean
       }
-      get_subscription_mode: {
-        Args: Record<string, never>
-        Returns: Json
+      platform_set_membership_role: {
+        Args: {
+          p_enabled?: boolean
+          p_organization_id: string
+          p_role_code: string
+          p_user_id: string
+        }
+        Returns: boolean
       }
+      platform_set_organization_quota:
+        | {
+            Args: {
+              p_max_active_events?: number
+              p_max_courts?: number
+              p_max_players_per_event?: number
+              p_max_staff?: number
+              p_max_venues?: number
+              p_note?: string
+              p_organization_id: string
+              p_plan_code: string
+              p_status?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_max_active_events?: number
+              p_max_courts?: number
+              p_max_members?: number
+              p_max_players_per_event?: number
+              p_max_staff?: number
+              p_max_venues?: number
+              p_note?: string
+              p_organization_id: string
+              p_plan_code: string
+              p_status?: string
+            }
+            Returns: Json
+          }
       platform_set_subscription_mode: {
         Args: { p_enabled: boolean }
         Returns: Json
       }
-      get_organization_quota: {
-        Args: { p_organization_id: string }
-        Returns: Json
-      }
-      platform_set_organization_quota: {
-        Args: {
-          p_organization_id: string
-          p_plan_code: string
-          p_status?: string
-          p_max_venues?: number | null
-          p_max_courts?: number | null
-          p_max_active_events?: number | null
-          p_max_players_per_event?: number | null
-          p_max_staff?: number | null
-                    p_max_members?: number | null
-          p_note?: string | null
-        }
-        Returns: Json
-      }
-      platform_list_subscription_plans: {
-        Args: Record<string, never>
-        Returns: Json
-      }
-      create_subscription_invoice: {
-        Args: {
-          p_organization_id: string
-          p_plan_code: string
-          p_period_start: string
-          p_period_end: string
-          p_due_at: string
-          p_notes?: string | null
-        }
-        Returns: Json
-      }
-      platform_review_payment: {
-        Args: { p_invoice_id: string; p_status: string; p_note?: string | null }
+      platform_set_user_role: {
+        Args: { p_enabled?: boolean; p_role_code: string; p_user_id: string }
         Returns: boolean
       }
-      get_organization_report: {
-        Args: {
-          p_event_id?: string | null
-          p_from?: string | null
-          p_organization_id: string
-          p_sport?: string | null
-          p_to?: string | null
-          p_venue_id?: string | null
-        }
-        Returns: Json
+      platform_set_user_status: {
+        Args: { p_is_active: boolean; p_user_id: string }
+        Returns: boolean
       }
       promote_event_waitlist: {
         Args: { p_event_id: string; p_limit?: number }
         Returns: number
+      }
+      register_event_guest:
+        | {
+            Args: {
+              p_consent_to_show_name?: boolean
+              p_display_name: string
+              p_email?: string
+              p_gender: string
+              p_phone?: string
+              p_photo_url?: string
+              p_public_code: string
+              p_tier?: string
+            }
+            Returns: {
+              display_name: string
+              event_id: string
+              event_name: string
+              player_id: string
+              public_code: string
+              registration_status: string
+              registration_token: string
+            }[]
+          }
+        | {
+            Args: {
+              p_consent_to_show_name?: boolean
+              p_display_name: string
+              p_email?: string
+              p_phone?: string
+              p_photo_url?: string
+              p_public_code: string
+            }
+            Returns: {
+              display_name: string
+              event_id: string
+              event_name: string
+              player_id: string
+              public_code: string
+              registration_token: string
+            }[]
+          }
+        | {
+            Args: {
+              p_consent_to_show_name?: boolean
+              p_display_name: string
+              p_email?: string
+              p_phone?: string
+              p_photo_url?: string
+              p_public_code: string
+              p_tier?: string
+            }
+            Returns: {
+              display_name: string
+              event_id: string
+              event_name: string
+              player_id: string
+              public_code: string
+              registration_token: string
+            }[]
+          }
+      submit_payment_proof: {
+        Args: {
+          p_file_path: string
+          p_invoice_id: string
+          p_note?: string
+          p_sender_name?: string
+          p_transferred_amount?: number
+          p_transferred_at?: string
+        }
+        Returns: boolean
       }
       withdraw_event_guest: {
         Args: { p_public_code: string; p_registration_token: string }

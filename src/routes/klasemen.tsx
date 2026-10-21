@@ -106,11 +106,11 @@ function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
   );
 }
 
-function competitionRank(rows: Standing[], index: number) {
+function competitionRank(rows: Standing[], index: number): number {
   if (index === 0) return 1;
   const current = rows[index];
   const previous = rows[index - 1];
-  const tied = current.points === previous.points && current.wins === previous.wins && current.pointDiff === previous.pointDiff;
+  const tied = !!current && !!previous && current.points === previous.points && current.wins === previous.wins && current.pointDiff === previous.pointDiff;
   return tied ? competitionRank(rows, index - 1) : competitionRank(rows, index - 1) + 1;
 }
 

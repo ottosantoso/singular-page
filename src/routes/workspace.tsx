@@ -387,11 +387,11 @@ function ReportsPanel({ organization }: { organization: Organization }) {
     setError("");
     const result = await supabase.rpc("get_organization_report", {
       p_organization_id: organization.id,
-      p_event_id: eventId || null,
-      p_venue_id: venueId || null,
-      p_sport: sport || null,
-      p_from: from ? new Date(`${from}T00:00:00`).toISOString() : null,
-      p_to: to ? new Date(`${to}T23:59:59.999`).toISOString() : null,
+      ...(eventId ? { p_event_id: eventId } : {}),
+      ...(venueId ? { p_venue_id: venueId } : {}),
+      ...(sport ? { p_sport: sport } : {}),
+      ...(from ? { p_from: new Date(`${from}T00:00:00`).toISOString() } : {}),
+      ...(to ? { p_to: new Date(`${to}T23:59:59.999`).toISOString() } : {}),
     });
     if (result.error) setError(result.error.message);
     else setReport((result.data ?? null) as ReportData | null);
