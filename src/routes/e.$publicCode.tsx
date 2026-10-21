@@ -122,6 +122,14 @@ function buildPublicStandings(players: PublicPlayer[], matches: PublicMatch[]) {
   return [...table.values()].sort((a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff || a.name.localeCompare(b.name));
 }
 
+function competitionRank(rows: PublicStanding[], index: number) {
+  if (index === 0) return 1;
+  const current = rows[index];
+  const previous = rows[index - 1];
+  const tied = current.points === previous.points && current.wins === previous.wins && current.pointDiff === previous.pointDiff;
+  return tied ? competitionRank(rows, index - 1) : competitionRank(rows, index - 1) + 1;
+}
+
 function publicMatchWon(match: PublicMatch, name: string) {
   const scoreA = Number(match.score_a ?? 0);
   const scoreB = Number(match.score_b ?? 0);
@@ -902,7 +910,7 @@ function PublicEventPage() {
                 <tbody>
                   {standings.map((standing, index) => (
                     <tr key={standing.name} className={`border-b border-slate-50 ${standing.name === meName ? "bg-lime-50/70" : ""}`}>
-                      <td className="px-3 py-3 font-display font-bold text-arena-dim">{String(index + 1).padStart(2, "0")}</td>
+                      <td className="px-3 py-3 font-display font-bold text-arena-dim">{String(competitionRank(standings, index)).padStart(2, "0")}</td>
                       <td className="px-3 py-3 font-semibold text-arena-ink">
                         {standing.name}{standing.name === meName && <span className="ml-2 rounded-full bg-lime-100 px-2 py-1 text-[10px] text-lime-800">Kamu</span>}
                       </td>

@@ -106,6 +106,14 @@ function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
   );
 }
 
+function competitionRank(rows: Standing[], index: number) {
+  if (index === 0) return 1;
+  const current = rows[index];
+  const previous = rows[index - 1];
+  const tied = current.points === previous.points && current.wins === previous.wins && current.pointDiff === previous.pointDiff;
+  return tied ? competitionRank(rows, index - 1) : competitionRank(rows, index - 1) + 1;
+}
+
 function buildPlayerReport(standings: Standing[], statRows: PlayerStatRow[]): PlayerReport[] {
   const statTable = new Map<string, { point_count: number; out_count: number; foul_count: number }>();
   statRows.forEach((row) => {
@@ -459,7 +467,7 @@ function Klasemen() {
                         <tr key={standing.name} className={index === 0 ? "bg-arena-lime/5" : undefined}>
                           <td>
                             <span className={`inline-flex size-7 items-center justify-center rounded-md font-display text-xs font-bold ${index === 0 ? "bg-arena-lime text-primary-foreground" : "bg-muted text-arena-dim"}`}>
-                              {String(index + 1).padStart(2, "0")}
+                              {String(competitionRank(data.standings, index)).padStart(2, "0")}
                             </span>
                           </td>
                           <td className="font-semibold text-arena-ink">{standing.name}</td>

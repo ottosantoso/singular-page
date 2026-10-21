@@ -2812,7 +2812,7 @@
     if (!rows.length) return '<div class="empty-lb">Tidak ada data klasemen.</div>';
     let html = '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">poin</th></tr></thead><tbody>';
     rows.forEach((r, i) => {
-      html += `<tr><td class="rank">${i + 1}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td class="pts">${r.points}</td></tr>`;
+      html += `<tr><td class="rank">${competitionRank(rows, i)}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td class="pts">${r.points}</td></tr>`;
     });
     html += '</tbody></table>';
     return html;
@@ -4007,12 +4007,20 @@
     renderPlayerManageList();
   }
 
+  function competitionRank(rows, index){
+    if (index === 0) return 1;
+    const current = rows[index];
+    const previous = rows[index - 1];
+    const tied = current.points === previous.points && (current.wins || 0) === (previous.wins || 0) && (current.pointDiff || 0) === (previous.pointDiff || 0);
+    return tied ? competitionRank(rows, index - 1) : competitionRank(rows, index - 1) + 1;
+  }
+
   function renderLeaderboard(){
     const rows = Object.entries(state.leaderboard).map(([name, d]) => ({ name, wins: 0, ...d })).sort((a, b) => b.points - a.points || (b.wins || 0) - (a.wins || 0) || (b.pointDiff || 0) - (a.pointDiff || 0) || a.name.localeCompare(b.name));
     if (!rows.length){ leaderboardEl.innerHTML = '<div class="empty-lb">Belum ada data.</div>'; return; }
     let html = '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">menang</th><th style="text-align:right">selisih</th><th style="text-align:right">poin</th></tr></thead><tbody>';
     rows.forEach((r, i) => {
-      html += `<tr><td class="rank">${i + 1}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${(r.pointDiff || 0) > 0 ? '+' + r.pointDiff : (r.pointDiff || 0)}</td><td class="pts">${r.points}</td></tr>`;
+      html += `<tr><td class="rank">${competitionRank(rows, i)}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${(r.pointDiff || 0) > 0 ? '+' + r.pointDiff : (r.pointDiff || 0)}</td><td class="pts">${r.points}</td></tr>`;
     });
     html += '</tbody></table>';
     leaderboardEl.innerHTML = html;
@@ -4065,7 +4073,7 @@
     if (rest.length){
       html += '<table><thead><tr><th></th><th>pemain</th><th style="text-align:right">main</th><th style="text-align:right">menang</th><th style="text-align:right">kalah</th><th style="text-align:right">win rate</th><th style="text-align:right">selisih</th><th style="text-align:right">poin</th></tr></thead><tbody>';
       rest.forEach((r, i) => {
-        html += `<tr><td class="rank">${i + 4}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${lossOf(r)}</td><td style="text-align:right;color:var(--line-dim)">${winRateOf(r)}%</td><td style="text-align:right;color:var(--line-dim)">${(r.pointDiff || 0) > 0 ? '+' + r.pointDiff : (r.pointDiff || 0)}</td><td class="pts">${r.points}</td></tr>`;
+        html += `<tr><td class="rank">${competitionRank(rows, i + 3)}</td><td>${r.name}</td><td style="text-align:right;color:var(--line-dim)">${r.games}</td><td style="text-align:right;color:var(--green)">${r.wins || 0}</td><td style="text-align:right;color:var(--line-dim)">${lossOf(r)}</td><td style="text-align:right;color:var(--line-dim)">${winRateOf(r)}%</td><td style="text-align:right;color:var(--line-dim)">${(r.pointDiff || 0) > 0 ? '+' + r.pointDiff : (r.pointDiff || 0)}</td><td class="pts">${r.points}</td></tr>`;
       });
       html += '</tbody></table>';
     }
