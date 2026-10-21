@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ArrowRight, ChevronRight, Trophy, UserRound, CalendarDays, RefreshCw, Play, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ChevronRight, Trophy, UserRound, RefreshCw, Play, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useAuth } from '@/lib/auth';
 import hero from '@/assets/sports-hero.jpg';
 import padelCourt from '@/assets/padel-court.jpg';
 import badmintonCourt from '@/assets/badminton-court.jpg';
@@ -41,6 +41,7 @@ const steps = [
 ];
 
 function Home() {
+  const auth = useAuth();
   return (
     <main className="sports-home arena-home court-lines">
       <nav className="home-nav" aria-label="Navigasi utama">
@@ -55,16 +56,19 @@ function Home() {
           </div>
           <div className="home-nav-actions">
             <Button asChild variant="outline" className="home-button"><Link to="/klasemen"><Trophy />Klasemen</Link></Button>
-            <Dialog>
-              <DialogTrigger asChild><Button className="home-button home-button-red home-event"><CalendarDays />Event & Promo<span className="home-new">NEW</span></Button></DialogTrigger>
-              <DialogContent>
-                <DialogTitle>Event & Promo</DialogTitle>
-                <DialogDescription>Belum ada event atau promo yang diumumkan.</DialogDescription>
-                <Button asChild><a href="/arena.html">Mulai bermain <ArrowRight /></a></Button>
-              </DialogContent>
-            </Dialog>
-            <Button asChild variant="outline" className="home-button"><Link to="/login"><UserRound />Login</Link></Button>
-            <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button>
+            {/* Event & Promo disembunyikan sampai ada konten (D1, O8); kembali bersama RPC list_public_events. */}
+            {!auth.session ? (
+              <Button asChild variant="outline" className="home-button"><Link to="/login"><UserRound />Masuk / Daftar</Link></Button>
+            ) : auth.loading ? (
+              // landingPath baru benar setelah peran terbaca; sebelum itu tombol belum boleh diklik.
+              <Button variant="outline" className="home-button" disabled aria-busy="true"><UserRound />Akun saya</Button>
+            ) : (
+              <Button asChild variant="outline" className="home-button"><Link to={auth.landingPath}><UserRound />Akun saya</Link></Button>
+            )}
+            {/* Hanya tampilan; penjaga sebenarnya RLS/RPC (fungsi admin_* menolak non-admin). */}
+            {!auth.loading && auth.isAdmin ? (
+              <Button asChild variant="outline" className="home-button"><Link to="/admin"><ShieldCheck />Admin Platform</Link></Button>
+            ) : null}
           </div>
         </div>
       </nav>
