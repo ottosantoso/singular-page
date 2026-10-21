@@ -12,6 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "node --experimental-strip-types --no-warnings --test \"tests/*.test.mjs\"",
+    "typecheck": "tsc --noEmit",
+    "types:gen": "node scripts/gen-types.mjs",
     "sim:pairing": "node scripts/sim-pairing.mjs",
     "db:dev": "powershell -ExecutionPolicy Bypass -File scripts/push-migrations.ps1 -Target dev",
     "db:prod": "powershell -ExecutionPolicy Bypass -File scripts/push-migrations.ps1 -Target prod",

@@ -122,11 +122,11 @@ function buildPublicStandings(players: PublicPlayer[], matches: PublicMatch[]) {
   return [...table.values()].sort((a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff || a.name.localeCompare(b.name));
 }
 
-function competitionRank(rows: PublicStanding[], index: number) {
+function competitionRank(rows: PublicStanding[], index: number): number {
   if (index === 0) return 1;
   const current = rows[index];
   const previous = rows[index - 1];
-  const tied = current.points === previous.points && current.wins === previous.wins && current.pointDiff === previous.pointDiff;
+  const tied = !!current && !!previous && current.points === previous.points && current.wins === previous.wins && current.pointDiff === previous.pointDiff;
   return tied ? competitionRank(rows, index - 1) : competitionRank(rows, index - 1) + 1;
 }
 
@@ -436,8 +436,8 @@ function PublicEventPage() {
   const myRivals = new Map<string, { games: number; wins: number }>();
   myMatches.forEach((match) => {
     const mineIsA = (match.team_a ?? []).includes(meName);
-    const partners = (mineIsA ? match.team_a : match.team_b).filter((name) => name !== meName);
-    const rivals = mineIsA ? match.team_b : match.team_a;
+    const partners = ((mineIsA ? match.team_a : match.team_b) ?? []).filter((name) => name !== meName);
+    const rivals = (mineIsA ? match.team_b : match.team_a) ?? [];
     const won = publicMatchWon(match, meName) === true;
     partners.forEach((name) => {
       const row = myPartners.get(name) ?? { games: 0, wins: 0 };
