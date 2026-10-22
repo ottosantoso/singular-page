@@ -27,6 +27,8 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { EventQr } from "@/components/event-qr";
+import { downloadQrPng } from "@/lib/qr-download";
 import { supabase } from "@/integrations/supabase/client";
 import { loginIdToEmail, useAuth } from "@/lib/auth";
 import { canOrganizationRole } from "@/lib/permissions";
@@ -609,7 +611,6 @@ function EventCard({
   const arenaUrl = `/arena.html?organization_id=${encodeURIComponent(organizationId)}&event_id=${encodeURIComponent(event.id)}&sport=${encodeURIComponent(event.sport)}&public_code=${encodeURIComponent(event.public_code)}&return_to=${encodeURIComponent("/workspace")}`;
   const publicUrl = `/e/${encodeURIComponent(event.public_code)}`;
   const fullPublicUrl = `${getPublicAppUrl()}${publicUrl}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=${encodeURIComponent(fullPublicUrl)}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Ikut ${event.name}: ${fullPublicUrl}`)}`;
 
   async function deleteEvent() {
@@ -693,7 +694,7 @@ function EventCard({
               </button>
             </div>
             <div className="mt-6 grid gap-6 sm:grid-cols-[180px_1fr] sm:items-center">
-              <img src={qrUrl} alt={`QR Code ${event.name}`} className="mx-auto size-44 rounded-2xl border border-arena-ink/10 p-2" />
+              <EventQr value={fullPublicUrl} label={`QR Code ${event.name}`} className="mx-auto size-44 rounded-2xl border border-arena-ink/10 bg-white p-2" />
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-arena-dim">Link publik</p>
                 <p className="mt-2 break-all rounded-xl bg-slate-50 p-3 text-sm font-semibold text-arena-ink">{fullPublicUrl}</p>
@@ -704,9 +705,9 @@ function EventCard({
               <button type="button" onClick={() => void copyPublicLink()} className="inline-flex items-center justify-center gap-2 rounded-full border border-arena-ink/15 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink">
                 <Copy className="size-4" /> {copyMessage || "Salin"}
               </button>
-              <a href={qrUrl} download={`${event.public_code}-qr.png`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-arena-ink/15 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink">
+              <button type="button" onClick={() => void downloadQrPng(fullPublicUrl, `${event.public_code}-qr.png`).then((ok) => { if (!ok) window.alert("QR belum dapat diunduh. Salin link publik sebagai gantinya."); })} className="inline-flex items-center justify-center gap-2 rounded-full border border-arena-ink/15 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink">
                 <Download className="size-4" /> Download QR
-              </a>
+              </button>
               <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-arena-lime px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink">
                 <Share2 className="size-4" /> WhatsApp
               </a>
