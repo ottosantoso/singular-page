@@ -37,3 +37,11 @@ supabase/.temp/
 # Local production diagnostic scripts
 query.mjs
 
+
+# Local-only credentials, notes, and worktree artifacts
+.env
+.env.*
+*.md
+*.mdx
+.claude/
+.codex-dev-merge/
