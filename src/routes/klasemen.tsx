@@ -1,23 +1,54 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import html2canvas from "html2canvas-pro";
 import {
   Activity,
-  ArrowLeft,
+  ArrowRight,
   BarChart3,
+  Bell,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  Crown,
   Download,
   ExternalLink,
-  Medal,
+  Flame,
+  Home,
+  Image as ImageIcon,
+  List,
+  MoreHorizontal,
+  Percent,
+  Radio,
+  Search,
+  Settings,
   Sparkles,
   Swords,
   Target,
+  Ticket,
   TrendingUp,
   Trophy,
+  User,
   Users,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { rankStandings, sortStandings } from "@/lib/ranking";
+import {
+  avatarTone,
+  buildForm,
+  buildInsights,
+  countResults,
+  initials,
+  leaderNarrative,
+  teamLabel,
+  type Insight,
+  type InsightKind,
+  type PlayerLine,
+} from "@/lib/klasemen-insights";
+import { MatchBadges, ScheduleDialog } from "@/components/klasemen/schedule-dialog";
+import "@/klasemen.css";
 
 export const Route = createFileRoute("/klasemen")({
   head: () => ({
@@ -134,11 +165,92 @@ function buildPlayerReport(standings: Standing[], statRows: PlayerStatRow[]): Pl
   });
 }
 
+type NavKey = "beranda" | "klasemen" | "pertandingan" | "pemain" | "event" | "galeri" | "notifikasi" | "pengaturan";
+
+const NAV_ITEMS: Array<{ key: NavKey; label: string; icon: LucideIcon; badge?: string }> = [
+  { key: "beranda", label: "Beranda", icon: Home },
+  { key: "klasemen", label: "Klasemen", icon: Trophy },
+  { key: "pertandingan", label: "Pertandingan", icon: CalendarDays },
+  { key: "pemain", label: "Pemain", icon: User },
+  { key: "event", label: "Event & Promo", icon: Ticket, badge: "NEW" },
+  { key: "galeri", label: "Galeri", icon: ImageIcon },
+  { key: "notifikasi", label: "Notifikasi", icon: Bell },
+  { key: "pengaturan", label: "Pengaturan", icon: Settings },
+];
+
+const MOBILE_NAV: NavKey[] = ["beranda", "klasemen", "pertandingan", "pemain"];
+const MORE_NAV: NavKey[] = ["event", "galeri", "notifikasi", "pengaturan"];
+
+const INSIGHT_STYLE: Record<InsightKind, { icon: LucideIcon; tone: string }> = {
+  consistent: { icon: TrendingUp, tone: "kl-tone-green" },
+  scorer: { icon: Target, tone: "kl-tone-gold" },
+  streak: { icon: Flame, tone: "kl-tone-red" },
+  duo: { icon: Users, tone: "kl-tone-blue" },
+  closest: { icon: Zap, tone: "kl-tone-gold" },
+  blowout: { icon: Swords, tone: "kl-tone-blue" },
+};
+
+function Avatar({ name, size }: { name: string; size?: "lg" | "xl" }) {
+  return (
+    <span
+      className={`kl-avatar ${size ? `kl-avatar--${size}` : ""}`}
+      style={avatarTone(name)}
+      aria-hidden="true"
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function signedValue(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function MatchCard({ match }: { match: MatchRow }) {
+  return (
+    <article className="kl-match">
+      <div className="kl-match-top">
+        <span className="r" style={{ display: "inline-flex", alignItems: "center", gap: ".4rem" }}>
+          Ronde {match.round}
+          <MatchBadges match={match} />
+        </span>
+        <span className="c">Lapangan {match.court}</span>
+      </div>
+      <div className="kl-match-body">
+        <p className={`kl-match-team ${match.score_a > match.score_b ? "is-win" : ""}`} style={{ margin: 0 }}>
+          {teamLabel(match.team_a)}
+        </p>
+        <div className="kl-score">
+          {match.score_a} – {match.score_b}
+        </div>
+        <p className={`kl-match-team right ${match.score_b > match.score_a ? "is-win" : ""}`} style={{ margin: 0 }}>
+          {teamLabel(match.team_b)}
+        </p>
+      </div>
+    </article>
+  );
+}
+
 function Klasemen() {
   const [input, setInput] = useState("");
   const [code, setCode] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [tableTab, setTableTab] = useState<"tabel" | "grafik">("tabel");
+  const [scheduleTab, setScheduleTab] = useState<"live" | "hasil" | "ronde">("hasil");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogRound, setDialogRound] = useState<number | null>(null);
+  const [focusName, setFocusName] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  const notify = (message: string) => setToast(message);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const handleDownloadImage = async () => {
     if (!reportRef.current) return;
@@ -146,7 +258,7 @@ function Klasemen() {
     try {
       const canvas = await html2canvas(reportRef.current, {
         scale: 2,
-        backgroundColor: "#f8fafc",
+        backgroundColor: "#f4f7fc",
         useCORS: true,
       });
       const dataURL = canvas.toDataURL("image/png");
@@ -190,7 +302,6 @@ function Klasemen() {
     }
   }, []);
 
-
   const query = useQuery({
     queryKey: ["klasemen", code],
     enabled: !!code,
@@ -225,364 +336,790 @@ function Klasemen() {
   });
 
   const data = query.data;
-  const dashboard = data
-    ? (() => {
-        const totalScore = data.matches.reduce((sum, match) => sum + match.score_a + match.score_b, 0);
-        const leader = data.playerReport[0];
-        const topScorer = [...data.playerReport].sort(
-          (a, b) => b.pointCount - a.pointCount || b.winRate - a.winRate,
-        )[0];
-        const mostConsistent = [...data.playerReport]
-          .filter((player) => player.games > 0)
-          .sort((a, b) => b.winRate - a.winRate || b.games - a.games)[0];
-        const closestMatch = [...data.matches].sort(
-          (a, b) => Math.abs(a.score_a - a.score_b) - Math.abs(b.score_a - b.score_b),
-        )[0];
-        const maxPoints = Math.max(...data.standings.map((player) => player.points), 1);
 
-        return {
-          totalScore,
-          averageTeamScore: data.matches.length > 0 ? totalScore / (data.matches.length * 2) : 0,
-          leader,
-          topScorer,
-          mostConsistent,
-          closestMatch,
-          maxPoints,
-        };
-      })()
-    : null;
+  const view = useMemo(() => {
+    if (!data) return null;
+    const lines: PlayerLine[] = data.standings.map((s) => {
+      const report = data.playerReport.find((p) => p.name === s.name);
+      return {
+        name: s.name,
+        games: s.games,
+        wins: s.wins,
+        winRate: report?.winRate ?? 0,
+        points: s.points,
+        pointDiff: s.pointDiff,
+        pointCount: report?.pointCount ?? 0,
+      };
+    });
+    const totalScore = data.matches.reduce((sum, m) => sum + m.score_a + m.score_b, 0);
+    return {
+      lines,
+      form: buildForm(data.matches),
+      totalScore,
+      averageTeamScore: data.matches.length > 0 ? totalScore / (data.matches.length * 2) : 0,
+      averageMatchTotal: data.matches.length > 0 ? totalScore / data.matches.length : 0,
+      rounds: new Set([...data.matches, ...data.liveMatches].map((m) => m.round)).size,
+      activePlayers: lines.filter((l) => l.games > 0).length,
+      maxPoints: Math.max(...lines.map((l) => l.points), 1),
+      maxGames: Math.max(...lines.map((l) => l.games), 1),
+      hasIndividual: data.playerReport.some((p) => p.pointCount > 0),
+      insights: buildInsights(lines, data.matches),
+      narrative: leaderNarrative(lines),
+      allMatches: [...data.liveMatches, ...data.matches],
+    };
+  }, [data]);
+
+  const openSchedule = (round: number | null) => {
+    if (!view || view.allMatches.length === 0) {
+      notify(view ? "Belum ada pertandingan tercatat." : "Masukkan kode arena dulu untuk melihat pertandingan.");
+      return;
+    }
+    setDialogRound(round);
+    setDialogOpen(true);
+  };
+
+  const scrollToReport = () => {
+    const el = document.getElementById("laporan-pemain");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    else notify("Masukkan kode arena dulu untuk melihat laporan pemain.");
+  };
+
+  const handleNav = (key: NavKey) => {
+    setMoreOpen(false);
+    switch (key) {
+      case "klasemen":
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        break;
+      case "pertandingan":
+        openSchedule(null);
+        break;
+      case "pemain":
+        scrollToReport();
+        break;
+      case "event":
+        notify("Event & Promo segera hadir 🚀");
+        break;
+      case "galeri":
+        notify("Galeri segera hadir 🚀");
+        break;
+      case "notifikasi":
+        notify("Notifikasi segera hadir 🚀");
+        break;
+      case "pengaturan":
+        notify("Pengaturan segera hadir 🚀");
+        break;
+      default:
+        break;
+    }
+  };
+
+  const renderNav = (key: NavKey, base: string, withLabel = true) => {
+    const item = NAV_ITEMS.find((n) => n.key === key)!;
+    const Icon = item.icon;
+    const content = (
+      <>
+        <Icon aria-hidden="true" />
+        {withLabel ? item.label : <span>{item.label}</span>}
+        {item.badge && <span className="kl-new">{item.badge}</span>}
+      </>
+    );
+    if (key === "beranda") {
+      return (
+        <Link key={key} to="/" className={base}>
+          {content}
+        </Link>
+      );
+    }
+    return (
+      <button
+        key={key}
+        type="button"
+        className={`${base} ${key === "klasemen" ? "is-active" : ""}`}
+        aria-current={key === "klasemen" ? "page" : undefined}
+        onClick={() => handleNav(key)}
+      >
+        {content}
+      </button>
+    );
+  };
+
+  const focus = view ? (view.lines.find((l) => l.name === focusName) ?? view.lines[0]) : undefined;
+  const focusResults = view && focus ? countResults(view.form.get(focus.name)) : null;
+  const focusTotal = focusResults ? focusResults.wins + focusResults.losses + focusResults.draws : 0;
+  const winPct = focusTotal > 0 && focusResults ? (focusResults.wins / focusTotal) * 100 : 0;
+  const drawPct = focusTotal > 0 && focusResults ? (focusResults.draws / focusTotal) * 100 : 0;
+  const donutBackground =
+    focusTotal > 0
+      ? `conic-gradient(#1d4ed8 0 ${winPct}%, #94a3b8 ${winPct}% ${winPct + drawPct}%, #e11d2e ${winPct + drawPct}% 100%)`
+      : "conic-gradient(#e5eaf3 0 100%)";
+
+  const podium = view ? view.lines.slice(0, 3) : [];
+  const podiumOrder = [1, 0, 2];
+  const latestRounds = data
+    ? [...new Set([...data.liveMatches, ...data.matches].map((m) => m.round))].sort((a, b) => b - a).slice(0, 4)
+    : [];
 
   return (
-    <main className="arena-home court-lines min-h-screen">
-      <div ref={reportRef} className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-20 pt-6 sm:px-6 sm:pt-10">
-        <nav className="mb-8 flex flex-wrap items-center justify-between gap-3">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 rounded-full border border-arena-ink/15 bg-card/80 px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-arena-ink transition hover:border-arena-lime"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" /> Beranda
-          </Link>
-          <div className="flex items-center gap-3">
-            <a
-              href="/arena.html"
-              className="inline-flex items-center gap-1.5 font-display text-xs font-bold uppercase tracking-wider text-arena-lime"
-            >
-              Buka Arena <ExternalLink className="size-3.5" aria-hidden="true" />
-            </a>
-            <button
-              onClick={handleDownloadImage}
-              disabled={isDownloading}
-              className="inline-flex items-center gap-2 rounded-full bg-arena-lime px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-            >
-              <Download className="size-4" aria-hidden="true" />
-              {isDownloading ? "Memproses..." : "Download Laporan"}
-            </button>
-          </div>
+    <main className="kl-root">
+      <header className="kl-topbar">
+        <Link to="/" className="kl-brand" aria-label="OTTOPLAY ARENA — Beranda">
+          <img src="/brand/logo-light-128.webp" alt="OTTOPLAY ARENA" />
+        </Link>
+        <nav className="kl-topnav" aria-label="Menu utama">
+          {NAV_ITEMS.slice(0, 5).map((item) => renderNav(item.key, "kl-navlink"))}
         </nav>
-
-        <header className="grid items-end gap-6 border-b border-arena-ink/10 pb-7 md:grid-cols-[1fr_auto]">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-arena-lime/30 bg-arena-lime/10 px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-wider text-arena-ink">
-              <Activity className="size-3.5 text-arena-lime" aria-hidden="true" /> Analisis pertandingan
-            </div>
-            <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-arena-ink sm:text-4xl">
-              Dashboard Klasemen
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-arena-dim">
-              Pantau peringkat, konsistensi, kontribusi poin, dan riwayat pertandingan dalam satu laporan.
-            </p>
-          </div>
-          {code && (
-            <div className="border-l-2 border-arena-lime pl-4 text-left md:text-right">
-              <p className="font-display text-[10px] font-bold uppercase tracking-wider text-arena-dim">Kode arena</p>
-              <p className="font-display text-xl font-bold text-arena-ink">{code}</p>
-              <p className="mt-1 text-xs text-arena-dim">Diperbarui otomatis setiap 15 detik</p>
-            </div>
-          )}
-        </header>
-
-        <form
-          className="mt-6 flex max-w-xl flex-wrap items-center gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const c = input.trim().toUpperCase();
-            setCode(c);
-            if (c) {
-              localStorage.setItem("kocokArenaCode_manual", c);
-              localStorage.setItem("kocokArenaCode_manual_at", String(Date.now()));
-            }
-          }}
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value.toUpperCase())}
-            placeholder="Kode arena, cth. AB12CD"
-            className="min-w-0 flex-1 rounded-full border border-arena-ink/15 bg-card/85 px-5 py-3 text-sm text-arena-ink outline-none transition placeholder:text-arena-dim focus:border-arena-lime"
-          />
-          <button type="submit" className="btn-arena !px-7 !py-3 !text-sm">
-            Tampilkan
+        <div className="kl-actions">
+          <button
+            type="button"
+            className="kl-iconbtn"
+            aria-label="Cari kode arena"
+            onClick={() => document.getElementById("kl-code")?.focus()}
+          >
+            <Search aria-hidden="true" />
           </button>
-        </form>
+          <button type="button" className="kl-iconbtn" aria-label="Notifikasi" onClick={() => handleNav("notifikasi")}>
+            <Bell aria-hidden="true" />
+            <span className="kl-dot" />
+          </button>
+          <Link to="/login" className="kl-iconbtn" aria-label="Masuk / akun">
+            <User aria-hidden="true" />
+          </Link>
+        </div>
+      </header>
 
-        {!code && (
-          <p className="mt-10 text-sm text-arena-dim">
-            Belum ada kode? Mulai pertandingan di arena dulu, kodenya otomatis dibuat.
-          </p>
-        )}
+      <div className="kl-shell">
+        <aside className="kl-sidebar" aria-label="Navigasi samping">
+          <nav className="kl-side-nav">{NAV_ITEMS.map((item) => renderNav(item.key, "kl-navlink"))}</nav>
+          <div className="kl-side-card">
+            <p>
+              Better Players,
+              <br />
+              Bigger Community
+            </p>
+            <span>Rotasi adil, skor tercatat, klasemen real-time.</span>
+          </div>
+        </aside>
 
-        {code && query.isLoading && (
-          <p className="mt-10 text-sm text-arena-dim">Memuat dashboard analisis…</p>
-        )}
+        <div ref={reportRef} className="kl-main">
+          <section className="kl-hero">
+            <div className="kl-crumb">
+              <Link to="/">Beranda</Link>
+              <ChevronRight size={12} aria-hidden="true" />
+              <span>Klasemen</span>
+            </div>
+            <div className="kl-chip">
+              <Activity aria-hidden="true" /> Analisis &amp; statistik
+            </div>
+            <h1 className="kl-title">
+              Klasemen<span>Pertandingan</span>
+            </h1>
+            <p className="kl-sub">
+              Pantau peringkat, konsistensi, kontribusi poin, dan riwayat pertandingan dalam satu laporan. Lihat siapa
+              yang sedang on fire.
+            </p>
+            <div className="kl-hero-meta">
+              {code && (
+                <div className="kl-codebadge">
+                  <small>Kode arena</small>
+                  <b>{code}</b>
+                  <i>Diperbarui otomatis setiap 15 detik</i>
+                </div>
+              )}
+              <a href="/arena.html" className="kl-btn">
+                Buka Arena <ExternalLink aria-hidden="true" />
+              </a>
+              <button type="button" onClick={handleDownloadImage} disabled={isDownloading} className="kl-btn kl-btn--primary">
+                <Download aria-hidden="true" />
+                {isDownloading ? "Memproses..." : "Download Laporan"}
+              </button>
+            </div>
+          </section>
 
-        {code && query.isError && (
-          <p className="mt-10 text-sm text-arena-dim">
-            Gagal memuat data. Coba lagi sebentar.
-          </p>
-        )}
+          <form
+            className="kl-filter"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const c = input.trim().toUpperCase();
+              setCode(c);
+              if (c) {
+                localStorage.setItem("kocokArenaCode_manual", c);
+                localStorage.setItem("kocokArenaCode_manual_at", String(Date.now()));
+              }
+            }}
+          >
+            <label className="kl-codeinput">
+              <Search aria-hidden="true" />
+              <input
+                id="kl-code"
+                value={input}
+                onChange={(e) => setInput(e.target.value.toUpperCase())}
+                placeholder="Kode arena, cth. AB12CD"
+                aria-label="Kode arena"
+              />
+            </label>
+            <div className="kl-pills">
+              <button type="button" className="kl-pill" onClick={() => notify("Filter Season segera hadir 🚀")}>
+                <CalendarDays aria-hidden="true" /> Semua Season <ChevronDown aria-hidden="true" />
+              </button>
+              <button type="button" className="kl-pill" onClick={() => notify("Filter Mode segera hadir 🚀")}>
+                <Swords aria-hidden="true" /> Semua Mode <ChevronDown aria-hidden="true" />
+              </button>
+              <button type="button" className="kl-pill" onClick={() => notify("Filter Cabang Olahraga segera hadir 🚀")}>
+                <Trophy aria-hidden="true" /> Semua Cabang Olahraga <ChevronDown aria-hidden="true" />
+              </button>
+            </div>
+            <button type="submit" className="kl-btn kl-btn--primary">
+              Tampilkan
+            </button>
+          </form>
 
-        {data && dashboard && (
-          <>
-            <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Ringkasan turnamen">
-              {[
-                { label: "Pemain aktif", value: data.players.length, icon: Users },
-                { label: "Pertandingan", value: data.matches.length, icon: Swords },
-                { label: "Total poin", value: dashboard.totalScore, icon: Target },
-                { label: "Rata-rata skor", value: dashboard.averageTeamScore.toFixed(1), icon: BarChart3 },
-              ].map((metric) => (
-                <article key={metric.label} className="rounded-lg border border-arena-ink/10 bg-card/85 p-4 shadow-sm backdrop-blur-sm sm:p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-arena-dim">{metric.label}</p>
-                    <metric.icon className="size-4 text-arena-lime" aria-hidden="true" />
-                  </div>
-                  <p className="mt-3 font-display text-3xl font-bold text-arena-ink">{metric.value}</p>
-                </article>
-              ))}
-            </section>
+          {!code && <p className="kl-note">Belum ada kode? Mulai pertandingan di arena dulu, kodenya otomatis dibuat.</p>}
+          {code && query.isLoading && <p className="kl-note">Memuat dashboard analisis…</p>}
+          {code && query.isError && <p className="kl-note">Gagal memuat data. Coba lagi sebentar.</p>}
 
-            <section className="mt-5 grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
-              <div className="overflow-hidden rounded-lg bg-arena-ink p-6 shadow-xl sm:p-7">
-                {dashboard.leader ? (
-                  <>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <span className="inline-flex items-center gap-2 rounded-md bg-background/10 px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-wider text-background">
-                        <Trophy className="size-3.5 text-arena-lime" aria-hidden="true" /> Pemimpin klasemen
-                      </span>
-                      <span className="font-display text-xs font-bold uppercase tracking-wider text-background/60">
-                        {dashboard.leader.games} pertandingan
-                      </span>
+          {data && view && (
+            <>
+              <section className="kl-stats" aria-label="Ringkasan turnamen">
+                {[
+                  { label: "Pemain aktif", value: data.players.length, icon: Users, tone: "blue", note: `${view.activePlayers} sudah bermain` },
+                  {
+                    label: "Pertandingan",
+                    value: data.matches.length,
+                    icon: Swords,
+                    tone: "red",
+                    note: data.liveMatches.length > 0 ? `${data.liveMatches.length} sedang live` : `${view.rounds} ronde`,
+                  },
+                  { label: "Total poin", value: view.totalScore, icon: Target, tone: "gold", note: `${view.averageMatchTotal.toFixed(1)} poin per laga` },
+                  { label: "Rata-rata skor", value: view.averageTeamScore.toFixed(1), icon: BarChart3, tone: "green", note: "per tim per laga" },
+                ].map((metric) => (
+                  <article key={metric.label} className="kl-stat">
+                    <span className={`kl-stat-icon kl-stat-icon--${metric.tone}`}>
+                      <metric.icon aria-hidden="true" />
+                    </span>
+                    <div>
+                      <small>{metric.label}</small>
+                      <b>{metric.value}</b>
+                      <em>{metric.note}</em>
                     </div>
-                    <div className="mt-8 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-background/55">Performa terbaik saat ini</p>
-                        <h2 className="mt-1 font-display text-3xl font-bold text-background">{dashboard.leader.name}</h2>
-                        <div className="mt-4 flex items-center gap-5">
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wide text-background/50">Win rate</p>
-                            <p className="font-display text-xl font-bold text-arena-lime">{dashboard.leader.winRate.toFixed(0)}%</p>
-                          </div>
-                          <div className="h-9 w-px bg-background/15" />
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wide text-background/50">Total poin</p>
-                            <p className="font-display text-xl font-bold text-background">{data.standings[0]?.points ?? 0}</p>
-                          </div>
-                          <div className="h-9 w-px bg-background/15" />
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wide text-background/50">Menang</p>
-                            <p className="font-display text-xl font-bold text-background">{dashboard.leader.wins}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex size-20 items-center justify-center rounded-full border border-arena-lime/30 bg-arena-lime/10">
-                        <Medal className="size-9 text-arena-lime" aria-hidden="true" />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-background/70">Belum ada performa pemain untuk dianalisis.</p>
-                )}
-              </div>
+                  </article>
+                ))}
+              </section>
 
-              <div className="rounded-lg border border-arena-ink/10 bg-card/85 p-5 shadow-sm backdrop-blur-sm">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="size-4 text-arena-lime" aria-hidden="true" />
-                  <h2 className="font-display text-sm font-bold uppercase tracking-wider text-arena-ink">Insight cepat</h2>
-                </div>
-                <div className="mt-5 space-y-5">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-arena-dim">Paling konsisten</p>
-                    <p className="mt-1 font-display text-lg font-bold text-arena-ink">{dashboard.mostConsistent?.name ?? "—"}</p>
-                    <p className="text-xs text-arena-dim">{dashboard.mostConsistent ? `${dashboard.mostConsistent.winRate.toFixed(0)}% kemenangan` : "Belum ada pertandingan"}</p>
-                  </div>
-                  <div className="border-t border-arena-ink/10 pt-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-arena-dim">Poin individu terbanyak</p>
-                    <p className="mt-1 font-display text-lg font-bold text-arena-ink">{dashboard.topScorer?.name ?? "—"}</p>
-                    <p className="text-xs text-arena-dim">{dashboard.topScorer?.pointCount ?? 0} poin tercatat</p>
-                  </div>
-                  <div className="border-t border-arena-ink/10 pt-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-arena-dim">Laga paling ketat</p>
-                    <p className="mt-1 font-display text-lg font-bold text-arena-ink">
-                      {dashboard.closestMatch ? `${dashboard.closestMatch.score_a} – ${dashboard.closestMatch.score_b}` : "—"}
+              <section className="kl-showcase">
+                <div className="kl-podium">
+                  <h2>
+                    <Trophy aria-hidden="true" /> Top 3 Klasemen
+                  </h2>
+                  <p className="kl-pdesc">Pemain dengan performa terbaik musim ini</p>
+                  {podium.length === 0 || podium[0].games === 0 ? (
+                    <p className="kl-pdesc" style={{ marginTop: "1.5rem" }}>
+                      Belum ada performa pemain untuk dianalisis.
                     </p>
-                    <p className="truncate text-xs text-arena-dim">
-                      {dashboard.closestMatch ? `${dashboard.closestMatch.team_a.join(" & ")} vs ${dashboard.closestMatch.team_b.join(" & ")}` : "Belum ada pertandingan"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="mt-5 overflow-hidden rounded-lg border border-arena-ink/10 bg-card/90 shadow-sm">
-              <div className="flex flex-col gap-2 border-b border-arena-ink/10 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-arena-lime">Peringkat keseluruhan</p>
-                  <h2 className="mt-1 font-display text-xl font-bold uppercase tracking-wide text-arena-ink">Klasemen Pejuang</h2>
-                </div>
-                <p className="text-xs text-arena-dim">Diurutkan berdasarkan poin, lalu selisih poin</p>
-              </div>
-              {data.standings.length === 0 ? (
-                <p className="px-5 py-10 text-center text-sm text-arena-dim">Belum ada data untuk kode ini.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="arena-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Pejuang</th>
-                        <th>Main</th>
-                        <th>Menang</th>
-                        <th>Win Rate</th>
-                        <th>Selisih</th>
-                        <th>Poin</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.standings.map((standing, index) => {
-                        const report = data.playerReport.find((player) => player.name === standing.name);
-                        const winRate = report?.winRate ?? 0;
+                  ) : (
+                    <div className="kl-podium-stage">
+                      {podiumOrder.map((idx) => {
+                        const p = podium[idx];
+                        const place = idx + 1;
+                        if (!p) return <div key={idx} className={`kl-step kl-step--${place} kl-step--empty`} />;
                         return (
-                        <tr key={standing.name} className={index === 0 ? "bg-arena-lime/5" : undefined}>
-                          <td>
-                            <span className={`inline-flex size-7 items-center justify-center rounded-md font-display text-xs font-bold ${index === 0 ? "bg-arena-lime text-primary-foreground" : "bg-muted text-arena-dim"}`}>
-                              {String(competitionRank(data.standings, index)).padStart(2, "0")}
-                            </span>
-                          </td>
-                          <td className="font-semibold text-arena-ink">{standing.name}</td>
-                          <td>{standing.games}</td>
-                          <td>{standing.wins}</td>
-                          <td>
-                            <div className="flex min-w-32 items-center gap-3">
-                              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                <div className="h-full rounded-full bg-arena-lime" style={{ width: `${winRate}%` }} />
-                              </div>
-                              <span className="w-9 text-right font-display text-xs font-bold text-arena-ink">{winRate.toFixed(0)}%</span>
-                            </div>
-                          </td>
-                          <td className="font-display font-bold text-arena-ink">{standing.pointDiff > 0 ? `+${standing.pointDiff}` : standing.pointDiff}</td>
-                          <td>
-                            <div className="flex items-center gap-3">
-                              <span className="font-display text-base font-bold text-arena-ink">{standing.points}</span>
-                              <div className="hidden h-1 w-16 overflow-hidden rounded-full bg-muted sm:block">
-                                <div className="h-full rounded-full bg-arena-lime" style={{ width: `${(standing.points / dashboard.maxPoints) * 100}%` }} />
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
+                          <div key={p.name} className={`kl-step kl-step--${place}`}>
+                            {place === 1 && <Crown className="kl-crown" aria-hidden="true" />}
+                            <Avatar name={p.name} size={place === 1 ? "xl" : "lg"} />
+                            <span className="kl-step-name">{p.name}</span>
+                            <span className="kl-step-pts">{p.points} Poin</span>
+                            <div className="kl-block">{competitionRank(data.standings, idx)}</div>
+                          </div>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </div>
+                  )}
                 </div>
-              )}
-            </section>
 
-            <section className="mt-8">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-arena-lime">Riwayat arena</p>
-                  <h2 className="mt-1 font-display text-xl font-bold uppercase tracking-wide text-arena-ink">Skor Pertandingan</h2>
+                <div className="kl-card kl-top5">
+                  <div className="kl-card-title">
+                    <Users aria-hidden="true" /> Top 5 Pemain
+                  </div>
+                  <ol className="kl-top5-list">
+                    {view.lines.slice(0, 5).map((p, i) => {
+                      const rank = competitionRank(data.standings, i);
+                      return (
+                        <li key={p.name}>
+                          <span className={`kl-rankbadge ${rank <= 3 ? `kl-rankbadge--${rank}` : ""}`}>{rank}</span>
+                          <Avatar name={p.name} />
+                          <b>{p.name}</b>
+                          <span className="kl-pts">{p.points}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
                 </div>
-                <span className="rounded-full border border-arena-ink/10 bg-card/70 px-3 py-1.5 text-xs font-semibold text-arena-dim">{data.matches.length} laga</span>
-              </div>
-              {data.matches.length + data.liveMatches.length === 0 ? (
-                <p className="text-sm text-arena-dim">Belum ada pertandingan tercatat.</p>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {[...data.liveMatches, ...data.matches].map((match) => (
-                    <article key={match.id} className="rounded-lg border border-arena-ink/10 bg-card/85 p-4 shadow-sm">
-                      <div className="flex items-center justify-between gap-3 border-b border-arena-ink/10 pb-3">
-                        <span className="font-display text-[10px] font-bold uppercase tracking-wider text-arena-lime">
-                          Ronde {match.round}
-                          {match.status === "live" && (
-                            <span className="ml-2 rounded-full bg-arena-ink px-2 py-0.5 text-[9px] text-background" title="Skor berjalan, belum dihitung ke klasemen">LIVE</span>
-                          )}
-                          {match.status === "auto_closed" && (
-                            <span className="ml-2 rounded-full border border-arena-ink/20 px-2 py-0.5 text-[9px] text-arena-dim" title="Sesi ditinggal, ditutup otomatis dengan skor terakhir">Ditutup otomatis</span>
-                          )}
-                        </span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-arena-dim">Lapangan {match.court}</span>
-                      </div>
-                      <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                        <p className={`text-sm leading-snug ${match.score_a > match.score_b ? "font-bold text-arena-ink" : "text-arena-dim"}`}>{match.team_a.join(" & ")}</p>
-                        <div className="rounded-md bg-arena-ink px-3 py-2 font-display text-lg font-bold text-background">{match.score_a} – {match.score_b}</div>
-                        <p className={`text-right text-sm leading-snug ${match.score_b > match.score_a ? "font-bold text-arena-ink" : "text-arena-dim"}`}>{match.team_b.join(" & ")}</p>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
 
-            <section className="mt-8">
-              <div className="mb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-arena-lime">Analisis individual</p>
-                <h2 className="mt-1 font-display text-xl font-bold uppercase tracking-wide text-arena-ink">Laporan Pemain</h2>
-                <p className="mt-1 text-xs text-arena-dim">Poin individu, out, dan kesalahan tersedia untuk pertandingan dengan mode Detail.</p>
-              </div>
-              {data.playerReport.length === 0 ? (
-                <p className="text-sm text-arena-dim">Belum ada data untuk kode ini.</p>
-              ) : (
-                <div className="overflow-x-auto rounded-lg border border-arena-ink/10 bg-card/90 shadow-sm">
-                  <table className="arena-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Pejuang</th>
-                        <th>Main</th>
-                        <th>Menang</th>
-                        <th>Win Rate</th>
-                        <th>Poin Individu</th>
-                        <th>Out</th>
-                        <th>Kesalahan</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.playerReport.map((player, index) => (
-                        <tr key={player.name}>
-                          <td className="font-display font-bold text-arena-lime">{String(index + 1).padStart(2, "0")}</td>
-                          <td className="font-semibold text-arena-ink">{player.name}</td>
-                          <td>{player.games}</td>
-                          <td>{player.wins}</td>
-                          <td>
-                            <div className="flex min-w-32 items-center gap-3">
-                              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                <div className="h-full rounded-full bg-arena-lime" style={{ width: `${player.winRate}%` }} />
-                              </div>
-                              <span className="w-9 text-right font-display text-xs font-bold">{player.winRate.toFixed(0)}%</span>
+                <div className="kl-card kl-insight">
+                  <div className="kl-card-title">
+                    <Sparkles aria-hidden="true" /> Insight Cepat
+                  </div>
+                  {view.insights.length === 0 ? (
+                    <p className="kl-card-sub" style={{ marginTop: "1rem" }}>
+                      Belum cukup data. Insight muncul setelah ada pertandingan selesai.
+                    </p>
+                  ) : (
+                    <div className="kl-insight-list">
+                      {view.insights.slice(0, 5).map((item: Insight) => {
+                        const style = INSIGHT_STYLE[item.kind];
+                        const Icon = style.icon;
+                        return (
+                          <div key={item.kind} className="kl-insight-item">
+                            <span className={`kl-insight-icon ${style.tone}`}>
+                              <Icon aria-hidden="true" />
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <small>{item.label}</small>
+                              <strong>{item.title}</strong>
+                              <span>{item.detail}</span>
                             </div>
-                          </td>
-                          <td className="font-display font-bold">{player.pointCount}</td>
-                          <td>{player.outCount}</td>
-                          <td>{player.foulCount}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {view.narrative && <p className="kl-insight-quote">{view.narrative}</p>}
                 </div>
-              )}
-            </section>
-          </>
-        )}
+              </section>
+
+              <section className="kl-card kl-table-card">
+                <div className="kl-card-head">
+                  <div>
+                    <h2 className="kl-card-title">
+                      <Trophy aria-hidden="true" /> Klasemen Pertandingan
+                    </h2>
+                    <p className="kl-card-sub">Diurutkan berdasarkan poin, lalu selisih poin.</p>
+                  </div>
+                  <div className="kl-tabs" role="tablist" aria-label="Tampilan klasemen">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={tableTab === "tabel"}
+                      className={`kl-tab ${tableTab === "tabel" ? "is-active" : ""}`}
+                      onClick={() => setTableTab("tabel")}
+                    >
+                      <List aria-hidden="true" /> Tabel
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={tableTab === "grafik"}
+                      className={`kl-tab ${tableTab === "grafik" ? "is-active" : ""}`}
+                      onClick={() => setTableTab("grafik")}
+                    >
+                      <BarChart3 aria-hidden="true" /> Grafik
+                    </button>
+                  </div>
+                </div>
+
+                {data.standings.length === 0 ? (
+                  <p className="kl-empty">Belum ada data untuk kode ini.</p>
+                ) : tableTab === "tabel" ? (
+                  <div className="kl-scroll">
+                    <table className="kl-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Pejuang</th>
+                          <th>Main</th>
+                          <th>Menang</th>
+                          <th>Win Rate</th>
+                          <th>Poin</th>
+                          <th>Selisih</th>
+                          <th>Poin Individu</th>
+                          <th>Form</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {view.lines.map((line, index) => {
+                          const rank = competitionRank(data.standings, index);
+                          const results = (view.form.get(line.name) ?? []).slice(-5);
+                          return (
+                            <tr key={line.name} className={index === 0 ? "is-leader" : undefined}>
+                              <td>
+                                <span className={`kl-rankbadge ${rank <= 3 ? `kl-rankbadge--${rank}` : ""}`}>{rank}</span>
+                              </td>
+                              <td>
+                                <div className="kl-player">
+                                  <Avatar name={line.name} />
+                                  {line.name}
+                                </div>
+                              </td>
+                              <td>{line.games}</td>
+                              <td>{line.wins}</td>
+                              <td>
+                                <div className="kl-bar">
+                                  <div className="kl-bar-track">
+                                    <div className="kl-bar-fill" style={{ width: `${line.winRate}%` }} />
+                                  </div>
+                                  <span className="kl-bar-val">{line.winRate.toFixed(0)}%</span>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="kl-bar" style={{ minWidth: "6.5rem" }}>
+                                  <span className="kl-num">{line.points}</span>
+                                  <div className="kl-bar-track">
+                                    <div className="kl-bar-fill kl-bar-fill--red" style={{ width: `${(line.points / view.maxPoints) * 100}%` }} />
+                                  </div>
+                                </div>
+                              </td>
+                              <td className={`kl-num ${line.pointDiff > 0 ? "kl-pos" : line.pointDiff < 0 ? "kl-neg" : ""}`}>
+                                {signedValue(line.pointDiff)}
+                              </td>
+                              <td className="kl-num">{view.hasIndividual ? line.pointCount : "—"}</td>
+                              <td>
+                                <div className="kl-form" aria-label="Hasil 5 laga terakhir">
+                                  {results.length === 0 ? (
+                                    <span style={{ color: "#94a3b8" }}>—</span>
+                                  ) : (
+                                    results.map((r, i) => (
+                                      <i key={i} className={r} title={r === "W" ? "Menang" : r === "L" ? "Kalah" : "Seri"}>
+                                        {r === "S" ? "S" : r === "W" ? "M" : "K"}
+                                      </i>
+                                    ))
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <>
+                    <div className="kl-legend">
+                      <span>Poin</span>
+                      <span className="r">Win rate</span>
+                    </div>
+                    <div className="kl-chart">
+                      {view.lines.map((line) => (
+                        <div key={line.name} className="kl-chart-row">
+                          <b>{line.name}</b>
+                          <div className="kl-chart-bars">
+                            <div className="kl-chart-line">
+                              <div className="kl-bar-track">
+                                <div className="kl-bar-fill" style={{ width: `${(line.points / view.maxPoints) * 100}%` }} />
+                              </div>
+                              <em>{line.points} poin</em>
+                            </div>
+                            <div className="kl-chart-line">
+                              <div className="kl-bar-track">
+                                <div className="kl-bar-fill kl-bar-fill--red" style={{ width: `${line.winRate}%` }} />
+                              </div>
+                              <em>{line.winRate.toFixed(0)}%</em>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </section>
+
+              <section className="kl-bottom">
+                <div className="kl-card kl-sched">
+                  <div className="kl-card-head">
+                    <div>
+                      <h2 className="kl-card-title">
+                        <CalendarDays aria-hidden="true" /> Jadwal Pertandingan
+                      </h2>
+                      <p className="kl-card-sub">Laga yang sedang berjalan dan hasil terbaru di arena ini.</p>
+                    </div>
+                    <button type="button" className="kl-link" onClick={() => openSchedule(null)}>
+                      Lihat Semua <ArrowRight aria-hidden="true" />
+                    </button>
+                  </div>
+                  <div className="kl-sched-tabs" role="tablist" aria-label="Jenis jadwal">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={scheduleTab === "live"}
+                      className={`kl-stab ${scheduleTab === "live" ? "is-active" : ""}`}
+                      onClick={() => setScheduleTab("live")}
+                    >
+                      <Radio size={12} aria-hidden="true" style={{ display: "inline", marginRight: 4 }} />
+                      Live{data.liveMatches.length > 0 ? ` (${data.liveMatches.length})` : ""}
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={scheduleTab === "hasil"}
+                      className={`kl-stab ${scheduleTab === "hasil" ? "is-active" : ""}`}
+                      onClick={() => setScheduleTab("hasil")}
+                    >
+                      Hasil Terbaru
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={scheduleTab === "ronde"}
+                      className={`kl-stab ${scheduleTab === "ronde" ? "is-active" : ""}`}
+                      onClick={() => setScheduleTab("ronde")}
+                    >
+                      Ronde
+                    </button>
+                  </div>
+                  <div className="kl-sched-list">
+                    {scheduleTab === "live" &&
+                      (data.liveMatches.length === 0 ? (
+                        <p className="kl-empty">Tidak ada laga yang sedang berjalan.</p>
+                      ) : (
+                        data.liveMatches.slice(0, 3).map((m) => <MatchCard key={m.id} match={m} />)
+                      ))}
+                    {scheduleTab === "hasil" &&
+                      (data.matches.length === 0 ? (
+                        <p className="kl-empty">Belum ada pertandingan tercatat.</p>
+                      ) : (
+                        [...data.matches]
+                          .sort((a, b) => b.round - a.round || b.court - a.court)
+                          .slice(0, 3)
+                          .map((m) => <MatchCard key={m.id} match={m} />)
+                      ))}
+                    {scheduleTab === "ronde" &&
+                      (latestRounds.length === 0 ? (
+                        <p className="kl-empty">Belum ada ronde tercatat.</p>
+                      ) : (
+                        latestRounds.map((r) => {
+                          const inRound = view.allMatches.filter((m) => m.round === r);
+                          const pts = inRound.reduce((s, m) => s + m.score_a + m.score_b, 0);
+                          return (
+                            <button key={r} type="button" className="kl-round-row" onClick={() => openSchedule(r)}>
+                              <div>
+                                <b>Ronde {r}</b>
+                                <small>
+                                  {inRound.length} laga · {pts} poin
+                                </small>
+                              </div>
+                              <ChevronRight size={16} aria-hidden="true" />
+                            </button>
+                          );
+                        })
+                      ))}
+                  </div>
+                </div>
+
+                <div className="kl-card">
+                  <div className="kl-card-head">
+                    <h2 className="kl-card-title">
+                      <Percent aria-hidden="true" /> Distribusi Hasil
+                    </h2>
+                  </div>
+                  {focus && focusResults && (
+                    <>
+                      <div className="kl-focus">
+                        <span className="kl-card-sub" style={{ margin: 0 }}>
+                          Pilih pemain
+                        </span>
+                        <select
+                          className="kl-select"
+                          value={focus.name}
+                          onChange={(e) => setFocusName(e.target.value)}
+                          aria-label="Pilih pemain untuk distribusi hasil"
+                        >
+                          {view.lines.map((l) => (
+                            <option key={l.name} value={l.name}>
+                              {l.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="kl-donut-wrap">
+                        <div className="kl-donut" style={{ background: donutBackground }}>
+                          <b>{focusTotal > 0 ? `${winPct.toFixed(0)}%` : "—"}</b>
+                        </div>
+                        <div className="kl-donut-legend">
+                          <div>
+                            <i style={{ background: "#1d4ed8" }} />
+                            <span>Menang</span>
+                            <b>{focusResults.wins}</b>
+                          </div>
+                          <div>
+                            <i style={{ background: "#e11d2e" }} />
+                            <span>Kalah</span>
+                            <b>{focusResults.losses}</b>
+                          </div>
+                          {focusResults.draws > 0 && (
+                            <div>
+                              <i style={{ background: "#94a3b8" }} />
+                              <span>Seri</span>
+                              <b>{focusResults.draws}</b>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="kl-card">
+                  <div className="kl-card-head">
+                    <h2 className="kl-card-title">
+                      <BarChart3 aria-hidden="true" /> Statistik Performa
+                    </h2>
+                    {focus && <span className="kl-card-sub" style={{ margin: 0 }}>{focus.name}</span>}
+                  </div>
+                  {focus && (
+                    <div className="kl-perf">
+                      {[
+                        { label: "Win rate", value: `${focus.winRate.toFixed(0)}%`, pct: focus.winRate, icon: Percent, tone: "kl-tone-blue" },
+                        { label: "Total poin terkumpul", value: String(focus.points), pct: (focus.points / view.maxPoints) * 100, icon: Target, tone: "kl-tone-red" },
+                        { label: "Total pertandingan", value: String(focus.games), pct: (focus.games / view.maxGames) * 100, icon: Swords, tone: "kl-tone-gold" },
+                        {
+                          label: "Selisih poin",
+                          value: signedValue(focus.pointDiff),
+                          pct: Math.min(100, (Math.abs(focus.pointDiff) / view.maxPoints) * 100 * 3),
+                          icon: TrendingUp,
+                          tone: "kl-tone-green",
+                        },
+                      ].map((row) => (
+                        <div key={row.label} className="kl-perf-row">
+                          <span className={`kl-perf-icon ${row.tone}`}>
+                            <row.icon aria-hidden="true" />
+                          </span>
+                          <div>
+                            <div className="kl-perf-top">
+                              <span>{row.label}</span>
+                              <b>{row.value}</b>
+                            </div>
+                            <div className="kl-bar-track">
+                              <div className="kl-bar-fill" style={{ width: `${row.pct}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="kl-banner mt-4" aria-label="Semangat bertanding">
+                <div>
+                  <p>Semangat Bertanding!</p>
+                  <span>Sportivitas hari ini, persahabatan selamanya.</span>
+                </div>
+              </section>
+
+              <section id="laporan-pemain" className="kl-card kl-report">
+                <div className="kl-card-head">
+                  <div>
+                    <h2 className="kl-card-title">
+                      <User aria-hidden="true" /> Laporan Pemain
+                    </h2>
+                    <p className="kl-card-sub">
+                      Poin individu, out, dan kesalahan tersedia untuk pertandingan dengan mode Detail.
+                    </p>
+                  </div>
+                </div>
+                {data.playerReport.length === 0 ? (
+                  <p className="kl-empty">Belum ada data untuk kode ini.</p>
+                ) : (
+                  <div className="kl-scroll">
+                    <table className="kl-table" style={{ minWidth: 640 }}>
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Pejuang</th>
+                          <th>Main</th>
+                          <th>Menang</th>
+                          <th>Win Rate</th>
+                          <th>Poin Individu</th>
+                          <th>Out</th>
+                          <th>Kesalahan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.playerReport.map((player, index) => (
+                          <tr key={player.name}>
+                            <td className="kl-num" style={{ color: "#e11d2e" }}>
+                              {String(index + 1).padStart(2, "0")}
+                            </td>
+                            <td>
+                              <div className="kl-player">
+                                <Avatar name={player.name} />
+                                {player.name}
+                              </div>
+                            </td>
+                            <td>{player.games}</td>
+                            <td>{player.wins}</td>
+                            <td>
+                              <div className="kl-bar">
+                                <div className="kl-bar-track">
+                                  <div className="kl-bar-fill" style={{ width: `${player.winRate}%` }} />
+                                </div>
+                                <span className="kl-bar-val">{player.winRate.toFixed(0)}%</span>
+                              </div>
+                            </td>
+                            <td className="kl-num">{player.pointCount}</td>
+                            <td>{player.outCount}</td>
+                            <td>{player.foulCount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+        </div>
       </div>
+
+      {moreOpen && (
+        <div className="kl-more" role="menu" aria-label="Menu lainnya">
+          {MORE_NAV.map((key) => renderNav(key, "kl-navlink"))}
+        </div>
+      )}
+      <nav className="kl-bottomnav" aria-label="Navigasi bawah">
+        {MOBILE_NAV.map((key) => {
+          const item = NAV_ITEMS.find((n) => n.key === key)!;
+          const Icon = item.icon;
+          const inner = (
+            <>
+              <Icon aria-hidden="true" />
+              <span>{item.label}</span>
+            </>
+          );
+          return key === "beranda" ? (
+            <Link key={key} to="/" className="kl-bn">
+              {inner}
+            </Link>
+          ) : (
+            <button
+              key={key}
+              type="button"
+              className={`kl-bn ${key === "klasemen" ? "is-active" : ""}`}
+              onClick={() => handleNav(key)}
+            >
+              {inner}
+            </button>
+          );
+        })}
+        <button type="button" className={`kl-bn ${moreOpen ? "is-active" : ""}`} onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen}>
+          <MoreHorizontal aria-hidden="true" />
+          <span>Lainnya</span>
+        </button>
+      </nav>
+
+      {toast && (
+        <div className="kl-toast" role="status">
+          <Sparkles aria-hidden="true" />
+          {toast}
+        </div>
+      )}
+
+      {view && (
+        <ScheduleDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          matches={view.allMatches}
+          initialRound={dialogRound}
+        />
+      )}
     </main>
   );
 }
