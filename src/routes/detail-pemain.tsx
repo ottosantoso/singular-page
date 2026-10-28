@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import html2canvas from "html2canvas-pro";
 import { supabase } from "@/integrations/supabase/client";
+import { rankStandings, sortStandings } from "@/lib/ranking";
 
 export const Route = createFileRoute("/detail-pemain")({
   head: () => ({
@@ -453,8 +454,7 @@ function DetailPemain() {
       const statRows = statsRes.error ? [] : ((statsRes.data ?? []) as PlayerStatRow[]);
 
       const standings = buildStandings(players, matches);
-      const trendNames = [...standings]
-        .sort((a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff)
+      const trendNames = sortStandings(standings)
         .slice(0, 5)
         .map((s) => s.name);
       const partnerships = buildPartnerStats(matches);
@@ -482,26 +482,13 @@ function DetailPemain() {
 
   const data = query.data;
 
-  const rankedStandingsRaw = data
-    ? [...data.standings].sort((a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff || a.name.localeCompare(b.name))
-    : [];
-  // Rank secara adil walau jumlah main tiap orang beda: pakai rata-rata poin per
-  // game, bukan total poin mentah. Supaya nggak ada yang nangkring di atas cuma
-  // modal 1-2 game menang, kasih syarat minimal main dulu (setengah dari jumlah
-  // main terbanyak, minimal 3x) sebelum ikut di-ranking berdasarkan rata-rata.
+  // Peringkat memakai aturan yang sama dengan halaman klasemen (src/lib/ranking.ts):
+  // poin terbanyak, lalu selisih poin. Jumlah main tidak mengubah urutan juara.
+  const rankedStandingsRaw = data ? rankStandings(data.standings) : [];
   const maxGamesPlayed = data ? Math.max(0, ...data.standings.map((s) => s.games)) : 0;
   const minGamesToRank = Math.max(3, Math.ceil(maxGamesPlayed / 2));
-  const eligibleForRank = rankedStandingsRaw.filter((s) => s.games >= minGamesToRank);
-  const belumCukupMain = rankedStandingsRaw.filter((s) => s.games > 0 && s.games < minGamesToRank);
-  const rankedStandings = [...eligibleForRank].sort((a, b) => {
-    const avgA = a.games > 0 ? a.points / a.games : 0;
-    const avgB = b.games > 0 ? b.points / b.games : 0;
-    return avgB - avgA || b.wins - a.wins || a.name.localeCompare(b.name);
-  });
-  const podium = rankedStandings.slice(0, 3);
-  const maxPodiumAvg = podium.length
-    ? Math.max(...podium.map((p) => (p.games > 0 ? p.points / p.games : 0)), 1)
-    : 1;
+  const podium = rankedStandingsRaw.filter((s) => s.games > 0 && s.rank <= 3).slice(0, 3);
+  const maxPodiumPoints = podium.length ? Math.max(...podium.map((p) => p.points), 1) : 1;
 
   const topPoin = data
     ? [...data.standings].sort((a, b) => b.points - a.points).slice(0, 5).map((s) => ({ name: s.name, value: s.points }))
@@ -605,20 +592,19 @@ function DetailPemain() {
             <section className="mt-10">
               <h2 className="text-arena-heading mb-1">Podium</h2>
               <p className="mb-4 text-xs text-arena-dim">
-                Top 3 pejuang lapangan berdasarkan rata-rata poin per game (biar adil walau jumlah
-                main beda-beda) & win rate. Minimal main {minGamesToRank}x dulu baru masuk
-                perangkingan.
+                Top 3 pejuang lapangan berdasarkan total poin, lalu selisih poin. Urutannya sama
+                dengan halaman Klasemen.
               </p>
               {podium.length === 0 ? (
                 <p className="text-sm text-arena-dim">
                   {rankedStandingsRaw.length === 0
                     ? "Belum ada data."
-                    : `Belum ada yang main minimal ${minGamesToRank}x — main dulu beberapa ronde lagi buat lihat podium.`}
+                    : "Belum ada pertandingan yang selesai — main dulu beberapa ronde lagi buat lihat podium."}
                 </p>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-3">
-                  {podium.map((p, i) => {
-                    const rank = i + 1;
+                  {podium.map((p) => {
+                    const rank = p.rank;
                     const meta =
                       rank === 1
                         ? { badge: "🥇", label: "GOLD BADGE", color: SPORT_AMBER }
@@ -627,8 +613,7 @@ function DetailPemain() {
                           : { badge: "🥉", label: "BRONZE BADGE", color: SPORT_PINK };
                     const winRate = p.games > 0 ? Math.round((p.wins / p.games) * 100) : 0;
                     const losses = p.games - p.wins;
-                    const avgPoints = p.games > 0 ? Math.round((p.points / p.games) * 10) / 10 : 0;
-                    const avgPct = Math.min(100, Math.round((avgPoints / maxPodiumAvg) * 100));
+                    const pointsPct = Math.min(100, Math.round((p.points / maxPodiumPoints) * 100));
 
                     return (
                       <div
@@ -654,13 +639,13 @@ function DetailPemain() {
 
                         <div className="mt-3">
                           <div className="flex items-center justify-between text-xs text-arena-dim">
-                            <span>Rata-rata Poin/Game</span>
-                            <span className="font-display font-bold text-arena-ink">{avgPoints} pts</span>
+                            <span>Total Poin</span>
+                            <span className="font-display font-bold text-arena-ink">{p.points} pts</span>
                           </div>
                           <div className="mt-1 h-2 overflow-hidden rounded-full bg-arena-ink/10">
                             <div
                               className="h-full rounded-full"
-                              style={{ width: `${avgPct}%`, background: meta.color }}
+                              style={{ width: `${pointsPct}%`, background: meta.color }}
                             />
                           </div>
                         </div>
@@ -689,19 +674,13 @@ function DetailPemain() {
                             {losses} Kalah
                           </span>
                           <span className="rounded-full bg-arena-ink/5 px-2 py-1 text-arena-dim">
-                            {p.points} total pts
+                            {p.pointDiff > 0 ? `+${p.pointDiff}` : p.pointDiff} selisih
                           </span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              )}
-              {belumCukupMain.length > 0 && (
-                <p className="mt-3 text-xs text-arena-dim">
-                  Belum ikut di-ranking (kurang dari {minGamesToRank}x main):{" "}
-                  {belumCukupMain.map((s) => s.name).join(", ")}
-                </p>
               )}
             </section>
 

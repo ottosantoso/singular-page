@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { rankStandings, sortStandings } from "@/lib/ranking";
 
 export const Route = createFileRoute("/klasemen")({
   head: () => ({
@@ -101,17 +102,12 @@ function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
       if (bWins) row.wins += 1;
     });
   });
-  return [...table.values()].sort(
-    (a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff || a.name.localeCompare(b.name),
-  );
+  return sortStandings([...table.values()]);
 }
 
+// Peringkat padat dari modul bersama (poin, lalu selisih poin).
 function competitionRank(rows: Standing[], index: number): number {
-  if (index === 0) return 1;
-  const current = rows[index];
-  const previous = rows[index - 1];
-  const tied = !!current && !!previous && current.points === previous.points && current.wins === previous.wins && current.pointDiff === previous.pointDiff;
-  return tied ? competitionRank(rows, index - 1) : competitionRank(rows, index - 1) + 1;
+  return rankStandings(rows)[index]?.rank ?? index + 1;
 }
 
 function buildPlayerReport(standings: Standing[], statRows: PlayerStatRow[]): PlayerReport[] {
@@ -441,7 +437,7 @@ function Klasemen() {
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-arena-lime">Peringkat keseluruhan</p>
                   <h2 className="mt-1 font-display text-xl font-bold uppercase tracking-wide text-arena-ink">Klasemen Pejuang</h2>
                 </div>
-                <p className="text-xs text-arena-dim">Diurutkan berdasarkan poin, kemenangan, lalu nama</p>
+                <p className="text-xs text-arena-dim">Diurutkan berdasarkan poin, lalu selisih poin</p>
               </div>
               {data.standings.length === 0 ? (
                 <p className="px-5 py-10 text-center text-sm text-arena-dim">Belum ada data untuk kode ini.</p>
