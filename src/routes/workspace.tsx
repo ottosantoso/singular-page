@@ -1,5 +1,6 @@
 ﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import QRCode from "qrcode";
 import {
   ArrowRight,
   BarChart3,
@@ -606,11 +607,26 @@ function EventCard({
   const [playersOpen, setPlayersOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
+  const [qrUrl, setQrUrl] = useState("");
   const arenaUrl = `/arena.html?organization_id=${encodeURIComponent(organizationId)}&event_id=${encodeURIComponent(event.id)}&sport=${encodeURIComponent(event.sport)}&public_code=${encodeURIComponent(event.public_code)}&return_to=${encodeURIComponent("/workspace")}`;
   const publicUrl = `/e/${encodeURIComponent(event.public_code)}`;
   const fullPublicUrl = `${getPublicAppUrl()}${publicUrl}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=${encodeURIComponent(fullPublicUrl)}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Ikut ${event.name}: ${fullPublicUrl}`)}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    setQrUrl("");
+    void QRCode.toDataURL(fullPublicUrl, { errorCorrectionLevel: "M", margin: 2, width: 320 })
+      .then((dataUrl) => {
+        if (!cancelled) setQrUrl(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setQrUrl("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fullPublicUrl]);
 
   async function deleteEvent() {
     if (!window.confirm(`Hapus event “${event.name}”? Peserta dan staff event juga akan ikut dihapus.`)) return;
@@ -693,7 +709,17 @@ function EventCard({
               </button>
             </div>
             <div className="mt-6 grid gap-6 sm:grid-cols-[180px_1fr] sm:items-center">
-              <img src={qrUrl} alt={`QR Code ${event.name}`} className="mx-auto size-44 rounded-2xl border border-arena-ink/10 p-2" />
+              {qrUrl ? (
+                <img
+                  src={qrUrl}
+                  alt={`QR Code ${event.name}`}
+                  className="mx-auto size-44 rounded-2xl border border-arena-ink/10 p-2"
+                />
+              ) : (
+                <div className="mx-auto grid size-44 place-items-center rounded-2xl border border-arena-ink/10 p-2 text-center text-xs text-arena-dim">
+                  Menyiapkan QR...
+                </div>
+              )}
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-arena-dim">Link publik</p>
                 <p className="mt-2 break-all rounded-xl bg-slate-50 p-3 text-sm font-semibold text-arena-ink">{fullPublicUrl}</p>
@@ -704,7 +730,14 @@ function EventCard({
               <button type="button" onClick={() => void copyPublicLink()} className="inline-flex items-center justify-center gap-2 rounded-full border border-arena-ink/15 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink">
                 <Copy className="size-4" /> {copyMessage || "Salin"}
               </button>
-              <a href={qrUrl} download={`${event.public_code}-qr.png`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-arena-ink/15 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink">
+              <a
+                href={qrUrl || undefined}
+                download={`${event.public_code}-qr.png`}
+                target="_blank"
+                rel="noreferrer"
+                aria-disabled={!qrUrl}
+                className={`inline-flex items-center justify-center gap-2 rounded-full border border-arena-ink/15 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink${qrUrl ? "" : " pointer-events-none opacity-50"}`}
+              >
                 <Download className="size-4" /> Download QR
               </a>
               <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full bg-arena-lime px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-arena-ink">
