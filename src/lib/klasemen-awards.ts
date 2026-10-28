@@ -250,24 +250,45 @@ export function buildAwards(
     );
   }
 
-  // 💪 Paling Rajin
+  // 💪 Raja Rotasi
   {
-    const { best, ties } = top(played, (a, b) => b.games - a.games);
+    const partners = new Map<string, Set<string>>();
+    const addPartners = (team: string[]) => {
+      for (const name of team) {
+        const set = partners.get(name) ?? new Set<string>();
+        for (const teammate of team) {
+          if (teammate !== name) set.add(teammate);
+        }
+        partners.set(name, set);
+      }
+    };
+    for (const match of matches) {
+      addPartners(match.team_a);
+      addPartners(match.team_b);
+    }
+
+    const rows = pool
+      .filter((p) => p.games >= 3)
+      .map((p) => ({ p, partnerCount: partners.get(p.name)?.size ?? 0 }))
+      .filter((row) => row.partnerCount > 0);
+    const { best, ties } = top(
+      rows,
+      (a, b) => b.partnerCount - a.partnerCount || b.p.games - a.p.games || b.p.wins - a.p.wins,
+    );
     awards.push(
       best
         ? {
-            key: "rajin",
+            key: "rotasi",
             emoji: "💪",
-            title: "Paling Rajin",
-            rule: "Laga terbanyak (penghargaan volume, di luar ranking)",
-            holders: [best.name],
-            value: String(best.games),
-            unit: "laga",
-            detail: `${best.wins} menang · ${best.losses} kalah${tieNote(ties)}`,
+            title: "Raja Rotasi",
+            rule: "Rekan satu tim unik terbanyak",
+            holders: [best.p.name],
+            value: String(best.partnerCount),
+            unit: "rekan unik",
+            detail: `${best.p.games} laga · ${best.p.wins} menang${tieNote(ties)}`,
           }
-        : empty("rajin", "💪", "Paling Rajin", "Laga terbanyak (penghargaan volume, di luar ranking)"),
+        : empty("rotasi", "💪", "Raja Rotasi", "Rekan satu tim unik terbanyak"),
     );
   }
-
   return awards;
 }
