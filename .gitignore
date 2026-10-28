@@ -43,5 +43,6 @@ query.mjs
 .env.*
 *.md
 *.mdx
+!docs/KLASEMEN.md
 .claude/
 .codex-dev-merge/
