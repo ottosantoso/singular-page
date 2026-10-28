@@ -1,0 +1,414 @@
+/* ===== Halaman /klasemen — redesign (prefix kl-) =====
+   Dimuat hanya oleh src/routes/klasemen.tsx. Warna memakai hex supaya aman
+   untuk html2canvas (fitur Download Laporan). Dialog di-portal ke <body>,
+   jadi variabel ditaruh di :root, bukan di .kl-root. */
+:root {
+  --kl-red: #e11d2e;
+  --kl-red-soft: #fff0f1;
+  --kl-blue: #1d4ed8;
+  --kl-blue-soft: #e8efff;
+  --kl-green: #16a34a;
+  --kl-green-soft: #e3f8ea;
+  --kl-gold: #f59e0b;
+  --kl-gold-soft: #fff6dc;
+  --kl-navy: #0b1b3b;
+  --kl-ink: #0f1f3d;
+  --kl-dim: #64748b;
+  --kl-line: #e5eaf3;
+  --kl-card: #ffffff;
+  --kl-bg: #f4f7fc;
+}
+
+.kl-root {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 800px 420px at 100% 0%, rgba(29, 78, 216, 0.08), transparent 70%),
+    radial-gradient(ellipse 700px 420px at 0% 30%, rgba(225, 29, 46, 0.05), transparent 70%),
+    var(--kl-bg);
+  color: var(--kl-ink);
+  font-family: "Inter", sans-serif;
+  padding-bottom: 84px;
+}
+.kl-root *,
+.kl-dialog * { box-sizing: border-box; }
+.kl-display { font-family: "Chakra Petch", sans-serif; }
+
+/* ---------- Top bar ---------- */
+.kl-topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 1rem;
+  height: 62px; padding: 0 1rem;
+  background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--kl-line);
+}
+.kl-brand { display: inline-flex; align-items: center; gap: .6rem; text-decoration: none; color: var(--kl-ink); flex: 0 0 auto; }
+.kl-brand img { height: 38px; width: auto; display: block; }
+.kl-brand strong { font: 800 1.05rem/1 "Chakra Petch", sans-serif; letter-spacing: .02em; }
+.kl-brand strong em { color: var(--kl-red); font-style: normal; }
+.kl-topnav { display: none; align-items: center; gap: .25rem; margin-left: 1rem; overflow-x: auto; scrollbar-width: none; }
+.kl-topnav::-webkit-scrollbar { display: none; }
+.kl-navlink {
+  position: relative; display: inline-flex; align-items: center; gap: .5rem; white-space: nowrap;
+  border: 0; background: transparent; cursor: pointer; text-decoration: none;
+  padding: .55rem .9rem; border-radius: 999px;
+  font: 600 .82rem/1 "Inter", sans-serif; color: #33466a; transition: background .15s, color .15s;
+}
+.kl-navlink svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+.kl-navlink:hover { background: #eef2fa; }
+.kl-navlink.is-active { background: var(--kl-red); color: #fff; box-shadow: 0 8px 18px -8px rgba(225, 29, 46, .7); }
+.kl-new { position: absolute; top: -6px; right: -2px; border-radius: 6px; background: var(--kl-gold); color: #3b2a00; font: 800 .5rem/1 "Chakra Petch", sans-serif; letter-spacing: .06em; padding: .2rem .35rem; }
+.kl-actions { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
+.kl-iconbtn {
+  position: relative; display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem;
+  border-radius: 999px; border: 1px solid var(--kl-line); background: #fff; color: #33466a; cursor: pointer; transition: border-color .15s, color .15s;
+}
+.kl-iconbtn:hover { border-color: var(--kl-red); color: var(--kl-red); }
+.kl-iconbtn svg { width: 1.05rem; height: 1.05rem; }
+.kl-dot { position: absolute; top: 7px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--kl-red); border: 2px solid #fff; }
+
+/* ---------- Shell + sidebar ---------- */
+.kl-shell { display: block; max-width: 1480px; margin: 0 auto; }
+.kl-sidebar { display: none; }
+.kl-side-nav { display: flex; flex-direction: column; gap: .2rem; }
+.kl-side-nav .kl-navlink { width: 100%; border-radius: 12px; padding: .8rem .9rem; }
+.kl-side-card {
+  margin-top: 1.5rem; border-radius: 18px; padding: 1.1rem; color: #fff; overflow: hidden; position: relative;
+  background: linear-gradient(160deg, #1d4ed8, #0b1b3b);
+}
+.kl-side-card p { margin: 0; font: italic 800 1.1rem/1.15 "Chakra Petch", sans-serif; }
+.kl-side-card span { display: block; margin-top: .5rem; font-size: .72rem; color: rgba(255,255,255,.75); line-height: 1.4; }
+
+.kl-main { min-width: 0; padding: 1rem 1rem 2rem; }
+
+/* ---------- Hero ---------- */
+.kl-hero {
+  position: relative; overflow: hidden; border-radius: 22px; padding: 1.25rem 1.25rem 1.5rem;
+  background: #fff; border: 1px solid var(--kl-line);
+  box-shadow: 0 18px 40px -30px rgba(15, 31, 61, .5);
+}
+.kl-hero::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, #fff 8%, rgba(255,255,255,.88) 45%, rgba(255,255,255,.2) 100%),
+    url("/icons/sports-hero.jpg") right center / cover no-repeat;
+  opacity: .95; z-index: 0;
+}
+.kl-hero > * { position: relative; z-index: 1; }
+.kl-crumb { display: flex; align-items: center; gap: .4rem; font-size: .72rem; color: var(--kl-dim); }
+.kl-crumb a { color: var(--kl-dim); text-decoration: none; }
+.kl-crumb a:hover { color: var(--kl-red); }
+.kl-chip {
+  display: inline-flex; align-items: center; gap: .4rem; margin-top: .9rem;
+  font: 800 .66rem/1 "Chakra Petch", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--kl-blue);
+}
+.kl-chip svg { width: .85rem; height: .85rem; }
+.kl-title { margin: .45rem 0 0; font: 800 clamp(2rem, 6.5vw, 3.4rem)/.95 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: -.01em; }
+.kl-title span { display: block; color: var(--kl-red); }
+.kl-sub { margin: .8rem 0 0; max-width: 30rem; font-size: .85rem; line-height: 1.6; color: #475a7a; }
+.kl-hero-meta { margin-top: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.kl-codebadge { border-left: 3px solid var(--kl-red); padding-left: .7rem; }
+.kl-codebadge small { display: block; font: 700 .58rem/1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .1em; color: var(--kl-dim); }
+.kl-codebadge b { display: block; margin-top: .2rem; font: 800 1.2rem/1 "Chakra Petch", sans-serif; }
+.kl-codebadge i { display: block; margin-top: .25rem; font-style: normal; font-size: .68rem; color: var(--kl-dim); }
+.kl-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem; white-space: nowrap;
+  border: 1px solid var(--kl-line); background: #fff; color: var(--kl-ink); cursor: pointer; text-decoration: none;
+  border-radius: 999px; padding: .6rem 1rem; font: 800 .7rem/1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .07em;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.kl-btn svg { width: .95rem; height: .95rem; }
+.kl-btn:hover { border-color: var(--kl-red); color: var(--kl-red); }
+.kl-btn--primary { background: var(--kl-red); border-color: var(--kl-red); color: #fff; box-shadow: 0 12px 22px -12px rgba(225, 29, 46, .8); }
+.kl-btn--primary:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 16px 26px -12px rgba(225, 29, 46, .9); }
+.kl-btn:disabled { opacity: .55; cursor: wait; }
+
+/* ---------- Filter bar ---------- */
+.kl-filter {
+  margin-top: 1rem; display: grid; gap: .6rem; padding: .8rem; border-radius: 18px;
+  background: #fff; border: 1px solid var(--kl-line); box-shadow: 0 14px 30px -26px rgba(15,31,61,.5);
+}
+.kl-codeinput { position: relative; display: flex; align-items: center; min-width: 0; }
+.kl-codeinput svg { position: absolute; left: .9rem; width: 1rem; height: 1rem; color: var(--kl-dim); }
+.kl-codeinput input {
+  width: 100%; min-width: 0; height: 2.8rem; border-radius: 12px; border: 1px solid var(--kl-line); background: #f8faff;
+  padding: 0 1rem 0 2.5rem; font: 700 .85rem/1 "Chakra Petch", sans-serif; letter-spacing: .08em; color: var(--kl-ink); outline: none;
+}
+.kl-codeinput input::placeholder { font-weight: 500; letter-spacing: 0; color: #94a3b8; }
+.kl-codeinput input:focus { border-color: var(--kl-red); box-shadow: 0 0 0 3px rgba(225, 29, 46, .12); background: #fff; }
+.kl-pills { display: flex; gap: .5rem; overflow-x: auto; scrollbar-width: none; }
+.kl-pills::-webkit-scrollbar { display: none; }
+.kl-pill {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: .6rem; flex: 0 0 auto;
+  height: 2.8rem; padding: 0 .9rem; border-radius: 12px; border: 1px solid var(--kl-line); background: #fff; cursor: pointer;
+  font: 600 .78rem/1 "Inter", sans-serif; color: #33466a;
+}
+.kl-pill svg { width: .95rem; height: .95rem; color: var(--kl-dim); }
+.kl-pill:hover { border-color: var(--kl-blue); }
+.kl-filter .kl-btn--primary { height: 2.8rem; padding: 0 1.6rem; font-size: .78rem; }
+
+.kl-note { margin: 1.6rem 0 0; font-size: .85rem; color: var(--kl-dim); }
+
+/* ---------- Stat cards ---------- */
+.kl-stats { margin-top: 1rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.kl-stat { display: flex; align-items: center; gap: .8rem; padding: .9rem; border-radius: 16px; background: #fff; border: 1px solid var(--kl-line); box-shadow: 0 12px 26px -24px rgba(15,31,61,.6); }
+.kl-stat-icon { display: grid; place-items: center; flex: 0 0 auto; width: 2.7rem; height: 2.7rem; border-radius: 50%; color: #fff; }
+.kl-stat-icon svg { width: 1.15rem; height: 1.15rem; }
+.kl-stat-icon--blue { background: var(--kl-blue); }
+.kl-stat-icon--red { background: var(--kl-red); }
+.kl-stat-icon--gold { background: var(--kl-gold); }
+.kl-stat-icon--green { background: var(--kl-green); }
+.kl-stat small { display: block; font: 700 .58rem/1.2 "Chakra Petch", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--kl-dim); }
+.kl-stat b { display: block; margin-top: .2rem; font: 800 1.7rem/1 "Chakra Petch", sans-serif; }
+.kl-stat em { display: block; margin-top: .25rem; font-style: normal; font-size: .66rem; color: var(--kl-green); font-weight: 600; }
+
+/* ---------- Generic card ---------- */
+.kl-card { border-radius: 20px; background: #fff; border: 1px solid var(--kl-line); box-shadow: 0 14px 30px -26px rgba(15,31,61,.55); }
+.kl-card-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; padding: 1rem 1.1rem .4rem; }
+.kl-card-title { display: flex; align-items: center; gap: .55rem; margin: 0; font: 800 .95rem/1.1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+.kl-card-title svg { width: 1.15rem; height: 1.15rem; color: var(--kl-red); }
+.kl-card-sub { margin: .25rem 0 0; font-size: .72rem; color: var(--kl-dim); }
+.kl-link { display: inline-flex; align-items: center; gap: .25rem; border: 0; background: transparent; cursor: pointer; font: 700 .72rem/1 "Inter", sans-serif; color: var(--kl-blue); padding: 0; }
+.kl-link svg { width: .85rem; height: .85rem; }
+.kl-link:hover { color: var(--kl-red); }
+
+/* ---------- Showcase grid (podium, top5, insight) ---------- */
+.kl-showcase { margin-top: 1rem; display: grid; gap: 1rem; }
+
+.kl-podium { position: relative; overflow: hidden; border-radius: 22px; padding: 1.1rem; color: #fff;
+  background: radial-gradient(ellipse 420px 260px at 50% 100%, rgba(245, 158, 11, .35), transparent 70%), linear-gradient(160deg, #14326e 0%, #0b1b3b 70%); }
+.kl-podium h2 { margin: 0; display: flex; align-items: center; gap: .5rem; font: 800 1rem/1 "Chakra Petch", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.kl-podium h2 svg { width: 1.2rem; height: 1.2rem; color: var(--kl-gold); }
+.kl-podium p.kl-pdesc { margin: .35rem 0 0; font-size: .72rem; color: rgba(255,255,255,.7); }
+.kl-podium-stage { margin-top: 1.1rem; display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: .5rem; min-height: 200px; }
+.kl-step { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+.kl-step .kl-avatar { border: 3px solid var(--kl-gold); }
+.kl-step-name { margin-top: .45rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 .82rem/1.1 "Chakra Petch", sans-serif; }
+.kl-step-pts { font-size: .68rem; color: rgba(255,255,255,.8); }
+.kl-block {
+  margin-top: .6rem; width: 100%; display: grid; place-items: start center; padding-top: .55rem; border-radius: 12px 12px 0 0;
+  font: 800 1.9rem/1 "Chakra Petch", sans-serif; color: rgba(255,255,255,.95);
+  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.06)); border: 1px solid rgba(255,255,255,.16); border-bottom: 0;
+}
+.kl-step--1 .kl-block { height: 96px; background: linear-gradient(180deg, #fbbf24, #b45309); color: #3b2a00; }
+.kl-step--2 .kl-block { height: 70px; }
+.kl-step--3 .kl-block { height: 52px; background: linear-gradient(180deg, rgba(251,146,60,.6), rgba(154,52,18,.5)); }
+.kl-crown { color: var(--kl-gold); width: 1.4rem; height: 1.4rem; margin-bottom: .15rem; }
+.kl-step--empty { opacity: .35; }
+
+.kl-top5 { padding: 1rem 1.1rem 1.1rem; }
+.kl-top5-list { margin: .6rem 0 0; padding: 0; list-style: none; display: grid; gap: .1rem; }
+.kl-top5-list li { display: flex; align-items: center; gap: .7rem; padding: .5rem 0; border-top: 1px solid #f0f3f9; }
+.kl-top5-list li:first-child { border-top: 0; }
+.kl-rankbadge { display: inline-grid; place-items: center; flex: 0 0 auto; width: 1.6rem; height: 1.6rem; border-radius: 8px; font: 800 .72rem/1 "Chakra Petch", sans-serif; background: #eef2fa; color: #33466a; }
+.kl-rankbadge--1 { background: var(--kl-gold); color: #3b2a00; }
+.kl-rankbadge--2 { background: #cbd5e1; color: #1e293b; }
+.kl-rankbadge--3 { background: #fdba74; color: #7c2d12; }
+.kl-top5-list b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
+.kl-top5-list span.kl-pts { font: 800 .9rem/1 "Chakra Petch", sans-serif; }
+
+.kl-avatar { display: inline-grid; place-items: center; flex: 0 0 auto; width: 2.1rem; height: 2.1rem; border-radius: 50%; font: 800 .7rem/1 "Chakra Petch", sans-serif; }
+.kl-avatar--lg { width: 3.6rem; height: 3.6rem; font-size: 1.05rem; }
+.kl-avatar--xl { width: 4.4rem; height: 4.4rem; font-size: 1.25rem; }
+
+.kl-insight { padding: 1rem 1.1rem 1.1rem; }
+.kl-insight-list { margin: .5rem 0 0; display: grid; gap: .15rem; }
+.kl-insight-item { display: flex; gap: .75rem; padding: .7rem 0; border-top: 1px solid #f0f3f9; }
+.kl-insight-item:first-child { border-top: 0; }
+.kl-insight-icon { display: grid; place-items: center; flex: 0 0 auto; width: 2.2rem; height: 2.2rem; border-radius: 50%; }
+.kl-insight-icon svg { width: 1.05rem; height: 1.05rem; }
+.kl-tone-green { background: var(--kl-green-soft); color: var(--kl-green); }
+.kl-tone-gold { background: var(--kl-gold-soft); color: #b45309; }
+.kl-tone-blue { background: var(--kl-blue-soft); color: var(--kl-blue); }
+.kl-tone-red { background: var(--kl-red-soft); color: var(--kl-red); }
+.kl-insight-item small { display: block; font: 700 .58rem/1.2 "Chakra Petch", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--kl-dim); }
+.kl-insight-item strong { display: block; margin-top: .15rem; font: 800 1rem/1.15 "Chakra Petch", sans-serif; }
+.kl-insight-item span { display: block; margin-top: .15rem; font-size: .7rem; line-height: 1.4; color: var(--kl-dim); }
+.kl-insight-quote { margin-top: .6rem; padding: .7rem .8rem; border-radius: 12px; background: var(--kl-blue-soft); color: #1e3a8a; font-size: .74rem; line-height: 1.5; font-weight: 600; }
+
+/* ---------- Klasemen table ---------- */
+.kl-table-card { margin-top: 1rem; overflow: hidden; }
+.kl-tabs { display: inline-flex; padding: .2rem; border-radius: 999px; background: #eef2fa; }
+.kl-tab { display: inline-flex; align-items: center; gap: .4rem; border: 0; background: transparent; cursor: pointer; border-radius: 999px; padding: .5rem .85rem; font: 700 .72rem/1 "Inter", sans-serif; color: #475a7a; }
+.kl-tab svg { width: .9rem; height: .9rem; }
+.kl-tab.is-active { background: var(--kl-red); color: #fff; box-shadow: 0 8px 16px -8px rgba(225,29,46,.8); }
+.kl-scroll { overflow-x: auto; padding: 0 .4rem .6rem; }
+.kl-table { width: 100%; min-width: 760px; border-collapse: separate; border-spacing: 0; font-size: .82rem; }
+.kl-table th { text-align: left; padding: .65rem .7rem; font: 700 .62rem/1 "Chakra Petch", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--kl-dim); background: #f6f8fd; }
+.kl-table th:first-child { border-radius: 10px 0 0 10px; }
+.kl-table th:last-child { border-radius: 0 10px 10px 0; }
+.kl-table td { padding: .65rem .7rem; border-top: 1px solid #f0f3f9; vertical-align: middle; }
+.kl-table tbody tr:first-child td { border-top: 0; }
+.kl-table tbody tr.is-leader td { background: #fffaf0; }
+.kl-player { display: flex; align-items: center; gap: .6rem; font-weight: 700; }
+.kl-bar { display: flex; align-items: center; gap: .6rem; min-width: 8rem; }
+.kl-bar-track { flex: 1; height: 6px; border-radius: 99px; background: #e8edf7; overflow: hidden; }
+.kl-bar-fill { height: 100%; border-radius: 99px; background: var(--kl-blue); }
+.kl-bar-fill--red { background: var(--kl-red); }
+.kl-bar-val { width: 2.4rem; text-align: right; font: 700 .72rem/1 "Chakra Petch", sans-serif; }
+.kl-num { font: 800 .9rem/1 "Chakra Petch", sans-serif; }
+.kl-pos { color: var(--kl-green); }
+.kl-neg { color: var(--kl-red); }
+.kl-form { display: flex; gap: .25rem; }
+.kl-form i { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%; font: 800 .58rem/1 "Chakra Petch", sans-serif; font-style: normal; color: #fff; }
+.kl-form .W { background: var(--kl-green); }
+.kl-form .L { background: var(--kl-red); }
+.kl-form .S { background: #94a3b8; }
+.kl-empty { padding: 2rem 1rem; text-align: center; font-size: .85rem; color: var(--kl-dim); }
+
+.kl-chart { padding: .4rem 1.1rem 1.2rem; display: grid; gap: .8rem; }
+.kl-chart-row { display: grid; grid-template-columns: 6.5rem 1fr; align-items: center; gap: .75rem; }
+.kl-chart-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; }
+.kl-chart-bars { display: grid; gap: .3rem; }
+.kl-chart-line { display: flex; align-items: center; gap: .5rem; }
+.kl-chart-line .kl-bar-track { height: 10px; }
+.kl-chart-line em { min-width: 3.6rem; font-style: normal; font: 700 .68rem/1 "Chakra Petch", sans-serif; color: var(--kl-dim); }
+.kl-legend { display: flex; gap: 1rem; padding: 0 1.1rem; font-size: .68rem; color: var(--kl-dim); }
+.kl-legend span::before { content: ""; display: inline-block; width: .6rem; height: .6rem; margin-right: .35rem; border-radius: 3px; background: var(--kl-blue); }
+.kl-legend span.r::before { background: var(--kl-red); }
+
+/* ---------- Bottom grid ---------- */
+.kl-bottom { margin-top: 1rem; display: grid; gap: 1rem; }
+.kl-sched { padding-bottom: 1rem; }
+.kl-sched-tabs { display: flex; gap: .4rem; padding: .5rem 1.1rem 0; overflow-x: auto; scrollbar-width: none; }
+.kl-sched-tabs::-webkit-scrollbar { display: none; }
+.kl-stab { flex: 1 0 auto; border: 1px solid var(--kl-line); background: #fff; cursor: pointer; border-radius: 10px; padding: .55rem .8rem; font: 700 .7rem/1 "Inter", sans-serif; color: #475a7a; }
+.kl-stab.is-active { background: var(--kl-red); border-color: var(--kl-red); color: #fff; }
+.kl-sched-list { margin: .7rem 0 0; padding: 0 1.1rem; display: grid; gap: .6rem; }
+.kl-match { border: 1px solid #edf0f7; border-radius: 14px; padding: .7rem .8rem; background: #fcfdff; }
+.kl-match-top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font: 800 .62rem/1 "Chakra Petch", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.kl-match-top .r { color: var(--kl-red); }
+.kl-match-top .c { color: var(--kl-dim); font-family: "Inter", sans-serif; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.kl-match-body { margin-top: .6rem; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .6rem; }
+.kl-match-team { min-width: 0; font-size: .78rem; line-height: 1.3; color: var(--kl-dim); overflow-wrap: anywhere; }
+.kl-match-team.is-win { color: var(--kl-ink); font-weight: 800; }
+.kl-match-team.right { text-align: right; }
+.kl-score { border-radius: 10px; padding: .45rem .7rem; background: var(--kl-navy); color: #fff; font: 800 1rem/1 "Chakra Petch", sans-serif; white-space: nowrap; }
+.kl-badge { display: inline-flex; align-items: center; gap: .25rem; border-radius: 999px; padding: .25rem .5rem; font: 800 .52rem/1 "Chakra Petch", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.kl-badge--live { background: var(--kl-red); color: #fff; }
+.kl-badge--auto { border: 1px solid var(--kl-line); color: var(--kl-dim); }
+.kl-badge--done { background: var(--kl-green-soft); color: var(--kl-green); }
+.kl-round-row { display: flex; align-items: center; justify-content: space-between; gap: .6rem; width: 100%; text-align: left; border: 1px solid #edf0f7; border-radius: 14px; padding: .75rem .85rem; background: #fcfdff; cursor: pointer; }
+.kl-round-row:hover { border-color: var(--kl-red); }
+.kl-round-row b { font: 800 .85rem/1 "Chakra Petch", sans-serif; }
+.kl-round-row small { display: block; margin-top: .3rem; font-size: .68rem; color: var(--kl-dim); }
+
+.kl-focus { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: 0 1.1rem; }
+.kl-select { max-width: 11rem; height: 2.2rem; border-radius: 10px; border: 1px solid var(--kl-line); background: #f8faff; padding: 0 .6rem; font: 600 .75rem/1 "Inter", sans-serif; color: var(--kl-ink); }
+.kl-donut-wrap { display: flex; align-items: center; gap: 1.2rem; padding: 1rem 1.1rem 1.2rem; }
+.kl-donut { position: relative; flex: 0 0 auto; width: 8.4rem; height: 8.4rem; border-radius: 50%; }
+.kl-donut::after { content: ""; position: absolute; inset: 1.15rem; border-radius: 50%; background: #fff; }
+.kl-donut b { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; font: 800 1.7rem/1 "Chakra Petch", sans-serif; }
+.kl-donut-legend { display: grid; gap: .55rem; font-size: .78rem; }
+.kl-donut-legend div { display: flex; align-items: center; gap: .5rem; }
+.kl-donut-legend i { width: .65rem; height: .65rem; border-radius: 50%; flex: 0 0 auto; }
+.kl-donut-legend span { color: var(--kl-dim); }
+.kl-donut-legend b { margin-left: auto; padding-left: 1rem; font: 800 .8rem/1 "Chakra Petch", sans-serif; }
+
+.kl-perf { display: grid; gap: .9rem; padding: .9rem 1.1rem 1.2rem; }
+.kl-perf-row { display: grid; grid-template-columns: 2.3rem 1fr; gap: .75rem; align-items: center; }
+.kl-perf-icon { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; border-radius: 50%; }
+.kl-perf-icon svg { width: 1rem; height: 1rem; }
+.kl-perf-top { display: flex; justify-content: space-between; align-items: baseline; font-size: .72rem; color: var(--kl-dim); }
+.kl-perf-top b { font: 800 .95rem/1 "Chakra Petch", sans-serif; color: var(--kl-ink); }
+.kl-perf-row .kl-bar-track { margin-top: .4rem; }
+
+.kl-banner {
+  position: relative; overflow: hidden; min-height: 170px; display: flex; align-items: flex-end; border-radius: 22px; padding: 1.25rem; color: #fff;
+  background: linear-gradient(90deg, rgba(11,27,59,.92), rgba(11,27,59,.35)), url("/icons/sport-equipment.jpg") center / cover no-repeat;
+}
+.kl-banner p { margin: 0; font: italic 800 1.5rem/1.1 "Chakra Petch", sans-serif; }
+.kl-banner span { display: block; margin-top: .45rem; max-width: 18rem; font-size: .8rem; color: rgba(255,255,255,.85); line-height: 1.5; }
+
+/* ---------- Laporan pemain ---------- */
+.kl-report { margin-top: 1rem; overflow: hidden; scroll-margin-top: 80px; }
+
+/* ---------- Bottom nav (mobile) + toast ---------- */
+.kl-bottomnav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, 1fr);
+  padding: .35rem .4rem calc(.35rem + env(safe-area-inset-bottom, 0px)); background: rgba(255,255,255,.96); backdrop-filter: blur(10px); border-top: 1px solid var(--kl-line);
+}
+.kl-bn { display: flex; flex-direction: column; align-items: center; gap: .25rem; border: 0; background: transparent; cursor: pointer; text-decoration: none; padding: .4rem 0; border-radius: 12px; font: 700 .6rem/1 "Inter", sans-serif; color: #5b6d8c; }
+.kl-bn svg { width: 1.2rem; height: 1.2rem; }
+.kl-bn.is-active { color: var(--kl-red); }
+.kl-more { position: fixed; right: .75rem; bottom: 4.6rem; z-index: 41; width: min(16rem, calc(100vw - 1.5rem)); padding: .5rem; border-radius: 16px; background: #fff; border: 1px solid var(--kl-line); box-shadow: 0 20px 40px -18px rgba(15,31,61,.5); }
+.kl-more .kl-navlink { width: 100%; border-radius: 10px; }
+.kl-toast {
+  position: fixed; left: 50%; bottom: 5.4rem; z-index: 60; transform: translateX(-50%); max-width: calc(100vw - 2rem);
+  display: flex; align-items: center; gap: .6rem; border-radius: 14px; padding: .8rem 1rem; background: var(--kl-navy); color: #fff;
+  box-shadow: 0 18px 36px -16px rgba(11,27,59,.7); font-size: .8rem; font-weight: 600;
+}
+.kl-toast svg { width: 1rem; height: 1rem; color: var(--kl-gold); flex: 0 0 auto; }
+
+/* ---------- Dialog semua pertandingan ---------- */
+.kl-dialog.kl-dialog {
+  display: flex; flex-direction: column; gap: 0; padding: 0; width: calc(100vw - 1rem); max-width: 60rem; max-height: calc(100vh - 1.5rem);
+  border: 0; border-radius: 22px; overflow: hidden; background: var(--kl-bg); color: var(--kl-ink); font-family: "Inter", sans-serif;
+}
+.kl-dialog-head { padding: 1.1rem 3.2rem 1rem 1.2rem; background: #fff; border-bottom: 1px solid var(--kl-line); }
+.kl-dialog-head h2 { margin: 0; font: 800 1.15rem/1.1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .04em; color: var(--kl-ink); }
+.kl-dialog-head p { margin: .35rem 0 0; font-size: .75rem; color: var(--kl-dim); }
+.kl-dialog-body { overflow-y: auto; padding: 1rem 1.2rem 1.4rem; }
+.kl-sum { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.kl-sum-item { border-radius: 14px; background: #fff; border: 1px solid var(--kl-line); padding: .75rem .8rem; }
+.kl-sum-item small { display: block; font: 700 .56rem/1.2 "Chakra Petch", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--kl-dim); }
+.kl-sum-item b { display: block; margin-top: .3rem; font: 800 1.35rem/1 "Chakra Petch", sans-serif; }
+.kl-sum-item span { display: block; margin-top: .3rem; font-size: .66rem; line-height: 1.35; color: var(--kl-dim); overflow-wrap: anywhere; }
+.kl-courts { margin-top: .6rem; display: flex; flex-wrap: wrap; gap: .4rem; }
+.kl-courts span { border-radius: 999px; background: #fff; border: 1px solid var(--kl-line); padding: .35rem .65rem; font-size: .68rem; font-weight: 700; color: #33466a; }
+.kl-dtools { margin-top: 1rem; display: grid; gap: .5rem; }
+.kl-dtools .kl-codeinput input { height: 2.5rem; font: 500 .82rem/1 "Inter", sans-serif; letter-spacing: 0; }
+.kl-dtools .kl-tabs { overflow-x: auto; max-width: 100%; }
+.kl-group { margin-top: 1.1rem; }
+.kl-group h3 { margin: 0 0 .5rem; display: flex; align-items: center; justify-content: space-between; font: 800 .8rem/1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--kl-red); }
+.kl-group h3 span { font: 600 .68rem/1 "Inter", sans-serif; letter-spacing: 0; text-transform: none; color: var(--kl-dim); }
+.kl-group-list { display: grid; gap: .6rem; }
+.kl-dmatch { border-radius: 14px; background: #fff; border: 1px solid var(--kl-line); padding: .8rem .9rem; }
+.kl-dmatch .kl-match-body { margin-top: .7rem; }
+.kl-dmatch-foot { margin-top: .6rem; display: flex; flex-wrap: wrap; gap: .5rem .9rem; font-size: .66rem; color: var(--kl-dim); }
+
+/* ---------- Breakpoints ---------- */
+@media (min-width: 560px) {
+  .kl-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .kl-sum { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .kl-banner p { font-size: 1.9rem; }
+}
+@media (min-width: 768px) {
+  .kl-root { padding-bottom: 0; }
+  .kl-topbar { padding: 0 1.5rem; height: 66px; }
+  .kl-topnav { display: flex; }
+  .kl-bottomnav, .kl-more { display: none; }
+  .kl-toast { bottom: 1.5rem; }
+  .kl-main { padding: 1.25rem 1.5rem 3rem; }
+  .kl-hero { padding: 1.75rem; }
+  .kl-filter { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .kl-filter .kl-pills { grid-column: 1 / -1; grid-row: 2; }
+  .kl-showcase { grid-template-columns: 1.3fr 1fr; }
+  .kl-insight { grid-column: 1 / -1; }
+  .kl-insight-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1.5rem; }
+  .kl-insight-item:nth-child(2) { border-top: 0; }
+  .kl-bottom { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kl-sched { grid-column: 1 / -1; }
+  .kl-perf-card { grid-column: auto; }
+  .kl-dtools { grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; }
+  .kl-group-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1180px) {
+  .kl-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+  .kl-sidebar { display: block; position: sticky; top: 66px; align-self: start; height: calc(100vh - 66px); padding: 1.25rem 1rem; overflow-y: auto; }
+  .kl-hero { padding: 2rem 2.2rem; }
+  .kl-filter { grid-template-columns: minmax(14rem, 1.2fr) auto auto; }
+  .kl-filter .kl-pills { grid-column: auto; grid-row: auto; order: 2; }
+  .kl-filter .kl-btn--primary { order: 3; }
+  .kl-showcase { grid-template-columns: 1.25fr .95fr 1fr; }
+  .kl-insight { grid-column: auto; }
+  .kl-insight-list { grid-template-columns: 1fr; }
+  .kl-insight-item:nth-child(2) { border-top: 1px solid #f0f3f9; }
+  .kl-bottom { grid-template-columns: 1.25fr 1fr 1fr; }
+  .kl-sched { grid-column: auto; }
+  .kl-banner { grid-column: 1 / -1; }
+}
+@media (max-width: 420px) {
+  .kl-donut-wrap { flex-direction: column; align-items: flex-start; }
+  .kl-chart-row { grid-template-columns: 5rem 1fr; }
+  .kl-step-name { font-size: .72rem; }
+}
