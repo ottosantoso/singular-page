@@ -1,0 +1,49 @@
+/* Tambahan untuk halaman /klasemen: papan gelar, mode urutan, indikator pergerakan. */
+
+/* badge "NEW" di top nav tidak terpotong overflow */
+.kl-topnav { padding-top: 10px; padding-bottom: 2px; }
+
+.kl-sortbar { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.kl-sortbar .kl-select { max-width: none; height: 2.2rem; }
+
+.kl-rulenote { margin: 0; padding: .8rem 1.1rem 1.1rem; font-size: .7rem; line-height: 1.5; color: var(--kl-dim); border-top: 1px solid #f0f3f9; }
+
+.kl-move { display: inline-flex; align-items: center; gap: .1rem; font: 800 .62rem/1 "Chakra Petch", sans-serif; }
+.kl-move.up { color: var(--kl-green); }
+.kl-move.down { color: var(--kl-red); }
+.kl-player > span:first-of-type { min-width: 0; }
+
+.kl-pts { text-align: right; }
+.kl-sub-pts { display: block; margin-top: .15rem; font: 600 .62rem/1.1 "Inter", sans-serif; color: var(--kl-dim); }
+
+/* ---------- Papan gelar ---------- */
+.kl-awards { margin-top: 1rem; }
+.kl-awards-head { padding: 0 .2rem .7rem; }
+.kl-awards-grid { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+.kl-award {
+  display: flex; flex-direction: column; gap: .7rem; padding: .95rem 1rem; border-radius: 18px; background: #fff;
+  border: 1px solid var(--kl-line); box-shadow: 0 14px 28px -26px rgba(15, 31, 61, .6);
+}
+.kl-award--gold { background: linear-gradient(160deg, #fff9e8, #fff); border-color: #fde7a8; }
+.kl-award.is-empty { opacity: .6; }
+.kl-award-top { display: flex; align-items: center; gap: .7rem; }
+.kl-award-emoji { display: grid; place-items: center; flex: 0 0 auto; width: 2.6rem; height: 2.6rem; border-radius: 14px; background: #eef2fa; font-size: 1.35rem; line-height: 1; }
+.kl-award--gold .kl-award-emoji { background: var(--kl-gold-soft); }
+.kl-award-top h3 { margin: 0; font: 800 .9rem/1.1 "Chakra Petch", sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+.kl-award-top small { display: block; margin-top: .25rem; font-size: .66rem; line-height: 1.35; color: var(--kl-dim); }
+.kl-award-body { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.kl-award-who { display: flex; align-items: center; gap: .55rem; min-width: 0; }
+.kl-award-who strong { min-width: 0; overflow-wrap: anywhere; font: 800 .95rem/1.15 "Chakra Petch", sans-serif; }
+.kl-award-avatars { display: inline-flex; flex: 0 0 auto; }
+.kl-award-avatars .kl-avatar + .kl-avatar { margin-left: -.55rem; border: 2px solid #fff; }
+.kl-award-val { flex: 0 0 auto; text-align: right; }
+.kl-award-val b { display: block; font: 800 1.45rem/1 "Chakra Petch", sans-serif; color: var(--kl-red); }
+.kl-award-val span { display: block; margin-top: .2rem; font-size: .6rem; color: var(--kl-dim); }
+.kl-award > p { margin: 0; padding-top: .6rem; border-top: 1px dashed var(--kl-line); font-size: .7rem; line-height: 1.45; color: var(--kl-dim); }
+
+@media (min-width: 640px) {
+  .kl-awards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .kl-awards-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
