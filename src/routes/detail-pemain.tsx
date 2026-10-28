@@ -15,7 +15,17 @@ import {
 } from "recharts";
 import html2canvas from "html2canvas-pro";
 import { supabase } from "@/integrations/supabase/client";
-import { rankStandings, sortStandings } from "@/lib/ranking";
+import { RankingPodium } from "@/components/ranking-podium";
+import { RankingRules } from "@/components/ranking-rules";
+import {
+  buildStandings,
+  gamesSpread,
+  getRankingProfile,
+  isCountedMatch,
+  rankStandings,
+  sportFromMatches,
+  type RankedStanding,
+} from "@/lib/ranking";
 
 export const Route = createFileRoute("/detail-pemain")({
   head: () => ({
@@ -44,6 +54,7 @@ type MatchRow = {
   score_b: number;
   created_at: string;
   status?: string;
+  sport?: string;
 };
 
 type PlayerStatRow = {
@@ -52,8 +63,6 @@ type PlayerStatRow = {
   out_count: number;
   foul_count: number;
 };
-
-type Standing = { name: string; points: number; games: number; wins: number; pointDiff: number };
 
 type ActionSummary = {
   name: string;
@@ -82,37 +91,6 @@ type RivalryRow = {
 
 function pairKey(a: string, b: string) {
   return [a, b].sort().join("␟");
-}
-
-function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
-  const table = new Map<string, Standing>();
-  players.forEach((name) => table.set(name, { name, points: 0, games: 0, wins: 0, pointDiff: 0 }));
-
-  matches.forEach((m) => {
-    const teamA = m.team_a ?? [];
-    const teamB = m.team_b ?? [];
-    const aWon = (m.score_a ?? 0) > (m.score_b ?? 0);
-    const bWon = (m.score_b ?? 0) > (m.score_a ?? 0);
-
-    teamA.forEach((name) => {
-      const row = table.get(name) ?? { name, points: 0, games: 0, wins: 0, pointDiff: 0 };
-      row.games += 1;
-      row.points += m.score_a ?? 0;
-      row.pointDiff += (m.score_a ?? 0) - (m.score_b ?? 0);
-      if (aWon) row.wins += 1;
-      table.set(name, row);
-    });
-    teamB.forEach((name) => {
-      const row = table.get(name) ?? { name, points: 0, games: 0, wins: 0, pointDiff: 0 };
-      row.games += 1;
-      row.points += m.score_b ?? 0;
-      row.pointDiff += (m.score_b ?? 0) - (m.score_a ?? 0);
-      if (bWon) row.wins += 1;
-      table.set(name, row);
-    });
-  });
-
-  return [...table.values()];
 }
 
 function buildActionSummary(statRows: PlayerStatRow[]): ActionSummary[] {
@@ -430,7 +408,7 @@ function DetailPemain() {
         supabase.from("arena_players").select("name").eq("arena_code", code),
         supabase
           .from("arena_matches")
-          .select("id, round, team_a, team_b, score_a, score_b, created_at, status")
+          .select("id, round, team_a, team_b, score_a, score_b, created_at, status, sport")
           .eq("arena_code", code)
           .order("round", { ascending: true })
           .order("created_at", { ascending: true }),
@@ -443,20 +421,14 @@ function DetailPemain() {
       if (matchesRes.error) throw matchesRes.error;
       const players = (playersRes.data ?? []).map((p) => p.name);
       const allMatches = (matchesRes.data ?? []) as MatchRow[];
-      // Ronde yang masih 0-0 di kedua tim itu belum beneran dimainkan (baru dibuat
-      // pas ronde mulai, skornya belum diisi) — jangan ikut dihitung di statistik
-      // apapun (podium, MVP, jumlah game, tren, dst), biar nggak nampilin ronde
-      // yang masih kosong seolah-olah sudah selesai.
-      // Skor yang masih berjalan (status 'live') belum dihitung ke statistik sampai ronde ditutup.
-      const matches = allMatches.filter(
-        (m) => m.status !== "live" && ((m.score_a ?? 0) !== 0 || (m.score_b ?? 0) !== 0),
-      );
+      // Ronde 0-0 belum dimainkan dan skor 'live' belum final: keduanya tidak ikut dihitung di
+      // statistik apa pun (podium, MVP, jumlah game, tren, dst). Aturannya satu sumber di ranking.ts.
+      const matches = allMatches.filter(isCountedMatch);
       const statRows = statsRes.error ? [] : ((statsRes.data ?? []) as PlayerStatRow[]);
 
-      const standings = buildStandings(players, matches);
-      const trendNames = sortStandings(standings)
-        .slice(0, 5)
-        .map((s) => s.name);
+      const sport = sportFromMatches(allMatches);
+      const standings: RankedStanding[] = rankStandings(buildStandings(players, matches), sport);
+      const trendNames = standings.slice(0, 5).map((s) => s.name);
       const partnerships = buildPartnerStats(matches);
 
       const lastMatchAt = allMatches.length
@@ -464,6 +436,7 @@ function DetailPemain() {
         : null;
 
       return {
+        sport,
         standings,
         actions: buildActionSummary(statRows),
         hasActionData: !statsRes.error && statRows.length > 0,
@@ -482,13 +455,14 @@ function DetailPemain() {
 
   const data = query.data;
 
-  // Peringkat memakai aturan yang sama dengan halaman klasemen (src/lib/ranking.ts):
-  // poin terbanyak, lalu selisih poin. Jumlah main tidak mengubah urutan juara.
-  const rankedStandingsRaw = data ? rankStandings(data.standings) : [];
+  // Peringkat memakai aturan yang sama dengan halaman klasemen (src/lib/ranking.ts),
+  // sesuai cabang olahraga arena. Jumlah main tidak mengubah urutan juara.
+  const profile = getRankingProfile(data?.sport);
+  const rankedStandingsRaw: RankedStanding[] = data ? data.standings : [];
   const maxGamesPlayed = data ? Math.max(0, ...data.standings.map((s) => s.games)) : 0;
   const minGamesToRank = Math.max(3, Math.ceil(maxGamesPlayed / 2));
   const podium = rankedStandingsRaw.filter((s) => s.games > 0 && s.rank <= 3).slice(0, 3);
-  const maxPodiumPoints = podium.length ? Math.max(...podium.map((p) => p.points), 1) : 1;
+  const spread = data ? gamesSpread(data.standings) : null;
 
   const topPoin = data
     ? [...data.standings].sort((a, b) => b.points - a.points).slice(0, 5).map((s) => ({ name: s.name, value: s.points }))
@@ -592,8 +566,7 @@ function DetailPemain() {
             <section className="mt-10">
               <h2 className="text-arena-heading mb-1">Podium</h2>
               <p className="mb-4 text-xs text-arena-dim">
-                Top 3 pejuang lapangan berdasarkan total poin, lalu selisih poin. Urutannya sama
-                dengan halaman Klasemen.
+                Top 3 pejuang lapangan. Urutan sama dengan halaman Klasemen.
               </p>
               {podium.length === 0 ? (
                 <p className="text-sm text-arena-dim">
@@ -602,86 +575,16 @@ function DetailPemain() {
                     : "Belum ada pertandingan yang selesai — main dulu beberapa ronde lagi buat lihat podium."}
                 </p>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {podium.map((p) => {
-                    const rank = p.rank;
-                    const meta =
-                      rank === 1
-                        ? { badge: "🥇", label: "GOLD BADGE", color: SPORT_AMBER }
-                        : rank === 2
-                          ? { badge: "🥈", label: "SILVER BADGE", color: SPORT_BLUE }
-                          : { badge: "🥉", label: "BRONZE BADGE", color: SPORT_PINK };
-                    const winRate = p.games > 0 ? Math.round((p.wins / p.games) * 100) : 0;
-                    const losses = p.games - p.wins;
-                    const pointsPct = Math.min(100, Math.round((p.points / maxPodiumPoints) * 100));
-
-                    return (
-                      <div
-                        key={p.name}
-                        className="arena-card-static"
-                        style={{ boxShadow: `0 0 0 1px ${meta.color}33, 0 14px 30px -24px ${meta.color}88` }}
-                      >
-                        <div className="flex items-start justify-between">
-                          <span className="text-2xl">{meta.badge}</span>
-                          <span
-                            className="flex h-7 w-7 items-center justify-center rounded-full font-display text-xs font-bold text-white"
-                            style={{ background: meta.color }}
-                          >
-                            {rank}
-                          </span>
-                        </div>
-                        <p className="mt-2 font-display text-lg font-bold uppercase tracking-wide text-arena-ink">
-                          {p.name}
-                        </p>
-                        <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: meta.color }}>
-                          {meta.label}
-                        </p>
-
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between text-xs text-arena-dim">
-                            <span>Total Poin</span>
-                            <span className="font-display font-bold text-arena-ink">{p.points} pts</span>
-                          </div>
-                          <div className="mt-1 h-2 overflow-hidden rounded-full bg-arena-ink/10">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${pointsPct}%`, background: meta.color }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-2">
-                          <div className="flex items-center justify-between text-xs text-arena-dim">
-                            <span>Win Rate</span>
-                            <span className="font-display font-bold text-arena-ink">{winRate}%</span>
-                          </div>
-                          <div className="mt-1 h-2 overflow-hidden rounded-full bg-arena-ink/10">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${winRate}%`, background: meta.color }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold">
-                          <span className="rounded-full bg-arena-ink/5 px-2 py-1 text-arena-dim">
-                            {p.games} Game
-                          </span>
-                          <span className="rounded-full bg-arena-lime/15 px-2 py-1 text-arena-ink">
-                            {p.wins} Menang
-                          </span>
-                          <span className="rounded-full px-2 py-1" style={{ background: `${SPORT_PINK}22`, color: SPORT_PINK }}>
-                            {losses} Kalah
-                          </span>
-                          <span className="rounded-full bg-arena-ink/5 px-2 py-1 text-arena-dim">
-                            {p.pointDiff > 0 ? `+${p.pointDiff}` : p.pointDiff} selisih
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div
+                  className="rounded-lg border border-arena-ink/10 px-4 pb-0 pt-9 sm:px-8"
+                  style={{ background: `linear-gradient(180deg, ${profile.accent}14, transparent 70%)` }}
+                >
+                  <RankingPodium rows={podium} profile={profile} />
                 </div>
               )}
+              <div className="mt-3">
+                <RankingRules profile={profile} gamesSpread={spread} />
+              </div>
             </section>
 
             {(data.roundMvp || topWinStreak) && (

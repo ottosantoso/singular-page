@@ -17,7 +17,19 @@ import {
   Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { rankStandings, sortStandings } from "@/lib/ranking";
+import { RankingPodium } from "@/components/ranking-podium";
+import { RankingRules } from "@/components/ranking-rules";
+import {
+  buildStandings,
+  gamesSpread,
+  getRankingProfile,
+  isCountedMatch,
+  profileSummary,
+  rankStandings,
+  sportFromMatches,
+  type RankedStanding,
+  type Standing,
+} from "@/lib/ranking";
 
 export const Route = createFileRoute("/klasemen")({
   head: () => ({
@@ -40,6 +52,8 @@ export const Route = createFileRoute("/klasemen")({
   component: Klasemen,
 });
 
+const MEDAL_TONE = { 1: "#e0a526", 2: "#8fa0b5", 3: "#c2773b" } as const;
+
 type MatchRow = {
   id: string;
   round: number;
@@ -50,14 +64,7 @@ type MatchRow = {
   score_b: number;
   created_at: string;
   status?: string;
-};
-
-type Standing = {
-  name: string;
-  points: number;
-  games: number;
-  wins: number;
-  pointDiff: number;
+  sport?: string;
 };
 
 type PlayerStatRow = {
@@ -76,39 +83,6 @@ type PlayerReport = {
   outCount: number;
   foulCount: number;
 };
-
-function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
-  const table = new Map<string, Standing>();
-  const ensure = (name: string) => {
-    if (!table.has(name)) table.set(name, { name, points: 0, games: 0, wins: 0, pointDiff: 0 });
-    return table.get(name)!;
-  };
-  players.forEach(ensure);
-  matches.forEach((m) => {
-    const aWins = m.score_a > m.score_b;
-    const bWins = m.score_b > m.score_a;
-    m.team_a.forEach((p) => {
-      const row = ensure(p);
-      row.points += m.score_a;
-      row.pointDiff += m.score_a - m.score_b;
-      row.games += 1;
-      if (aWins) row.wins += 1;
-    });
-    m.team_b.forEach((p) => {
-      const row = ensure(p);
-      row.points += m.score_b;
-      row.pointDiff += m.score_b - m.score_a;
-      row.games += 1;
-      if (bWins) row.wins += 1;
-    });
-  });
-  return sortStandings([...table.values()]);
-}
-
-// Peringkat padat dari modul bersama (poin, lalu selisih poin).
-function competitionRank(rows: Standing[], index: number): number {
-  return rankStandings(rows)[index]?.rank ?? index + 1;
-}
 
 function buildPlayerReport(standings: Standing[], statRows: PlayerStatRow[]): PlayerReport[] {
   const statTable = new Map<string, { point_count: number; out_count: number; foul_count: number }>();
@@ -200,7 +174,7 @@ function Klasemen() {
         supabase.from("arena_players").select("name").eq("arena_code", code),
         supabase
           .from("arena_matches")
-          .select("id, round, court, team_a, team_b, score_a, score_b, created_at, status")
+          .select("id, round, court, team_a, team_b, score_a, score_b, created_at, status, sport")
           .eq("arena_code", code)
           .order("round", { ascending: true })
           .order("court", { ascending: true }),
@@ -215,16 +189,20 @@ function Klasemen() {
       const players = (playersRes.data ?? []).map((p) => p.name);
       const allRows = (matchesRes.data ?? []) as MatchRow[];
       // Skor yang masih berjalan (status 'live') ditampilkan, tapi belum dihitung ke klasemen
-      // sampai ronde ditutup, supaya skor setengah jalan tidak mengubah peringkat.
-      const matches = allRows.filter((m) => m.status !== "live");
+      // sampai ronde ditutup. Ronde 0-0 belum dimainkan, jadi juga tidak dihitung.
+      const matches = allRows.filter(isCountedMatch);
       const liveMatches = allRows.filter((m) => m.status === "live");
       const statRows = (statsRes.data ?? []) as PlayerStatRow[];
-      const standings = buildStandings(players, matches);
-      return { players, matches, liveMatches, standings, playerReport: buildPlayerReport(standings, statRows) };
+      const sport = sportFromMatches(allRows);
+      const standings: RankedStanding[] = rankStandings(buildStandings(players, matches), sport);
+      return { players, matches, liveMatches, sport, standings, playerReport: buildPlayerReport(standings, statRows) };
     },
   });
 
   const data = query.data;
+  const profile = getRankingProfile(data?.sport);
+  const podiumRows = data ? data.standings.filter((row) => row.games > 0 && row.rank <= 3).slice(0, 3) : [];
+  const spread = data ? gamesSpread(data.standings) : null;
   const dashboard = data
     ? (() => {
         const totalScore = data.matches.reduce((sum, match) => sum + match.score_a + match.score_b, 0);
@@ -432,13 +410,31 @@ function Klasemen() {
             </section>
 
             <section className="mt-5 overflow-hidden rounded-lg border border-arena-ink/10 bg-card/90 shadow-sm">
-              <div className="flex flex-col gap-2 border-b border-arena-ink/10 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex flex-col gap-3 border-b border-arena-ink/10 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-arena-lime">Peringkat keseluruhan</p>
                   <h2 className="mt-1 font-display text-xl font-bold uppercase tracking-wide text-arena-ink">Klasemen Pejuang</h2>
                 </div>
-                <p className="text-xs text-arena-dim">Diurutkan berdasarkan poin, lalu selisih poin</p>
+                <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                  <span
+                    className="inline-flex items-center rounded-full px-3 py-1 font-display text-[10px] font-bold uppercase tracking-wider"
+                    style={{ background: `${profile.accent}26`, color: "var(--arena-ink)", boxShadow: `inset 0 0 0 1px ${profile.accent}` }}
+                  >
+                    {profile.label}
+                  </span>
+                  <p className="text-xs text-arena-dim">Urutan: {profileSummary(profile)}</p>
+                </div>
               </div>
+
+              {podiumRows.length > 0 && (
+                <div
+                  className="border-b border-arena-ink/10 px-4 pb-0 pt-9 sm:px-8"
+                  style={{ background: `linear-gradient(180deg, ${profile.accent}14, transparent 70%)` }}
+                >
+                  <RankingPodium rows={podiumRows} profile={profile} />
+                </div>
+              )}
+
               {data.standings.length === 0 ? (
                 <p className="px-5 py-10 text-center text-sm text-arena-dim">Belum ada data untuk kode ini.</p>
               ) : (
@@ -449,50 +445,69 @@ function Klasemen() {
                         <th>#</th>
                         <th>Pejuang</th>
                         <th>Main</th>
-                        <th>Menang</th>
+                        <th className="whitespace-nowrap">M/S/K</th>
                         <th>Win Rate</th>
                         <th>Selisih</th>
-                        <th>Poin</th>
+                        <th>{profile.unit === "game" ? "Game" : "Poin"}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.standings.map((standing, index) => {
+                      {data.standings.map((standing) => {
                         const report = data.playerReport.find((player) => player.name === standing.name);
                         const winRate = report?.winRate ?? 0;
+                        const played = standing.games > 0;
+                        const medal = played && standing.rank <= 3 ? MEDAL_TONE[standing.rank as 1 | 2 | 3] : null;
                         return (
-                        <tr key={standing.name} className={index === 0 ? "bg-arena-lime/5" : undefined}>
-                          <td>
-                            <span className={`inline-flex size-7 items-center justify-center rounded-md font-display text-xs font-bold ${index === 0 ? "bg-arena-lime text-primary-foreground" : "bg-muted text-arena-dim"}`}>
-                              {String(competitionRank(data.standings, index)).padStart(2, "0")}
-                            </span>
-                          </td>
-                          <td className="font-semibold text-arena-ink">{standing.name}</td>
-                          <td>{standing.games}</td>
-                          <td>{standing.wins}</td>
-                          <td>
-                            <div className="flex min-w-32 items-center gap-3">
-                              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                <div className="h-full rounded-full bg-arena-lime" style={{ width: `${winRate}%` }} />
+                          <tr key={standing.name} style={medal ? { background: `${medal}14` } : undefined}>
+                            <td>
+                              <span
+                                className={`inline-flex size-7 items-center justify-center rounded-full font-display text-xs font-bold ${medal ? "text-white" : "bg-muted text-arena-dim"}`}
+                                style={medal ? { background: medal } : undefined}
+                                aria-label={played ? `Peringkat ${standing.rank}` : "Belum main"}
+                              >
+                                {played ? standing.rank : "–"}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap font-semibold text-arena-ink">{standing.name}</td>
+                            <td>{standing.games}</td>
+                            <td className="whitespace-nowrap text-xs text-arena-dim">
+                              <span className="font-bold text-arena-ink">{standing.wins}</span> /{" "}
+                              {standing.draws} / {standing.losses}
+                            </td>
+                            <td>
+                              <div className="flex min-w-28 items-center gap-3">
+                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                  <div className="h-full rounded-full" style={{ width: `${winRate}%`, background: profile.accent }} />
+                                </div>
+                                <span className="w-9 text-right font-display text-xs font-bold text-arena-ink">{winRate.toFixed(0)}%</span>
                               </div>
-                              <span className="w-9 text-right font-display text-xs font-bold text-arena-ink">{winRate.toFixed(0)}%</span>
-                            </div>
-                          </td>
-                          <td className="font-display font-bold text-arena-ink">{standing.pointDiff > 0 ? `+${standing.pointDiff}` : standing.pointDiff}</td>
-                          <td>
-                            <div className="flex items-center gap-3">
-                              <span className="font-display text-base font-bold text-arena-ink">{standing.points}</span>
-                              <div className="hidden h-1 w-16 overflow-hidden rounded-full bg-muted sm:block">
-                                <div className="h-full rounded-full bg-arena-lime" style={{ width: `${(standing.points / dashboard.maxPoints) * 100}%` }} />
+                            </td>
+                            <td
+                              className={`font-display font-bold ${standing.pointDiff > 0 ? "text-emerald-600" : standing.pointDiff < 0 ? "text-rose-600" : "text-arena-dim"}`}
+                            >
+                              {standing.pointDiff > 0 ? `+${standing.pointDiff}` : standing.pointDiff}
+                            </td>
+                            <td>
+                              <div className="flex items-center gap-3">
+                                <span className="font-display text-base font-bold text-arena-ink">{standing.points}</span>
+                                <div className="hidden h-1 w-16 overflow-hidden rounded-full bg-muted sm:block">
+                                  <div
+                                    className="h-full rounded-full"
+                                    style={{ width: `${(standing.points / dashboard.maxPoints) * 100}%`, background: profile.accent }}
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
                         );
                       })}
                     </tbody>
                   </table>
                 </div>
               )}
+              <div className="border-t border-arena-ink/10 p-3 sm:p-4">
+                <RankingRules profile={profile} gamesSpread={spread} />
+              </div>
             </section>
 
             <section className="mt-8">
