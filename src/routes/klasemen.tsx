@@ -16,7 +16,6 @@ import {
   Flame,
   Home,
   Image as ImageIcon,
-  List,
   MoreHorizontal,
   Percent,
   Radio,
@@ -34,21 +33,26 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { rankStandings, sortStandings } from "@/lib/ranking";
+import { sortStandings } from "@/lib/ranking";
 import {
-  avatarTone,
   buildForm,
   buildInsights,
-  countResults,
-  initials,
-  leaderNarrative,
+  leaderNarrative as _unusedLeaderNarrative,
   teamLabel,
   type Insight,
   type InsightKind,
   type PlayerLine,
 } from "@/lib/klasemen-insights";
+import { championNarrative, computeStats, rankChampions, rankMovement } from "@/lib/klasemen-ranking";
+import { buildAwards } from "@/lib/klasemen-awards";
+import { Avatar } from "@/components/klasemen/avatar";
+import { AwardsBoard } from "@/components/klasemen/awards-board";
+import { StandingsCard } from "@/components/klasemen/standings-card";
 import { MatchBadges, ScheduleDialog } from "@/components/klasemen/schedule-dialog";
 import "@/klasemen.css";
+import "@/klasemen-awards.css";
+
+void _unusedLeaderNarrative;
 
 export const Route = createFileRoute("/klasemen")({
   head: () => ({
@@ -136,11 +140,6 @@ function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
   return sortStandings([...table.values()]);
 }
 
-// Peringkat padat dari modul bersama (poin, lalu selisih poin).
-function competitionRank(rows: Standing[], index: number): number {
-  return rankStandings(rows)[index]?.rank ?? index + 1;
-}
-
 function buildPlayerReport(standings: Standing[], statRows: PlayerStatRow[]): PlayerReport[] {
   const statTable = new Map<string, { point_count: number; out_count: number; foul_count: number }>();
   statRows.forEach((row) => {
@@ -190,18 +189,6 @@ const INSIGHT_STYLE: Record<InsightKind, { icon: LucideIcon; tone: string }> = {
   blowout: { icon: Swords, tone: "kl-tone-blue" },
 };
 
-function Avatar({ name, size }: { name: string; size?: "lg" | "xl" }) {
-  return (
-    <span
-      className={`kl-avatar ${size ? `kl-avatar--${size}` : ""}`}
-      style={avatarTone(name)}
-      aria-hidden="true"
-    >
-      {initials(name)}
-    </span>
-  );
-}
-
 function signedValue(value: number): string {
   return value > 0 ? `+${value}` : String(value);
 }
@@ -236,7 +223,6 @@ function Klasemen() {
   const [code, setCode] = useState("");
   const reportRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [tableTab, setTableTab] = useState<"tabel" | "grafik">("tabel");
   const [scheduleTab, setScheduleTab] = useState<"live" | "hasil" | "ronde">("hasil");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogRound, setDialogRound] = useState<number | null>(null);
@@ -339,33 +325,43 @@ function Klasemen() {
 
   const view = useMemo(() => {
     if (!data) return null;
-    const lines: PlayerLine[] = data.standings.map((s) => {
-      const report = data.playerReport.find((p) => p.name === s.name);
-      return {
-        name: s.name,
-        games: s.games,
-        wins: s.wins,
-        winRate: report?.winRate ?? 0,
-        points: s.points,
-        pointDiff: s.pointDiff,
-        pointCount: report?.pointCount ?? 0,
-      };
-    });
+    const allMatches = [...data.liveMatches, ...data.matches];
+    const rounds = new Set(allMatches.map((m) => m.round)).size;
+    const stats = computeStats(data.players, data.matches);
+    const { ordered, minGames } = rankChampions(stats, rounds);
+    const reportByName = new Map(data.playerReport.map((r) => [r.name, r] as [string, PlayerReport]));
+    const lines: PlayerLine[] = ordered.map((p) => ({
+      name: p.name,
+      games: p.games,
+      wins: p.wins,
+      winRate: p.winRate,
+      points: p.pointsFor,
+      pointDiff: p.pointDiff,
+      pointCount: reportByName.get(p.name)?.pointCount ?? 0,
+    }));
+    const movement = rankMovement(
+      stats.map((s) => s.name),
+      data.matches,
+    );
     const totalScore = data.matches.reduce((sum, m) => sum + m.score_a + m.score_b, 0);
     return {
-      lines,
+      ordered,
+      minGames,
+      reportByName,
       form: buildForm(data.matches),
+      movement,
+      awards: buildAwards(ordered, data.matches, movement),
       totalScore,
       averageTeamScore: data.matches.length > 0 ? totalScore / (data.matches.length * 2) : 0,
       averageMatchTotal: data.matches.length > 0 ? totalScore / data.matches.length : 0,
-      rounds: new Set([...data.matches, ...data.liveMatches].map((m) => m.round)).size,
-      activePlayers: lines.filter((l) => l.games > 0).length,
-      maxPoints: Math.max(...lines.map((l) => l.points), 1),
-      maxGames: Math.max(...lines.map((l) => l.games), 1),
-      hasIndividual: data.playerReport.some((p) => p.pointCount > 0),
-      insights: buildInsights(lines, data.matches),
-      narrative: leaderNarrative(lines),
-      allMatches: [...data.liveMatches, ...data.matches],
+      rounds,
+      activePlayers: ordered.filter((p) => p.games > 0).length,
+      maxPoints: Math.max(...ordered.map((p) => p.pointsFor), 1),
+      maxGames: Math.max(...ordered.map((p) => p.games), 1),
+      // Streak & duo sudah punya gelar sendiri di Papan Gelar.
+      insights: buildInsights(lines, data.matches).filter((i) => i.kind !== "streak" && i.kind !== "duo"),
+      narrative: championNarrative(ordered),
+      allMatches,
     };
   }, [data]);
 
@@ -413,13 +409,13 @@ function Klasemen() {
     }
   };
 
-  const renderNav = (key: NavKey, base: string, withLabel = true) => {
+  const renderNav = (key: NavKey, base: string) => {
     const item = NAV_ITEMS.find((n) => n.key === key)!;
     const Icon = item.icon;
     const content = (
       <>
         <Icon aria-hidden="true" />
-        {withLabel ? item.label : <span>{item.label}</span>}
+        {item.label}
         {item.badge && <span className="kl-new">{item.badge}</span>}
       </>
     );
@@ -443,20 +439,20 @@ function Klasemen() {
     );
   };
 
-  const focus = view ? (view.lines.find((l) => l.name === focusName) ?? view.lines[0]) : undefined;
-  const focusResults = view && focus ? countResults(view.form.get(focus.name)) : null;
-  const focusTotal = focusResults ? focusResults.wins + focusResults.losses + focusResults.draws : 0;
-  const winPct = focusTotal > 0 && focusResults ? (focusResults.wins / focusTotal) * 100 : 0;
-  const drawPct = focusTotal > 0 && focusResults ? (focusResults.draws / focusTotal) * 100 : 0;
+  const focus = view ? (view.ordered.find((p) => p.name === focusName) ?? view.ordered[0]) : undefined;
+  const focusTotal = focus ? focus.wins + focus.losses + focus.draws : 0;
+  const winPct = focus && focusTotal > 0 ? (focus.wins / focusTotal) * 100 : 0;
+  const drawPct = focus && focusTotal > 0 ? (focus.draws / focusTotal) * 100 : 0;
   const donutBackground =
     focusTotal > 0
       ? `conic-gradient(#1d4ed8 0 ${winPct}%, #94a3b8 ${winPct}% ${winPct + drawPct}%, #e11d2e ${winPct + drawPct}% 100%)`
       : "conic-gradient(#e5eaf3 0 100%)";
 
-  const podium = view ? view.lines.slice(0, 3) : [];
+  const rankedPlayers = view ? view.ordered.filter((p) => p.rank !== null) : [];
+  const podium = rankedPlayers.slice(0, 3);
   const podiumOrder = [1, 0, 2];
-  const latestRounds = data
-    ? [...new Set([...data.liveMatches, ...data.matches].map((m) => m.round))].sort((a, b) => b - a).slice(0, 4)
+  const latestRounds = view
+    ? [...new Set(view.allMatches.map((m) => m.round))].sort((a, b) => b - a).slice(0, 4)
     : [];
 
   return (
@@ -610,8 +606,8 @@ function Klasemen() {
                   <h2>
                     <Trophy aria-hidden="true" /> Top 3 Klasemen
                   </h2>
-                  <p className="kl-pdesc">Pemain dengan performa terbaik musim ini</p>
-                  {podium.length === 0 || podium[0].games === 0 ? (
+                  <p className="kl-pdesc">Juara Umum berdasarkan win rate, bukan sekadar total poin</p>
+                  {podium.length === 0 ? (
                     <p className="kl-pdesc" style={{ marginTop: "1.5rem" }}>
                       Belum ada performa pemain untuk dianalisis.
                     </p>
@@ -626,8 +622,10 @@ function Klasemen() {
                             {place === 1 && <Crown className="kl-crown" aria-hidden="true" />}
                             <Avatar name={p.name} size={place === 1 ? "xl" : "lg"} />
                             <span className="kl-step-name">{p.name}</span>
-                            <span className="kl-step-pts">{p.points} Poin</span>
-                            <div className="kl-block">{competitionRank(data.standings, idx)}</div>
+                            <span className="kl-step-pts">
+                              {p.winRate.toFixed(0)}% · {p.pointsFor} poin
+                            </span>
+                            <div className="kl-block">{p.rank}</div>
                           </div>
                         );
                       })}
@@ -640,17 +638,18 @@ function Klasemen() {
                     <Users aria-hidden="true" /> Top 5 Pemain
                   </div>
                   <ol className="kl-top5-list">
-                    {view.lines.slice(0, 5).map((p, i) => {
-                      const rank = competitionRank(data.standings, i);
-                      return (
-                        <li key={p.name}>
-                          <span className={`kl-rankbadge ${rank <= 3 ? `kl-rankbadge--${rank}` : ""}`}>{rank}</span>
-                          <Avatar name={p.name} />
-                          <b>{p.name}</b>
-                          <span className="kl-pts">{p.points}</span>
-                        </li>
-                      );
-                    })}
+                    {view.ordered.slice(0, 5).map((p) => (
+                      <li key={p.name}>
+                        <span className={`kl-rankbadge ${p.rank !== null && p.rank <= 3 ? `kl-rankbadge--${p.rank}` : ""}`}>
+                          {p.rank ?? "–"}
+                        </span>
+                        <Avatar name={p.name} />
+                        <b>{p.name}</b>
+                        <span className="kl-pts">
+                          {p.winRate.toFixed(0)}%<small className="kl-sub-pts">{p.pointsFor} poin</small>
+                        </span>
+                      </li>
+                    ))}
                   </ol>
                 </div>
 
@@ -664,7 +663,7 @@ function Klasemen() {
                     </p>
                   ) : (
                     <div className="kl-insight-list">
-                      {view.insights.slice(0, 5).map((item: Insight) => {
+                      {view.insights.slice(0, 4).map((item: Insight) => {
                         const style = INSIGHT_STYLE[item.kind];
                         const Icon = style.icon;
                         return (
@@ -686,140 +685,15 @@ function Klasemen() {
                 </div>
               </section>
 
-              <section className="kl-card kl-table-card">
-                <div className="kl-card-head">
-                  <div>
-                    <h2 className="kl-card-title">
-                      <Trophy aria-hidden="true" /> Klasemen Pertandingan
-                    </h2>
-                    <p className="kl-card-sub">Diurutkan berdasarkan poin, lalu selisih poin.</p>
-                  </div>
-                  <div className="kl-tabs" role="tablist" aria-label="Tampilan klasemen">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={tableTab === "tabel"}
-                      className={`kl-tab ${tableTab === "tabel" ? "is-active" : ""}`}
-                      onClick={() => setTableTab("tabel")}
-                    >
-                      <List aria-hidden="true" /> Tabel
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={tableTab === "grafik"}
-                      className={`kl-tab ${tableTab === "grafik" ? "is-active" : ""}`}
-                      onClick={() => setTableTab("grafik")}
-                    >
-                      <BarChart3 aria-hidden="true" /> Grafik
-                    </button>
-                  </div>
-                </div>
+              <StandingsCard
+                ordered={view.ordered}
+                form={view.form}
+                movement={view.movement}
+                maxPoints={view.maxPoints}
+                minGames={view.minGames}
+              />
 
-                {data.standings.length === 0 ? (
-                  <p className="kl-empty">Belum ada data untuk kode ini.</p>
-                ) : tableTab === "tabel" ? (
-                  <div className="kl-scroll">
-                    <table className="kl-table">
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Pejuang</th>
-                          <th>Main</th>
-                          <th>Menang</th>
-                          <th>Win Rate</th>
-                          <th>Poin</th>
-                          <th>Selisih</th>
-                          <th>Poin Individu</th>
-                          <th>Form</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {view.lines.map((line, index) => {
-                          const rank = competitionRank(data.standings, index);
-                          const results = (view.form.get(line.name) ?? []).slice(-5);
-                          return (
-                            <tr key={line.name} className={index === 0 ? "is-leader" : undefined}>
-                              <td>
-                                <span className={`kl-rankbadge ${rank <= 3 ? `kl-rankbadge--${rank}` : ""}`}>{rank}</span>
-                              </td>
-                              <td>
-                                <div className="kl-player">
-                                  <Avatar name={line.name} />
-                                  {line.name}
-                                </div>
-                              </td>
-                              <td>{line.games}</td>
-                              <td>{line.wins}</td>
-                              <td>
-                                <div className="kl-bar">
-                                  <div className="kl-bar-track">
-                                    <div className="kl-bar-fill" style={{ width: `${line.winRate}%` }} />
-                                  </div>
-                                  <span className="kl-bar-val">{line.winRate.toFixed(0)}%</span>
-                                </div>
-                              </td>
-                              <td>
-                                <div className="kl-bar" style={{ minWidth: "6.5rem" }}>
-                                  <span className="kl-num">{line.points}</span>
-                                  <div className="kl-bar-track">
-                                    <div className="kl-bar-fill kl-bar-fill--red" style={{ width: `${(line.points / view.maxPoints) * 100}%` }} />
-                                  </div>
-                                </div>
-                              </td>
-                              <td className={`kl-num ${line.pointDiff > 0 ? "kl-pos" : line.pointDiff < 0 ? "kl-neg" : ""}`}>
-                                {signedValue(line.pointDiff)}
-                              </td>
-                              <td className="kl-num">{view.hasIndividual ? line.pointCount : "—"}</td>
-                              <td>
-                                <div className="kl-form" aria-label="Hasil 5 laga terakhir">
-                                  {results.length === 0 ? (
-                                    <span style={{ color: "#94a3b8" }}>—</span>
-                                  ) : (
-                                    results.map((r, i) => (
-                                      <i key={i} className={r} title={r === "W" ? "Menang" : r === "L" ? "Kalah" : "Seri"}>
-                                        {r === "S" ? "S" : r === "W" ? "M" : "K"}
-                                      </i>
-                                    ))
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <>
-                    <div className="kl-legend">
-                      <span>Poin</span>
-                      <span className="r">Win rate</span>
-                    </div>
-                    <div className="kl-chart">
-                      {view.lines.map((line) => (
-                        <div key={line.name} className="kl-chart-row">
-                          <b>{line.name}</b>
-                          <div className="kl-chart-bars">
-                            <div className="kl-chart-line">
-                              <div className="kl-bar-track">
-                                <div className="kl-bar-fill" style={{ width: `${(line.points / view.maxPoints) * 100}%` }} />
-                              </div>
-                              <em>{line.points} poin</em>
-                            </div>
-                            <div className="kl-chart-line">
-                              <div className="kl-bar-track">
-                                <div className="kl-bar-fill kl-bar-fill--red" style={{ width: `${line.winRate}%` }} />
-                              </div>
-                              <em>{line.winRate.toFixed(0)}%</em>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </section>
+              <AwardsBoard awards={view.awards} />
 
               <section className="kl-bottom">
                 <div className="kl-card kl-sched">
@@ -909,7 +783,7 @@ function Klasemen() {
                       <Percent aria-hidden="true" /> Distribusi Hasil
                     </h2>
                   </div>
-                  {focus && focusResults && (
+                  {focus && (
                     <>
                       <div className="kl-focus">
                         <span className="kl-card-sub" style={{ margin: 0 }}>
@@ -921,9 +795,9 @@ function Klasemen() {
                           onChange={(e) => setFocusName(e.target.value)}
                           aria-label="Pilih pemain untuk distribusi hasil"
                         >
-                          {view.lines.map((l) => (
-                            <option key={l.name} value={l.name}>
-                              {l.name}
+                          {view.ordered.map((p) => (
+                            <option key={p.name} value={p.name}>
+                              {p.name}
                             </option>
                           ))}
                         </select>
@@ -936,18 +810,18 @@ function Klasemen() {
                           <div>
                             <i style={{ background: "#1d4ed8" }} />
                             <span>Menang</span>
-                            <b>{focusResults.wins}</b>
+                            <b>{focus.wins}</b>
                           </div>
                           <div>
                             <i style={{ background: "#e11d2e" }} />
                             <span>Kalah</span>
-                            <b>{focusResults.losses}</b>
+                            <b>{focus.losses}</b>
                           </div>
-                          {focusResults.draws > 0 && (
+                          {focus.draws > 0 && (
                             <div>
                               <i style={{ background: "#94a3b8" }} />
                               <span>Seri</span>
-                              <b>{focusResults.draws}</b>
+                              <b>{focus.draws}</b>
                             </div>
                           )}
                         </div>
@@ -967,7 +841,7 @@ function Klasemen() {
                     <div className="kl-perf">
                       {[
                         { label: "Win rate", value: `${focus.winRate.toFixed(0)}%`, pct: focus.winRate, icon: Percent, tone: "kl-tone-blue" },
-                        { label: "Total poin terkumpul", value: String(focus.points), pct: (focus.points / view.maxPoints) * 100, icon: Target, tone: "kl-tone-red" },
+                        { label: "Total poin terkumpul", value: String(focus.pointsFor), pct: (focus.pointsFor / view.maxPoints) * 100, icon: Target, tone: "kl-tone-red" },
                         { label: "Total pertandingan", value: String(focus.games), pct: (focus.games / view.maxGames) * 100, icon: Swords, tone: "kl-tone-gold" },
                         {
                           label: "Selisih poin",
@@ -1015,7 +889,7 @@ function Klasemen() {
                     </p>
                   </div>
                 </div>
-                {data.playerReport.length === 0 ? (
+                {view.ordered.length === 0 ? (
                   <p className="kl-empty">Belum ada data untuk kode ini.</p>
                 ) : (
                   <div className="kl-scroll">
@@ -1033,32 +907,35 @@ function Klasemen() {
                         </tr>
                       </thead>
                       <tbody>
-                        {data.playerReport.map((player, index) => (
-                          <tr key={player.name}>
-                            <td className="kl-num" style={{ color: "#e11d2e" }}>
-                              {String(index + 1).padStart(2, "0")}
-                            </td>
-                            <td>
-                              <div className="kl-player">
-                                <Avatar name={player.name} />
-                                {player.name}
-                              </div>
-                            </td>
-                            <td>{player.games}</td>
-                            <td>{player.wins}</td>
-                            <td>
-                              <div className="kl-bar">
-                                <div className="kl-bar-track">
-                                  <div className="kl-bar-fill" style={{ width: `${player.winRate}%` }} />
+                        {view.ordered.map((player) => {
+                          const report = view.reportByName.get(player.name);
+                          return (
+                            <tr key={player.name}>
+                              <td className="kl-num" style={{ color: "#e11d2e" }}>
+                                {player.rank !== null ? String(player.rank).padStart(2, "0") : "–"}
+                              </td>
+                              <td>
+                                <div className="kl-player">
+                                  <Avatar name={player.name} />
+                                  {player.name}
                                 </div>
-                                <span className="kl-bar-val">{player.winRate.toFixed(0)}%</span>
-                              </div>
-                            </td>
-                            <td className="kl-num">{player.pointCount}</td>
-                            <td>{player.outCount}</td>
-                            <td>{player.foulCount}</td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td>{player.games}</td>
+                              <td>{player.wins}</td>
+                              <td>
+                                <div className="kl-bar">
+                                  <div className="kl-bar-track">
+                                    <div className="kl-bar-fill" style={{ width: `${player.winRate}%` }} />
+                                  </div>
+                                  <span className="kl-bar-val">{player.winRate.toFixed(0)}%</span>
+                                </div>
+                              </td>
+                              <td className="kl-num">{report?.pointCount ?? 0}</td>
+                              <td>{report?.outCount ?? 0}</td>
+                              <td>{report?.foulCount ?? 0}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
