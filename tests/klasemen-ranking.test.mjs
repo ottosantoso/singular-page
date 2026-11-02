@@ -79,3 +79,45 @@ test("pergerakan peringkat dibanding ronde sebelumnya", () => {
   assert.ok(mv.get("A").delta < 0);
   assert.equal(rankMovement(["A"], [m(1, ["A"], ["B"], 1, 0)]).size, 0);
 });
+
+// Data nyata arena VS6TJA: 8 pemain, 1 lapangan (4 pemain per ronde), 11 ronde.
+// Pemain main 5 atau 6 laga; Bang deni baru masuk setelah ronde 2.
+const vs6tja = [
+  m(1, ["Ryo", "Donna"], ["Tama", "Afwan"], 9, 12),
+  m(2, ["Afwan", "Tari"], ["Riska", "Otto"], 12, 9),
+  m(3, ["Bang deni", "Riska"], ["Ryo", "Tama"], 11, 10),
+  m(4, ["Tari", "Otto"], ["Donna", "Bang deni"], 14, 7),
+  m(5, ["Bang deni", "Tari"], ["Otto", "Afwan"], 8, 13),
+  m(6, ["Donna", "Tama"], ["Ryo", "Riska"], 13, 8),
+  m(7, ["Tari", "Donna"], ["Tama", "Riska"], 10, 11),
+  m(8, ["Bang deni", "Otto"], ["Ryo", "Afwan"], 8, 13),
+  m(9, ["Tari", "Ryo"], ["Afwan", "Riska"], 13, 8),
+  m(10, ["Donna", "Otto"], ["Tama", "Bang deni"], 10, 11),
+  m(11, ["Tari", "Otto"], ["Bang deni", "Donna"], 14, 7),
+];
+const vs6tjaPlayers = ["Ryo", "Otto", "Afwan", "Tari", "Donna", "Riska", "Tama", "Bang deni"];
+
+test("arena rotasi (VS6TJA): pemain dengan 5 laga tidak jadi Provisional, Afwan juara", () => {
+  const { ordered, minGames } = rankChampions(computeStats(vs6tjaPlayers, vs6tja), 11);
+  assert.equal(minGames, 3);
+  assert.equal(ordered.some((p) => p.provisional), false);
+  assert.deepEqual(
+    ordered.slice(0, 3).map((p) => [p.name, p.rank]),
+    [["Afwan", 1], ["Tama", 2], ["Tari", 3]],
+  );
+});
+
+test("batas minimum: jatah main = yang terkecil antara jumlah ronde dan main terbanyak", () => {
+  assert.equal(minimumGames(11), 6); // semua bisa main di tiap ronde
+  assert.equal(minimumGames(11, 6), 3); // arena rotasi, paling banyak main 6x
+  assert.equal(minimumGames(11, 20), 6); // tidak pernah lebih ketat dari aturan jumlah ronde
+  assert.equal(minimumGames(1, 0), 1);
+});
+
+test("pemain yang baru main sedikit tetap Provisional di arena rotasi", () => {
+  const matches = [...vs6tja, m(12, ["Baru", "Tari"], ["Otto", "Ryo"], 11, 9)];
+  const { ordered } = rankChampions(computeStats([...vs6tjaPlayers, "Baru"], matches), 12);
+  const baru = ordered.find((p) => p.name === "Baru");
+  assert.equal(baru.provisional, true);
+  assert.equal(baru.rank, null);
+});

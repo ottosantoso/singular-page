@@ -208,10 +208,16 @@ Untuk mencegah pemain dengan sampel sangat kecil langsung memimpin, sistem
 menerapkan batas minimum laga:
 
 ```text
-minimum laga = max(1, ceil(50% x jumlah ronde yang terdeteksi))
+jatah main = min(jumlah ronde, jumlah main terbanyak di arena)
+minimum laga = max(1, ceil(50% x jatah main))
 ```
 
-Contoh:
+Jumlah main terbanyak dipakai karena pada arena dengan pemain lebih banyak dari slot
+lapangan (misalnya 8 pemain, 1 lapangan, 4 pemain per ronde) tidak ada yang bisa main di
+semua ronde. Menghitung dari jumlah ronde akan menjadikan pemain yang sudah mendapat jatah
+main penuh sebagai Provisional.
+
+Contoh (semua pemain main di tiap ronde, jatah main = jumlah ronde):
 
 | Jumlah ronde | Minimum laga resmi |
 |---:|---:|
@@ -221,6 +227,9 @@ Contoh:
 | 4 ronde | 2 |
 | 5 ronde | 3 |
 | 10 ronde | 5 |
+
+Contoh arena rotasi: 11 ronde, 8 pemain, 1 lapangan. Pemain main 5 atau 6 laga, jatah main = 6,
+minimum laga = 3, sehingga semua pemain masuk peringkat.
 
 Pemain yang belum mencapai batas tersebut:
 
