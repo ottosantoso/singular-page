@@ -2,6 +2,14 @@
 // Urutan: win rate -> persentase poin -> selisih poin per laga -> jumlah menang.
 // Kalau semuanya sama, peringkat dibagi (padat). Nama hanya dipakai untuk urutan tampil.
 // Pemain dengan laga kurang dari batas minimum berstatus Provisional (tidak mengambil peringkat).
+//
+// Aturan final (simulasi_juara_umum.xlsx, 3 Nov 2026):
+//  0. Laga valid hanya jika skor A + skor B > 0. Laga 0-0 berstatus final adalah laga yang belum
+//     dimainkan, bukan seri, jadi dikeluarkan dari semua statistik.
+//  1. Pembagi win rate = MAX(laga sendiri, main terbanyak - ROTATION_TOLERANCE).
+//  2. Win rate = (menang + 0,5 x seri) / pembagi.
+//  3. Layak peringkat jika laga sendiri >= MAX(1, ceil(50% x main terbanyak)); sisanya Provisional.
+//  4. Total poin tidak ikut menentukan peringkat (hanya informasi).
 
 export type MatchLike = {
   round: number;
@@ -20,7 +28,7 @@ export type PlayerStats = {
   pointsFor: number;
   pointsAgainst: number;
   pointDiff: number;
-  winRate: number; // 0-100, seri dihitung setengah menang
+  winRate: number; // 0-100, seri dihitung setengah menang; pembagi = MAX(games, main terbanyak - toleransi)
   pointPct: number; // 0-100, poin untuk / (poin untuk + poin kebobolan)
   avgFor: number;
   avgAgainst: number;
@@ -31,9 +39,19 @@ export type RankedPlayer = PlayerStats & { rank: number | null; provisional: boo
 
 export type SortMode = "juara" | "poin" | "rata" | "selisih";
 
+// Jadwal rotasi yang adil menghasilkan selisih main paling banyak 1 laga (istirahat bergilir,
+// ronde terakhir tidak penuh). Selisih sebesar ini bukan salah pemain, jadi tidak menurunkan win rate.
+// Selisih yang lebih besar (telat datang, pulang awal) dihitung sebagai laga yang tidak dimenangkan.
+export const ROTATION_TOLERANCE = 1;
+
+// Laga 0-0 = belum dimainkan (bukan seri). Dipakai juga oleh insight, form, dan papan gelar.
+export function isPlayedMatch(m: { score_a: number; score_b: number }): boolean {
+  return m.score_a + m.score_b > 0;
+}
+
 type Raw = { games: number; wins: number; losses: number; draws: number; pf: number; pa: number };
 
-function finalize(name: string, r: Raw): PlayerStats {
+function finalize(name: string, r: Raw, divisor: number): PlayerStats {
   const g = r.games;
   const total = r.pf + r.pa;
   return {
@@ -45,7 +63,7 @@ function finalize(name: string, r: Raw): PlayerStats {
     pointsFor: r.pf,
     pointsAgainst: r.pa,
     pointDiff: r.pf - r.pa,
-    winRate: g > 0 ? ((r.wins + 0.5 * r.draws) / g) * 100 : 0,
+    winRate: divisor > 0 ? ((r.wins + 0.5 * r.draws) / divisor) * 100 : 0,
     pointPct: total > 0 ? (r.pf / total) * 100 : 0,
     avgFor: g > 0 ? r.pf / g : 0,
     avgAgainst: g > 0 ? r.pa / g : 0,
@@ -65,6 +83,7 @@ export function computeStats(players: readonly string[], matches: readonly Match
   };
   players.forEach(ensure);
   for (const m of matches) {
+    if (!isPlayedMatch(m)) continue; // laga 0-0 belum dimainkan
     const apply = (team: string[], own: number, other: number) => {
       for (const name of team) {
         const row = ensure(name);
@@ -79,7 +98,10 @@ export function computeStats(players: readonly string[], matches: readonly Match
     apply(m.team_a, m.score_a, m.score_b);
     apply(m.team_b, m.score_b, m.score_a);
   }
-  return [...table.entries()].map(([name, row]) => finalize(name, row));
+  const maxGames = [...table.values()].reduce((max, r) => Math.max(max, r.games), 0);
+  return [...table.entries()].map(([name, row]) =>
+    finalize(name, row, Math.max(row.games, maxGames - ROTATION_TOLERANCE)),
+  );
 }
 
 // 0 = seri penuh pada semua kriteria peringkat (nama tidak ikut dihitung).
@@ -162,11 +184,12 @@ export function rankMovement(
   matches: readonly MatchLike[],
 ): Map<string, Movement> {
   const result = new Map<string, Movement>();
-  const rounds = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b);
+  const played = matches.filter(isPlayedMatch);
+  const rounds = [...new Set(played.map((m) => m.round))].sort((a, b) => a - b);
   if (rounds.length < 2) return result;
   const last = rounds[rounds.length - 1];
-  const before = denseRanks(computeStats(players, matches.filter((m) => m.round <= rounds[rounds.length - 2])));
-  const after = denseRanks(computeStats(players, matches.filter((m) => m.round <= last)));
+  const before = denseRanks(computeStats(players, played.filter((m) => m.round <= rounds[rounds.length - 2])));
+  const after = denseRanks(computeStats(players, played.filter((m) => m.round <= last)));
   for (const [name, to] of after) {
     const from = before.get(name);
     if (from !== undefined) result.set(name, { delta: from - to, from, to, round: last });
