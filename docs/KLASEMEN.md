@@ -189,18 +189,22 @@ Artinya, total poin bukan penentu pertama Juara Umum. Pemain dengan total poin
 lebih tinggi belum tentu berada di atas pemain lain jika win rate atau % Poinnya
 lebih rendah.
 
-### 3.2 Peringkat padat dan peringkat yang sama
+### 3.2 Peringkat kompetisi dan peringkat yang sama
 
 Jika semua kriteria Juara Umum sama, pemain berbagi peringkat yang sama. Sistem
-menggunakan peringkat padat:
+menggunakan peringkat gaya kompetisi, sama dengan Excel simulasi
+(`simulasi_juara_umum.xlsx`):
 
 ```text
 Pemain A  #1
 Pemain B  #1
-Pemain C  #2
+Pemain C  #3
 ```
 
-Tidak ada lompatan ke `#3` setelah dua pemain berbagi `#1`. Untuk ranking resmi, label posisi mengikuti peringkat padat tersebut.
+Peringkat berikutnya melompat sebanyak jumlah pemain yang seri: tidak ada `#2`
+setelah dua pemain berbagi `#1`. Rumusnya: peringkat = 1 + jumlah pemain layak yang
+lebih baik. Perbedaan dengan peringkat padat (1, 1, 2) hanya terlihat bila ada seri
+penuh. Pemain Provisional tidak memakai nomor peringkat.
 
 ## 4. Provisional dan Batas Minimum Laga
 
@@ -208,19 +212,23 @@ Untuk mencegah pemain dengan sampel sangat kecil langsung memimpin, sistem
 menerapkan batas minimum laga:
 
 ```text
-minimum laga = max(1, ceil(50% x jumlah ronde yang terdeteksi))
+minimum laga = max(1, ceil(50% x jumlah main terbanyak di arena))
 ```
+
+Dasarnya jumlah main terbanyak, bukan jumlah ronde. Pada arena 8 pemain dengan
+1 lapangan (4 pemain per ronde), tiap pemain memang hanya main sekitar separuh
+ronde. Batas "50% ronde" jatuh tepat di rata-rata, sehingga pemain yang kebetulan
+istirahat sekali lebih sering ikut dicoret dari peringkat.
 
 Contoh:
 
-| Jumlah ronde | Minimum laga resmi |
+| Main terbanyak | Minimum laga resmi |
 |---:|---:|
-| 1 ronde | 1 |
-| 2 ronde | 1 |
-| 3 ronde | 2 |
-| 4 ronde | 2 |
-| 5 ronde | 3 |
-| 10 ronde | 5 |
+| 1 | 1 |
+| 2 | 1 |
+| 5 | 3 |
+| 6 | 3 |
+| 10 | 5 |
 
 Pemain yang belum mencapai batas tersebut:
 

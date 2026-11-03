@@ -16,11 +16,12 @@ export type Award = {
 };
 
 function top<T>(items: readonly T[], cmp: (a: T, b: T) => number): { best: T | null; ties: number } {
-  if (items.length === 0) return { best: null, ties: 0 };
   // sort stabil: urutan masuk (urutan peringkat) memenangkan seri
   const sorted = [...items].sort(cmp);
-  const ties = sorted.filter((item) => cmp(sorted[0], item) === 0).length - 1;
-  return { best: sorted[0], ties };
+  const best = sorted[0];
+  if (best === undefined) return { best: null, ties: 0 };
+  const ties = sorted.filter((item) => cmp(best, item) === 0).length - 1;
+  return { best, ties };
 }
 
 const tieNote = (ties: number) => (ties > 0 ? ` · imbang dengan ${ties} pemain lain` : "");

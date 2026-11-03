@@ -43,7 +43,13 @@ import {
   type InsightKind,
   type PlayerLine,
 } from "@/lib/klasemen-insights";
-import { championNarrative, computeStats, rankChampions, rankMovement } from "@/lib/klasemen-ranking";
+import {
+  championNarrative,
+  computeStats,
+  isPlayedMatch,
+  rankChampions,
+  rankMovement,
+} from "@/lib/klasemen-ranking";
 import { buildAwards } from "@/lib/klasemen-awards";
 import { Avatar } from "@/components/klasemen/avatar";
 import { AwardsBoard } from "@/components/klasemen/awards-board";
@@ -120,6 +126,7 @@ function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
   };
   players.forEach(ensure);
   matches.forEach((m) => {
+    if (!isPlayedMatch(m)) return; // laga 0-0 belum dimainkan
     const aWins = m.score_a > m.score_b;
     const bWins = m.score_b > m.score_a;
     m.team_a.forEach((p) => {
@@ -327,8 +334,10 @@ function Klasemen() {
     if (!data) return null;
     const allMatches = [...data.liveMatches, ...data.matches];
     const rounds = new Set(allMatches.map((m) => m.round)).size;
-    const stats = computeStats(data.players, data.matches);
-    const { ordered, minGames } = rankChampions(stats, rounds);
+    // Laga 0-0 berstatus final = belum dimainkan: tetap tampil di jadwal, tapi tidak masuk statistik.
+    const playedMatches = data.matches.filter(isPlayedMatch);
+    const stats = computeStats(data.players, playedMatches);
+    const { ordered, minGames } = rankChampions(stats);
     const reportByName = new Map(data.playerReport.map((r) => [r.name, r] as [string, PlayerReport]));
     const lines: PlayerLine[] = ordered.map((p) => ({
       name: p.name,
@@ -338,28 +347,29 @@ function Klasemen() {
       points: p.pointsFor,
       pointDiff: p.pointDiff,
       pointCount: reportByName.get(p.name)?.pointCount ?? 0,
+      rank: p.rank,
     }));
     const movement = rankMovement(
       stats.map((s) => s.name),
-      data.matches,
+      playedMatches,
     );
     const totalScore = data.matches.reduce((sum, m) => sum + m.score_a + m.score_b, 0);
     return {
       ordered,
       minGames,
       reportByName,
-      form: buildForm(data.matches),
+      form: buildForm(playedMatches),
       movement,
-      awards: buildAwards(ordered, data.matches, movement),
+      awards: buildAwards(ordered, playedMatches, movement),
       totalScore,
-      averageTeamScore: data.matches.length > 0 ? totalScore / (data.matches.length * 2) : 0,
-      averageMatchTotal: data.matches.length > 0 ? totalScore / data.matches.length : 0,
+      averageTeamScore: playedMatches.length > 0 ? totalScore / (playedMatches.length * 2) : 0,
+      averageMatchTotal: playedMatches.length > 0 ? totalScore / playedMatches.length : 0,
       rounds,
       activePlayers: ordered.filter((p) => p.games > 0).length,
       maxPoints: Math.max(...ordered.map((p) => p.pointsFor), 1),
       maxGames: Math.max(...ordered.map((p) => p.games), 1),
       // Streak & duo sudah punya gelar sendiri di Papan Gelar.
-      insights: buildInsights(lines, data.matches).filter((i) => i.kind !== "streak" && i.kind !== "duo"),
+      insights: buildInsights(lines, playedMatches).filter((i) => i.kind !== "streak" && i.kind !== "duo"),
       narrative: championNarrative(ordered),
       allMatches,
     };

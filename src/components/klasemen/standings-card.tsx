@@ -212,7 +212,7 @@ export function StandingsCard({
       <p className="kl-rulenote">
         {SORT_NOTE[mode]}
         {hasProvisional && mode === "juara"
-          ? ` Provisional = belum mencapai ${minGames} laga (50% jumlah ronde), tampil di bawah tanpa peringkat.`
+          ? ` Provisional = belum mencapai ${minGames} laga (separuh dari jumlah main terbanyak), tampil di bawah tanpa peringkat.`
           : ""}
       </p>
     </section>
