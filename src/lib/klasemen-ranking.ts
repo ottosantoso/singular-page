@@ -204,6 +204,23 @@ export function rankMovement(
   return result;
 }
 
+// Catatan pembaca: kalau pemilik poin terbanyak bukan peringkat 1, jelaskan kenapa supaya klasemen
+// tidak membingungkan (peringkat ditentukan win rate, bukan total poin).
+export function topScorerNote(ordered: readonly RankedPlayer[]): string {
+  const leader = ordered.find((p) => p.rank === 1);
+  const scorer = ordered.reduce<RankedPlayer | undefined>(
+    (best, p) => (!best || p.pointsFor > best.pointsFor ? p : best),
+    undefined,
+  );
+  if (!leader || !scorer || scorer.pointsFor <= 0 || scorer.rank === 1) return "";
+  const place = scorer.rank !== null ? `peringkat ${scorer.rank}` : "belum masuk peringkat";
+  return (
+    `Poin terbanyak tidak otomatis juara: ${scorer.name} mengumpulkan ${scorer.pointsFor} poin (${place}) ` +
+    `dengan win rate ${scorer.winRate.toFixed(0)}% (menang ${scorer.wins} dari ${scorer.games} laga), ` +
+    `sedangkan ${leader.name} win rate ${leader.winRate.toFixed(0)}% (menang ${leader.wins} dari ${leader.games} laga).`
+  );
+}
+
 export function championNarrative(ordered: readonly RankedPlayer[]): string {
   const ranked = ordered.filter((p) => p.rank !== null);
   const a = ranked[0];
