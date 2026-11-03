@@ -189,18 +189,22 @@ Artinya, total poin bukan penentu pertama Juara Umum. Pemain dengan total poin
 lebih tinggi belum tentu berada di atas pemain lain jika win rate atau % Poinnya
 lebih rendah.
 
-### 3.2 Peringkat padat dan peringkat yang sama
+### 3.2 Peringkat kompetisi dan peringkat yang sama
 
 Jika semua kriteria Juara Umum sama, pemain berbagi peringkat yang sama. Sistem
-menggunakan peringkat padat:
+menggunakan peringkat gaya kompetisi, sama dengan Excel simulasi
+(`simulasi_juara_umum.xlsx`):
 
 ```text
 Pemain A  #1
 Pemain B  #1
-Pemain C  #2
+Pemain C  #3
 ```
 
-Tidak ada lompatan ke `#3` setelah dua pemain berbagi `#1`. Untuk ranking resmi, label posisi mengikuti peringkat padat tersebut.
+Peringkat berikutnya melompat sebanyak jumlah pemain yang seri: tidak ada `#2`
+setelah dua pemain berbagi `#1`. Rumusnya: peringkat = 1 + jumlah pemain layak yang
+lebih baik. Perbedaan dengan peringkat padat (1, 1, 2) hanya terlihat bila ada seri
+penuh. Pemain Provisional tidak memakai nomor peringkat.
 
 ## 4. Provisional dan Batas Minimum Laga
 

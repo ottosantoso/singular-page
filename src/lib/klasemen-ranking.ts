@@ -1,6 +1,7 @@
 // Peringkat "Juara Umum" untuk halaman /klasemen. Tanpa import supaya bisa dites langsung (npm test).
 // Urutan: win rate -> persentase poin -> selisih poin per laga -> jumlah menang.
-// Kalau semuanya sama, peringkat dibagi (padat). Nama hanya dipakai untuk urutan tampil.
+// Kalau semuanya sama, peringkat dibagi gaya kompetisi (1, 1, 3), sama dengan Excel simulasi.
+// Nama hanya dipakai untuk urutan tampil.
 // Pemain dengan laga kurang dari batas minimum berstatus Provisional (tidak mengambil peringkat).
 //
 // Aturan final (simulasi_juara_umum.xlsx, 3 Nov 2026):
@@ -135,9 +136,12 @@ export function rankChampions(stats: readonly PlayerStats[]): { ordered: RankedP
   const eligibleNames = new Set(eligible.map((s) => s.name));
 
   let rank = 0;
+  let position = 0;
   let previous: PlayerStats | undefined;
   const ranked: RankedPlayer[] = [...eligible].sort(byChampion).map((s) => {
-    if (!previous || compareChampion(previous, s) !== 0) rank += 1;
+    position += 1;
+    // Peringkat kompetisi: yang seri berbagi peringkat, peringkat berikutnya melompat (1, 1, 3).
+    if (!previous || compareChampion(previous, s) !== 0) rank = position;
     previous = s;
     return { ...s, rank, provisional: false };
   });
@@ -162,16 +166,18 @@ export function sortPlayers(ordered: readonly RankedPlayer[], mode: SortMode): R
 
 export type Movement = { delta: number; from: number; to: number; round: number };
 
-function denseRanks(stats: readonly PlayerStats[]): Map<string, number> {
+function competitionRanks(stats: readonly PlayerStats[]): Map<string, number> {
   const sorted = [...stats].sort(
     (a, b) => Number(b.games > 0) - Number(a.games > 0) || byChampion(a, b),
   );
   const ranks = new Map<string, number>();
   let rank = 0;
+  let position = 0;
   let previous: PlayerStats | undefined;
   for (const s of sorted) {
+    position += 1;
     const tied = previous && previous.games > 0 === s.games > 0 && compareChampion(previous, s) === 0;
-    if (!tied) rank += 1;
+    if (!tied) rank = position;
     previous = s;
     ranks.set(s.name, rank);
   }
@@ -189,8 +195,8 @@ export function rankMovement(
   const last = rounds[rounds.length - 1];
   const previous = rounds[rounds.length - 2];
   if (last === undefined || previous === undefined) return result;
-  const before = denseRanks(computeStats(players, played.filter((m) => m.round <= previous)));
-  const after = denseRanks(computeStats(players, played.filter((m) => m.round <= last)));
+  const before = competitionRanks(computeStats(players, played.filter((m) => m.round <= previous)));
+  const after = competitionRanks(computeStats(players, played.filter((m) => m.round <= last)));
   for (const [name, to] of after) {
     const from = before.get(name);
     if (from !== undefined) result.set(name, { delta: from - to, from, to, round: last });

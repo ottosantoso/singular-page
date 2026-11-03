@@ -27,12 +27,27 @@ test("win rate mengalahkan total poin: main lebih sedikit tapi efektif tetap di 
   assert.ok(b.rank < a.rank);
 });
 
-test("seri penuh berbagi peringkat padat, nama tidak memisahkan", () => {
+test("seri penuh berbagi peringkat gaya kompetisi (1,1,3,3), nama tidak memisahkan", () => {
   const matches = [m(1, ["A"], ["B"], 11, 9), m(1, ["C"], ["D"], 11, 9)];
   const { ordered } = rankChampions(computeStats(["A", "B", "C", "D"], matches));
   assert.deepEqual(
     ordered.map((p) => [p.name, p.rank]),
-    [["A", 1], ["C", 1], ["B", 2], ["D", 2]],
+    [["A", 1], ["C", 1], ["B", 3], ["D", 3]],
+  );
+});
+
+test("peringkat kompetisi: seri di tengah melompat, bukan padat (1,2,2,4)", () => {
+  // A menang 2x, D kalah 2x. B dan C saling mengalahkan sekali dengan skor identik (rekor kembar).
+  const matches = [
+    m(1, ["A"], ["D"], 11, 5),
+    m(2, ["A"], ["D"], 11, 5),
+    m(3, ["B"], ["C"], 11, 9),
+    m(4, ["C"], ["B"], 11, 9),
+  ];
+  const { ordered } = rankChampions(computeStats(["A", "B", "C", "D"], matches));
+  assert.deepEqual(
+    ordered.map((p) => [p.name, p.rank]),
+    [["A", 1], ["B", 2], ["C", 2], ["D", 4]],
   );
 });
 
