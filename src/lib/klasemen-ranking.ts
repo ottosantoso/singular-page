@@ -96,16 +96,17 @@ function byChampion(a: PlayerStats, b: PlayerStats): number {
   return compareChampion(a, b) || a.name.localeCompare(b.name);
 }
 
-// Batas minimum = 50% jumlah ronde yang sudah ada (minimal 1 laga).
-export function minimumGames(rounds: number): number {
-  return Math.max(1, Math.ceil(rounds * 0.5));
+// Batas minimum = separuh dari jumlah main terbanyak di arena (minimal 1 laga).
+// Dasarnya jumlah main, bukan jumlah ronde: di arena 8 pemain dengan 1 lapangan tiap pemain
+// memang hanya main sekitar separuh ronde, jadi batas "50% ronde" mencoret pemain yang
+// kebetulan istirahat lebih sering (atau baru masuk di tengah sesi).
+export function minimumGames(maxGames: number): number {
+  return Math.max(1, Math.ceil(maxGames * 0.5));
 }
 
-export function rankChampions(
-  stats: readonly PlayerStats[],
-  rounds: number,
-): { ordered: RankedPlayer[]; minGames: number } {
-  const minGames = minimumGames(rounds);
+export function rankChampions(stats: readonly PlayerStats[]): { ordered: RankedPlayer[]; minGames: number } {
+  const maxGames = stats.reduce((max, s) => Math.max(max, s.games), 0);
+  const minGames = minimumGames(maxGames);
   let eligible = stats.filter((s) => s.games >= minGames);
   // Jaga-jaga: kalau tak seorang pun memenuhi batas, semua yang sudah main tetap diranking.
   if (eligible.length === 0) eligible = stats.filter((s) => s.games > 0);

@@ -328,7 +328,7 @@ function Klasemen() {
     const allMatches = [...data.liveMatches, ...data.matches];
     const rounds = new Set(allMatches.map((m) => m.round)).size;
     const stats = computeStats(data.players, data.matches);
-    const { ordered, minGames } = rankChampions(stats, rounds);
+    const { ordered, minGames } = rankChampions(stats);
     const reportByName = new Map(data.playerReport.map((r) => [r.name, r] as [string, PlayerReport]));
     const lines: PlayerLine[] = ordered.map((p) => ({
       name: p.name,

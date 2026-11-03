@@ -208,19 +208,23 @@ Untuk mencegah pemain dengan sampel sangat kecil langsung memimpin, sistem
 menerapkan batas minimum laga:
 
 ```text
-minimum laga = max(1, ceil(50% x jumlah ronde yang terdeteksi))
+minimum laga = max(1, ceil(50% x jumlah main terbanyak di arena))
 ```
+
+Dasarnya jumlah main terbanyak, bukan jumlah ronde. Pada arena 8 pemain dengan
+1 lapangan (4 pemain per ronde), tiap pemain memang hanya main sekitar separuh
+ronde. Batas "50% ronde" jatuh tepat di rata-rata, sehingga pemain yang kebetulan
+istirahat sekali lebih sering ikut dicoret dari peringkat.
 
 Contoh:
 
-| Jumlah ronde | Minimum laga resmi |
+| Main terbanyak | Minimum laga resmi |
 |---:|---:|
-| 1 ronde | 1 |
-| 2 ronde | 1 |
-| 3 ronde | 2 |
-| 4 ronde | 2 |
-| 5 ronde | 3 |
-| 10 ronde | 5 |
+| 1 | 1 |
+| 2 | 1 |
+| 5 | 3 |
+| 6 | 3 |
+| 10 | 5 |
 
 Pemain yang belum mencapai batas tersebut:
 
