@@ -129,19 +129,21 @@ export function bestDuo(matches: readonly InsightMatch[]): Duo | null {
 export function closestMatch<T extends InsightMatch>(matches: readonly T[]): T | null {
   const played = matches.filter(isPlayed);
   if (played.length === 0) return null;
-  return [...played].sort(
+  const [closest] = [...played].sort(
     (a, b) =>
       Math.abs(a.score_a - a.score_b) - Math.abs(b.score_a - b.score_b) ||
       b.score_a + b.score_b - (a.score_a + a.score_b),
-  )[0];
+  );
+  return closest ?? null;
 }
 
 export function biggestWin<T extends InsightMatch>(matches: readonly T[]): T | null {
   const decisive = matches.filter((m) => m.score_a !== m.score_b);
   if (decisive.length === 0) return null;
-  return [...decisive].sort(
+  const [biggest] = [...decisive].sort(
     (a, b) => Math.abs(b.score_a - b.score_b) - Math.abs(a.score_a - a.score_b),
-  )[0];
+  );
+  return biggest ?? null;
 }
 
 export function teamLabel(team: string[]): string {
@@ -244,8 +246,9 @@ export function buildInsights(players: readonly PlayerLine[], matches: readonly 
 
 // Kalimat penutup singkat soal persaingan di papan atas. `players` harus sudah urut klasemen.
 export function leaderNarrative(players: readonly PlayerLine[]): string {
-  if (players.length < 2 || players[0].games === 0) return "";
-  const [first, second] = players;
+  const first = players[0];
+  const second = players[1];
+  if (!first || !second || first.games === 0) return "";
   const gap = first.points - second.points;
   if (gap === 0) {
     return `${first.name} dan ${second.name} berbagi poin yang sama — selisih poin yang menentukan peringkat.`;
@@ -293,9 +296,11 @@ export function summarizeMatches(matches: readonly InsightMatch[]): MatchSummary
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  if (!first || !last) return "?";
+  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
+  return (first.charAt(0) + last.charAt(0)).toUpperCase();
 }
 
 const AVATAR_TONES = [
@@ -311,6 +316,6 @@ const AVATAR_TONES = [
 export function avatarTone(name: string): { background: string; color: string } {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-  const [background, color] = AVATAR_TONES[hash % AVATAR_TONES.length];
+  const [background, color] = AVATAR_TONES[hash % AVATAR_TONES.length] ?? AVATAR_TONES[0];
   return { background, color };
 }

@@ -186,9 +186,10 @@ export function rankMovement(
   const result = new Map<string, Movement>();
   const played = matches.filter(isPlayedMatch);
   const rounds = [...new Set(played.map((m) => m.round))].sort((a, b) => a - b);
-  if (rounds.length < 2) return result;
   const last = rounds[rounds.length - 1];
-  const before = denseRanks(computeStats(players, played.filter((m) => m.round <= rounds[rounds.length - 2])));
+  const previous = rounds[rounds.length - 2];
+  if (last === undefined || previous === undefined) return result;
+  const before = denseRanks(computeStats(players, played.filter((m) => m.round <= previous)));
   const after = denseRanks(computeStats(players, played.filter((m) => m.round <= last)));
   for (const [name, to] of after) {
     const from = before.get(name);
@@ -199,8 +200,9 @@ export function rankMovement(
 
 export function championNarrative(ordered: readonly RankedPlayer[]): string {
   const ranked = ordered.filter((p) => p.rank !== null);
-  if (ranked.length < 2) return "";
-  const [a, b] = ranked;
+  const a = ranked[0];
+  const b = ranked[1];
+  if (!a || !b) return "";
   if (a.winRate === b.winRate) {
     return `${a.name} dan ${b.name} sama-sama ${a.winRate.toFixed(0)}% menang — persentase poin yang menentukan peringkat.`;
   }
