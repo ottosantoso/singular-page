@@ -23,6 +23,9 @@ export type PlayerLine = {
   points: number;
   pointDiff: number;
   pointCount: number;
+  // Peringkat resmi dari rankChampions (null = Provisional). Kalau diisi, "Paling konsisten"
+  // memakai peringkat yang sama dengan Top 3 sehingga keduanya tidak bisa saling bertentangan.
+  rank?: number | null;
 };
 
 export type InsightKind = "consistent" | "scorer" | "streak" | "duo" | "closest" | "blowout";
@@ -34,6 +37,9 @@ export type Insight = {
   detail: string;
 };
 
+// Laga 0-0 = belum dimainkan (sama dengan isPlayedMatch di klasemen-ranking.ts).
+const isPlayed = (m: { score_a: number; score_b: number }) => m.score_a + m.score_b > 0;
+
 export function sortChronological<T extends { round: number; court: number; created_at: string }>(
   rows: readonly T[],
 ): T[] {
@@ -42,7 +48,7 @@ export function sortChronological<T extends { round: number; court: number; crea
   );
 }
 
-// Hasil tiap pemain berurutan dari laga paling awal ke paling akhir.
+// Hasil tiap pemain berurutan dari laga paling awal ke paling akhir. Laga 0-0 dilewati.
 export function buildForm(matches: readonly InsightMatch[]): Map<string, Result[]> {
   const form = new Map<string, Result[]>();
   const push = (names: string[], own: number, other: number) => {
@@ -54,6 +60,7 @@ export function buildForm(matches: readonly InsightMatch[]): Map<string, Result[
     });
   };
   for (const match of sortChronological(matches)) {
+    if (!isPlayed(match)) continue;
     push(match.team_a, match.score_a, match.score_b);
     push(match.team_b, match.score_b, match.score_a);
   }
@@ -106,6 +113,7 @@ export function bestDuo(matches: readonly InsightMatch[]): Duo | null {
     table.set(key, row);
   };
   matches.forEach((m) => {
+    if (!isPlayed(m)) return;
     add(m.team_a, m.score_a, m.score_b);
     add(m.team_b, m.score_b, m.score_a);
   });
@@ -119,7 +127,7 @@ export function bestDuo(matches: readonly InsightMatch[]): Duo | null {
 }
 
 export function closestMatch<T extends InsightMatch>(matches: readonly T[]): T | null {
-  const played = matches.filter((m) => m.score_a + m.score_b > 0);
+  const played = matches.filter(isPlayed);
   if (played.length === 0) return null;
   return [...played].sort(
     (a, b) =>
@@ -140,16 +148,26 @@ export function teamLabel(team: string[]): string {
   return team.join(" & ");
 }
 
+// Pemain "Paling konsisten". Kalau PlayerLine membawa `rank`, dipakai peringkat resmi (sama dengan
+// Top 3 di halaman). Tanpa `rank` (pemanggil lama), jatuh ke aturan lama: batas separuh main terbanyak.
+function pickConsistent(played: readonly PlayerLine[]): PlayerLine | undefined {
+  if (played.some((p) => p.rank !== undefined)) {
+    const ranked = played.filter((p) => p.rank !== undefined && p.rank !== null);
+    return [...ranked].sort((a, b) => (a.rank as number) - (b.rank as number))[0];
+  }
+  const maxGames = Math.max(...played.map((p) => p.games));
+  const minGames = Math.max(1, Math.ceil(maxGames / 2));
+  return [...played]
+    .filter((p) => p.games >= minGames)
+    .sort((a, b) => b.winRate - a.winRate || b.wins - a.wins || b.games - a.games)[0];
+}
+
 export function buildInsights(players: readonly PlayerLine[], matches: readonly InsightMatch[]): Insight[] {
   const insights: Insight[] = [];
   const played = players.filter((p) => p.games > 0);
 
   if (played.length > 0) {
-    const maxGames = Math.max(...played.map((p) => p.games));
-    const minGames = Math.max(1, Math.ceil(maxGames / 2));
-    const consistent = [...played]
-      .filter((p) => p.games >= minGames)
-      .sort((a, b) => b.winRate - a.winRate || b.wins - a.wins || b.games - a.games)[0];
+    const consistent = pickConsistent(played);
     if (consistent) {
       insights.push({
         kind: "consistent",
@@ -262,7 +280,8 @@ export function summarizeMatches(matches: readonly InsightMatch[]): MatchSummary
     totalPoints,
     avgTotal: matches.length > 0 ? totalPoints / matches.length : 0,
     avgTeam: matches.length > 0 ? totalPoints / (matches.length * 2) : 0,
-    draws: matches.filter((m) => m.score_a === m.score_b).length,
+    // Seri sungguhan saja; laga 0-0 belum dimainkan.
+    draws: matches.filter((m) => isPlayed(m) && m.score_a === m.score_b).length,
     highest: highest && highest.score_a + highest.score_b > 0 ? highest : null,
     closest: closestMatch(matches),
     biggest: biggestWin(matches),
