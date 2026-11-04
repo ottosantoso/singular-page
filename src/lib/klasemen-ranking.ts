@@ -45,6 +45,11 @@ export type SortMode = "juara" | "poin" | "rata" | "selisih";
 // Selisih yang lebih besar (telat datang, pulang awal) dihitung sebagai laga yang tidak dimenangkan.
 export const ROTATION_TOLERANCE = 1;
 
+// Pembagi win rate satu pemain: jumlah laga sendiri, tapi tidak kurang dari (main terbanyak - toleransi).
+export function winRateDivisor(games: number, maxGames: number): number {
+  return Math.max(games, maxGames - ROTATION_TOLERANCE);
+}
+
 // Laga 0-0 = belum dimainkan (bukan seri). Dipakai juga oleh insight, form, dan papan gelar.
 export function isPlayedMatch(m: { score_a: number; score_b: number }): boolean {
   return m.score_a + m.score_b > 0;
@@ -101,7 +106,7 @@ export function computeStats(players: readonly string[], matches: readonly Match
   }
   const maxGames = [...table.values()].reduce((max, r) => Math.max(max, r.games), 0);
   return [...table.entries()].map(([name, row]) =>
-    finalize(name, row, Math.max(row.games, maxGames - ROTATION_TOLERANCE)),
+    finalize(name, row, winRateDivisor(row.games, maxGames)),
   );
 }
 
@@ -216,4 +221,60 @@ export function championNarrative(ordered: readonly RankedPlayer[]): string {
   return `${a.name} memimpin dengan win rate ${a.winRate.toFixed(0)}%, unggul ${gap.toFixed(0)} poin persen dari ${b.name}.${
     gap <= 10 ? " Persaingan puncak masih terbuka!" : ""
   }`;
+}
+
+// ---------------------------------------------------------------------------
+// Teks penjelasan peringkat untuk pemain. Dibangun dari konstanta aturan di atas supaya angka
+// di layar (batas minimum, pembagi) selalu sama dengan yang dipakai perhitungan.
+// ---------------------------------------------------------------------------
+
+// Rincian win rate satu pemain, mis. "4 menang ÷ 5 = 80%".
+export function winRateBreakdown(
+  p: Pick<PlayerStats, "games" | "wins" | "draws" | "winRate">,
+  maxGames: number,
+): string {
+  const divisor = winRateDivisor(p.games, maxGames);
+  const numerator = p.draws > 0 ? `${p.wins} menang + ½ × ${p.draws} seri` : `${p.wins} menang`;
+  const base = `${numerator} ÷ ${divisor} = ${p.winRate.toFixed(0)}%`;
+  return divisor > p.games
+    ? `${base} (main ${p.games} laga, pembagi dinaikkan ke ${divisor})`
+    : base;
+}
+
+export type RankingExplanation = {
+  summary: string;
+  steps: string[];
+  example: string | null;
+};
+
+export function explainRanking(
+  ordered: readonly RankedPlayer[],
+  minGames: number,
+): RankingExplanation {
+  const maxGames = ordered.reduce((max, p) => Math.max(max, p.games), 0);
+  const floor = maxGames - ROTATION_TOLERANCE;
+  const divisorRule =
+    floor >= 2
+      ? `Pembagi = jumlah laga pemain itu, tetapi tidak kurang dari ${floor} (main terbanyak di arena ini ${maxGames}, dikurangi ${ROTATION_TOLERANCE}).`
+      : "Pembagi = jumlah laga pemain itu.";
+  const leader = ordered.find((p) => p.rank === 1);
+
+  return {
+    summary:
+      "Peringkat resmi: win rate, lalu % poin, selisih poin per laga, lalu jumlah menang. " +
+      "Total poin hanya informasi dan tidak menentukan peringkat. Seri penuh berbagi peringkat (1, 1, 3).",
+    steps: [
+      "Laga yang dihitung: hanya laga yang sudah dimainkan. Skor 0–0 dan laga yang masih berjalan tidak ikut dihitung.",
+      `Win rate = (menang + ½ × seri) ÷ pembagi. ${divisorRule}`,
+      `Kenapa pembagi begitu: selisih ${ROTATION_TOLERANCE} laga dianggap wajar (rotasi, istirahat bergilir) dan tidak menurunkan win rate. ` +
+        `Selisih lebih dari ${ROTATION_TOLERANCE} laga (datang telat, pulang lebih awal) dihitung sebagai laga yang tidak dimenangkan. ` +
+        "Contoh: bila main terbanyak 10 laga, menang 5 dari 5 laga (5 ÷ 9 = 56%) tidak mengalahkan menang 7 dari 10 laga (70%).",
+      "Win rate sama? Dipisah berurutan oleh % poin (poin pemain ÷ poin pemain + poin lawan), lalu selisih poin per laga, lalu jumlah menang.",
+      `Syarat masuk peringkat: minimal ${minGames} laga (separuh dari main terbanyak, ${maxGames}). ` +
+        "Yang belum mencapainya berlabel Provisional dan tampil di bawah tanpa nomor peringkat.",
+    ],
+    example: leader
+      ? `Contoh di arena ini: ${leader.name} ${winRateBreakdown(leader, maxGames)}.`
+      : null,
+  };
 }

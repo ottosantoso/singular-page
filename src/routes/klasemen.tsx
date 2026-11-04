@@ -616,7 +616,9 @@ function Klasemen() {
                   <h2>
                     <Trophy aria-hidden="true" /> Top 3 Klasemen
                   </h2>
-                  <p className="kl-pdesc">Juara Umum berdasarkan win rate, bukan sekadar total poin</p>
+                  <p className="kl-pdesc">
+                    Juara Umum berdasarkan win rate, bukan total poin. Cara hitungnya ada di bawah tabel klasemen.
+                  </p>
                   {podium.length === 0 ? (
                     <p className="kl-pdesc" style={{ marginTop: "1.5rem" }}>
                       Belum ada performa pemain untuk dianalisis.

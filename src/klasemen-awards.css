@@ -7,6 +7,14 @@
 .kl-sortbar .kl-select { max-width: none; height: 2.2rem; }
 
 .kl-rulenote { margin: 0; padding: .8rem 1.1rem 1.1rem; font-size: .7rem; line-height: 1.5; color: var(--kl-dim); border-top: 1px solid #f0f3f9; }
+.kl-rulenote:has(+ .kl-rules) { padding-bottom: .5rem; }
+.kl-rules { padding: 0 1.1rem 1.1rem; font-size: .72rem; line-height: 1.55; color: var(--kl-dim); }
+.kl-rules > summary { cursor: pointer; width: fit-content; min-height: 2rem; display: flex; align-items: center; font-weight: 700; color: var(--kl-blue); }
+.kl-rules > summary:focus-visible { outline: 2px solid var(--kl-blue); outline-offset: 2px; border-radius: 4px; }
+.kl-rules ol { margin: .4rem 0 0; padding-left: 1.4rem; list-style: decimal; }
+.kl-rules li + li { margin-top: .5rem; }
+.kl-rules li::marker { font-weight: 800; color: var(--kl-ink); }
+.kl-rules-example { margin: .6rem 0 0; padding: .55rem .75rem; border-radius: 10px; background: var(--kl-blue-soft); color: var(--kl-ink); font-weight: 600; }
 
 .kl-move { display: inline-flex; align-items: center; gap: .1rem; font: 800 .62rem/1 "Chakra Petch", sans-serif; }
 .kl-move.up { color: var(--kl-green); }
