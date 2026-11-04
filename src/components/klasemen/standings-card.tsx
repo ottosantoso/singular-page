@@ -2,7 +2,14 @@ import { useMemo, useState } from "react";
 import { BarChart3, List, Trophy } from "lucide-react";
 import { Avatar } from "@/components/klasemen/avatar";
 import type { Result } from "@/lib/klasemen-insights";
-import { sortPlayers, type Movement, type RankedPlayer, type SortMode } from "@/lib/klasemen-ranking";
+import {
+  explainRanking,
+  sortPlayers,
+  winRateBreakdown,
+  type Movement,
+  type RankedPlayer,
+  type SortMode,
+} from "@/lib/klasemen-ranking";
 
 const SORT_OPTIONS: Array<{ key: SortMode; label: string }> = [
   { key: "juara", label: "Juara Umum" },
@@ -11,8 +18,8 @@ const SORT_OPTIONS: Array<{ key: SortMode; label: string }> = [
   { key: "selisih", label: "Selisih Poin" },
 ];
 
-const SORT_NOTE: Record<SortMode, string> = {
-  juara: "Juara Umum: win rate, lalu % poin, selisih poin per laga, lalu jumlah menang. Seri penuh berbagi peringkat.",
+// Catatan untuk mode selain Juara Umum. Mode Juara Umum memakai explainRanking (klasemen-ranking.ts).
+const SORT_NOTE: Record<Exclude<SortMode, "juara">, string> = {
   poin: "Urutan Total Poin: poin terbanyak, lalu selisih poin (aturan lama). Bukan peringkat resmi.",
   rata: "Urutan rata-rata poin per laga. Bukan peringkat resmi.",
   selisih: "Urutan total selisih poin. Bukan peringkat resmi.",
@@ -38,7 +45,8 @@ export function StandingsCard({
   const [tab, setTab] = useState<"tabel" | "grafik">("tabel");
   const [mode, setMode] = useState<SortMode>("juara");
   const rows = useMemo(() => sortPlayers(ordered, mode), [ordered, mode]);
-  const hasProvisional = ordered.some((p) => p.provisional);
+  const explanation = useMemo(() => explainRanking(ordered, minGames), [ordered, minGames]);
+  const maxGames = useMemo(() => ordered.reduce((max, p) => Math.max(max, p.games), 0), [ordered]);
 
   return (
     <section className="kl-card kl-table-card">
@@ -47,7 +55,11 @@ export function StandingsCard({
           <h2 className="kl-card-title">
             <Trophy aria-hidden="true" /> Klasemen Pertandingan
           </h2>
-          <p className="kl-card-sub">Peringkat resmi berdasarkan win rate, bukan sekadar total poin.</p>
+          <p className="kl-card-sub">
+            {mode === "juara"
+              ? "Peringkat resmi: siapa paling sering menang. Total poin bukan penentu."
+              : "Urutan tampilan alternatif, bukan peringkat resmi."}
+          </p>
         </div>
         <div className="kl-sortbar">
           <select
@@ -96,7 +108,9 @@ export function StandingsCard({
                 <th>Pejuang</th>
                 <th>Main</th>
                 <th>Menang</th>
-                <th>Win Rate</th>
+                <th title="Menang ÷ pembagi. Arahkan kursor ke angkanya untuk melihat hitungannya.">
+                  Win Rate
+                </th>
                 <th>Poin</th>
                 <th>Rata/Laga</th>
                 <th>% Poin</th>
@@ -140,7 +154,7 @@ export function StandingsCard({
                     <td>{p.games}</td>
                     <td>{p.wins}</td>
                     <td>
-                      <div className="kl-bar">
+                      <div className="kl-bar" title={winRateBreakdown(p, maxGames)}>
                         <div className="kl-bar-track">
                           <div className="kl-bar-fill" style={{ width: `${p.winRate}%` }} />
                         </div>
@@ -209,12 +223,18 @@ export function StandingsCard({
         </>
       )}
 
-      <p className="kl-rulenote">
-        {SORT_NOTE[mode]}
-        {hasProvisional && mode === "juara"
-          ? ` Provisional = belum mencapai ${minGames} laga (separuh dari jumlah main terbanyak), tampil di bawah tanpa peringkat.`
-          : ""}
-      </p>
+      <p className="kl-rulenote">{mode === "juara" ? explanation.summary : SORT_NOTE[mode]}</p>
+      {mode === "juara" && (
+        <details className="kl-rules">
+          <summary>Lihat cara menghitung peringkat</summary>
+          <ol>
+            {explanation.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+          {explanation.example && <p className="kl-rules-example">{explanation.example}</p>}
+        </details>
+      )}
     </section>
   );
 }

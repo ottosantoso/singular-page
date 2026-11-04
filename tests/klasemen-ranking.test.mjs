@@ -7,6 +7,9 @@ import {
   rankMovement,
   sortPlayers,
   minimumGames,
+  winRateDivisor,
+  winRateBreakdown,
+  explainRanking,
 } from "../src/lib/klasemen-ranking.ts";
 
 const m = (round, a, b, sa, sb) => ({ round, team_a: a, team_b: b, score_a: sa, score_b: sb });
@@ -144,4 +147,75 @@ test("batas minimum = separuh dari jumlah main terbanyak (minimal 1)", () => {
   assert.equal(minimumGames(5), 3);
   assert.equal(minimumGames(6), 3);
   assert.equal(minimumGames(10), 5);
+});
+
+// --- Teks penjelasan peringkat (apa yang dibaca pemain di bawah tabel) ---
+
+test("winRateDivisor: tidak kurang dari main terbanyak - 1, dan tidak kurang dari laga sendiri", () => {
+  assert.equal(winRateDivisor(5, 6), 5); // selisih 1 laga: pakai laga sendiri
+  assert.equal(winRateDivisor(6, 6), 6);
+  assert.equal(winRateDivisor(5, 10), 9); // selisih 5 laga: pembagi dinaikkan
+  assert.equal(winRateDivisor(2, 2), 2);
+  assert.equal(winRateDivisor(1, 1), 1);
+});
+
+test("VS6TJA: rincian win rate di layar sama dengan angka yang dipakai peringkat", () => {
+  const { ordered } = rankChampions(computeStats(vs6tjaPlayers, vs6tja));
+  const maxGames = 6;
+  const byName = Object.fromEntries(ordered.map((p) => [p.name, p]));
+  assert.equal(winRateBreakdown(byName["Afwan"], maxGames), "4 menang ÷ 5 = 80%");
+  assert.equal(winRateBreakdown(byName["Tari"], maxGames), "4 menang ÷ 6 = 67%");
+  // angka di rincian = nilai winRate yang dipakai untuk mengurutkan
+  for (const p of ordered) {
+    const shown = Number(winRateBreakdown(p, maxGames).match(/= (\d+)%/)[1]);
+    assert.equal(shown, Math.round(p.winRate));
+  }
+});
+
+test("rincian win rate menyebut pembagi dinaikkan untuk pemain yang telat (Deni 5/5 vs Dona 7/10)", () => {
+  const matches = [];
+  for (let r = 1; r <= 10; r++) {
+    matches.push(m(r, ["Dona", "X"], ["Y", "Z"], r <= 7 ? 11 : 5, r <= 7 ? 5 : 11));
+  }
+  for (let r = 6; r <= 10; r++) {
+    matches.push(m(100 + r, ["Deni", "Q"], ["W", "V"], 11, 5)); // Deni 5 laga, 5 menang
+  }
+  const stats = computeStats(["Dona", "Deni", "X", "Y", "Z", "Q", "W", "V"], matches);
+  const deni = stats.find((p) => p.name === "Deni");
+  assert.equal(deni.games, 5);
+  assert.equal(
+    winRateBreakdown(deni, 10),
+    "5 menang ÷ 9 = 56% (main 5 laga, pembagi dinaikkan ke 9)",
+  );
+  const dona = stats.find((p) => p.name === "Dona");
+  assert.equal(winRateBreakdown(dona, 10), "7 menang ÷ 10 = 70%");
+  assert.ok(dona.winRate > deni.winRate, "Dona (7/10) tetap di atas Deni (5/5 tapi telat)");
+});
+
+test("rincian win rate menyertakan seri sebagai setengah menang", () => {
+  const p = { games: 4, wins: 2, draws: 2, winRate: 75 };
+  assert.equal(winRateBreakdown(p, 4), "2 menang + ½ × 2 seri ÷ 4 = 75%");
+});
+
+test("explainRanking VS6TJA: angka di teks mengikuti aturan (batas 3 laga, pembagi minimal 5, contoh Afwan)", () => {
+  const { ordered, minGames } = rankChampions(computeStats(vs6tjaPlayers, vs6tja));
+  const ex = explainRanking(ordered, minGames);
+  assert.match(ex.summary, /win rate, lalu % poin, selisih poin per laga, lalu jumlah menang/);
+  assert.match(ex.summary, /Total poin hanya informasi/);
+  assert.match(ex.summary, /\(1, 1, 3\)/);
+  assert.equal(ex.steps.length, 5);
+  assert.match(ex.steps[0], /0–0/);
+  assert.match(ex.steps[1], /tidak kurang dari 5 \(main terbanyak di arena ini 6, dikurangi 1\)/);
+  assert.match(ex.steps[4], /minimal 3 laga \(separuh dari main terbanyak, 6\)/);
+  assert.equal(ex.example, "Contoh di arena ini: Afwan 4 menang ÷ 5 = 80%.");
+});
+
+test("explainRanking: arena kecil tanpa batas pembagi, dan tanpa contoh bila belum ada peringkat", () => {
+  const small = rankChampions(computeStats(["A", "B"], [m(1, ["A"], ["B"], 11, 9)]));
+  const ex = explainRanking(small.ordered, small.minGames);
+  assert.match(ex.steps[1], /Pembagi = jumlah laga pemain itu\.$/);
+  assert.equal(ex.example, "Contoh di arena ini: A 1 menang ÷ 1 = 100%.");
+  const empty = explainRanking([], 1);
+  assert.equal(empty.example, null);
+  assert.match(empty.steps[4], /minimal 1 laga/);
 });

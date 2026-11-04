@@ -43,10 +43,11 @@ Dari nilai dasar tersebut sistem menghitung metrik berikut.
 
 ### 2.1 Win rate
 
-Win rate memakai skor penuh untuk menang dan setengah skor untuk seri:
+Win rate memakai skor penuh untuk menang dan setengah skor untuk seri. Pembaginya
+bukan selalu jumlah main pemain itu, melainkan **pembagi** yang dijelaskan di 2.1.1:
 
 ```text
-win rate = ((menang + 0.5 x seri) / main) x 100
+win rate = ((menang + 0.5 x seri) / pembagi) x 100
 ```
 
 Contoh:
@@ -65,6 +66,38 @@ win rate = ((4 + 0.5 x 2) / 9) x 100 = 55.56% -> tampil 56%
 
 Jadi seri tidak dianggap menang penuh, tetapi tetap memberi kontribusi setengah
 menang pada metrik Juara Umum.
+
+#### 2.1.1 Pembagi dan toleransi rotasi
+
+```text
+pembagi = max(jumlah laga pemain, main terbanyak di arena - 1)
+```
+
+Angka `1` adalah `ROTATION_TOLERANCE` di `src/lib/klasemen-ranking.ts`.
+
+- Selisih 1 laga dari pemain yang paling banyak main dianggap wajar (rotasi,
+  istirahat bergilir, ronde terakhir tidak penuh), sehingga tidak menurunkan win rate.
+- Selisih lebih dari 1 laga (datang telat, pulang lebih awal) dihitung sebagai laga
+  yang tidak dimenangkan, karena pembagi dinaikkan ke `main terbanyak - 1`.
+
+Contoh, main terbanyak 10 laga:
+
+```text
+Dona  7 menang dari 10 laga -> 7 / max(10, 9) = 70%
+Deni  5 menang dari  5 laga -> 5 / max( 5, 9) = 56%
+```
+
+Deni menang di setiap laga yang ia mainkan, tetapi baru main separuhnya, jadi belum
+mengalahkan Dona. Pada arena VS6TJA (main terbanyak 6), pembagi minimal 5, sehingga
+Afwan (4 menang dari 5 laga) mendapat 4 / 5 = 80%.
+
+Laga dengan skor 0-0 dianggap belum dimainkan dan tidak dihitung sebagai main, menang,
+kalah, maupun seri.
+
+Hitungan ini juga tampil di halaman klasemen: arahkan kursor ke angka Win Rate, atau
+buka "Lihat cara menghitung peringkat" di bawah tabel. Teks itu dibuat oleh
+`explainRanking` dan `winRateBreakdown` di `klasemen-ranking.ts` dari konstanta yang
+sama dengan perhitungannya.
 
 ### 2.2 % Poin
 
@@ -468,13 +501,14 @@ selebihnya urutan kandidat dipakai untuk menentukan pemilik visual utama.
 ## 10. Ringkasan Rumus
 
 ```text
-win rate       = (menang + 0.5 x seri) / main x 100
+win rate       = (menang + 0.5 x seri) / pembagi x 100
+pembagi        = max(main, main terbanyak - 1)
 % poin         = pointsFor / (pointsFor + pointsAgainst) x 100
 rata/laga      = pointsFor / main
 rata kebobolan = pointsAgainst / main
 selisih        = pointsFor - pointsAgainst
 selisih/laga   = selisih / main
-minimum laga   = max(1, ceil(0.5 x jumlah ronde))
+minimum laga   = max(1, ceil(0.5 x main terbanyak))
 ```
 
 Urutan resmi:
