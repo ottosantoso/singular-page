@@ -1156,6 +1156,7 @@
     copyInfoBtn.style.display = 'none';
     historyCard.style.display = 'none';
     finalArea.style.display = 'none';
+    if (window.ArenaWizard) window.ArenaWizard.reset();
   }
 
   document.querySelectorAll('.menu-card[data-sport]').forEach(btn => {
@@ -1724,6 +1725,7 @@
     arenaPinInput.value = '';
     if (typeof loadRoomCodeForCurrentSport === 'function') loadRoomCodeForCurrentSport();
     refreshKlasemenLink();
+    if (window.ArenaWizard) window.ArenaWizard.reset();
   }
 
   // Tombol "Mulai Turnamen Baru": bersihkan sesi lalu kembali ke Beranda Arena (pilihan cabang olahraga).
@@ -4349,6 +4351,8 @@
     if (currentStep === 6) updateSummary();
   }));
 
+  // Dipanggil dari script utama saat sesi di-reset / pindah cabang, supaya wizard kembali ke langkah 1.
+  window.ArenaWizard = { reset: () => showStep(1) };
   showStep(1);
 })();
 </script>
