@@ -10,6 +10,7 @@ import {
   winRateDivisor,
   winRateBreakdown,
   explainRanking,
+  topThree,
 } from "../src/lib/klasemen-ranking.ts";
 
 const m = (round, a, b, sa, sb) => ({ round, team_a: a, team_b: b, score_a: sa, score_b: sb });
@@ -218,4 +219,50 @@ test("explainRanking: arena kecil tanpa batas pembagi, dan tanpa contoh bila bel
   const empty = explainRanking([], 1);
   assert.equal(empty.example, null);
   assert.match(empty.steps[4], /minimal 1 laga/);
+});
+
+// --- Podium dipakai bersama Klasemen dan Detail Pemain ---
+
+test("topThree VS6TJA: Afwan, Tama, Tari (bukan Tari, Otto, Afwan seperti aturan total poin lama)", () => {
+  const { ordered } = rankChampions(computeStats(vs6tjaPlayers, vs6tja));
+  assert.deepEqual(
+    topThree(ordered).map((p) => [p.name, p.rank]),
+    [
+      ["Afwan", 1],
+      ["Tama", 2],
+      ["Tari", 3],
+    ],
+  );
+  // aturan lama (total poin) memberi urutan berbeda; podium tidak boleh mengikutinya
+  const byPoints = [...ordered]
+    .sort((a, b) => b.pointsFor - a.pointsFor)
+    .slice(0, 3)
+    .map((p) => p.name);
+  assert.deepEqual(byPoints, ["Tari", "Otto", "Afwan"]);
+});
+
+test("topThree: pemain Provisional tidak masuk podium walau win rate tinggi", () => {
+  const matches = [];
+  for (let r = 1; r <= 6; r++) {
+    matches.push(m(r, ["A", "X"], ["B", "Y"], r <= 3 ? 11 : 5, r <= 3 ? 5 : 11));
+  }
+  matches.push(m(7, ["C", "X"], ["B", "Y"], 11, 0)); // C baru 1 laga, menang 100%
+  const { ordered } = rankChampions(computeStats(["A", "B", "C", "X", "Y"], matches));
+  const c = ordered.find((p) => p.name === "C");
+  assert.equal(c.provisional, true);
+  assert.ok(!topThree(ordered).some((p) => p.name === "C"));
+});
+
+test("topThree: seri di posisi 1 berbagi peringkat dan hanya tiga yang diambil", () => {
+  const matches = [m(1, ["A"], ["B"], 11, 9), m(1, ["C"], ["D"], 11, 9)];
+  const { ordered } = rankChampions(computeStats(["A", "B", "C", "D"], matches));
+  assert.deepEqual(
+    topThree(ordered).map((p) => [p.name, p.rank]),
+    [
+      ["A", 1],
+      ["C", 1],
+      ["B", 3],
+    ],
+  );
+  assert.deepEqual(topThree([]), []);
 });

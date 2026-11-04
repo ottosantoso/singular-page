@@ -15,7 +15,14 @@ import {
 } from "recharts";
 import html2canvas from "html2canvas-pro";
 import { supabase } from "@/integrations/supabase/client";
-import { rankStandings, sortStandings } from "@/lib/ranking";
+import {
+  computeStats,
+  explainRanking,
+  isPlayedMatch,
+  rankChampions,
+  topThree,
+  winRateBreakdown,
+} from "@/lib/klasemen-ranking";
 
 export const Route = createFileRoute("/detail-pemain")({
   head: () => ({
@@ -53,8 +60,6 @@ type PlayerStatRow = {
   foul_count: number;
 };
 
-type Standing = { name: string; points: number; games: number; wins: number; pointDiff: number };
-
 type ActionSummary = {
   name: string;
   pointCount: number;
@@ -82,37 +87,6 @@ type RivalryRow = {
 
 function pairKey(a: string, b: string) {
   return [a, b].sort().join("␟");
-}
-
-function buildStandings(players: string[], matches: MatchRow[]): Standing[] {
-  const table = new Map<string, Standing>();
-  players.forEach((name) => table.set(name, { name, points: 0, games: 0, wins: 0, pointDiff: 0 }));
-
-  matches.forEach((m) => {
-    const teamA = m.team_a ?? [];
-    const teamB = m.team_b ?? [];
-    const aWon = (m.score_a ?? 0) > (m.score_b ?? 0);
-    const bWon = (m.score_b ?? 0) > (m.score_a ?? 0);
-
-    teamA.forEach((name) => {
-      const row = table.get(name) ?? { name, points: 0, games: 0, wins: 0, pointDiff: 0 };
-      row.games += 1;
-      row.points += m.score_a ?? 0;
-      row.pointDiff += (m.score_a ?? 0) - (m.score_b ?? 0);
-      if (aWon) row.wins += 1;
-      table.set(name, row);
-    });
-    teamB.forEach((name) => {
-      const row = table.get(name) ?? { name, points: 0, games: 0, wins: 0, pointDiff: 0 };
-      row.games += 1;
-      row.points += m.score_b ?? 0;
-      row.pointDiff += (m.score_b ?? 0) - (m.score_a ?? 0);
-      if (bWon) row.wins += 1;
-      table.set(name, row);
-    });
-  });
-
-  return [...table.values()];
 }
 
 function buildActionSummary(statRows: PlayerStatRow[]): ActionSummary[] {
@@ -448,15 +422,12 @@ function DetailPemain() {
       // apapun (podium, MVP, jumlah game, tren, dst), biar nggak nampilin ronde
       // yang masih kosong seolah-olah sudah selesai.
       // Skor yang masih berjalan (status 'live') belum dihitung ke statistik sampai ronde ditutup.
-      const matches = allMatches.filter(
-        (m) => m.status !== "live" && ((m.score_a ?? 0) !== 0 || (m.score_b ?? 0) !== 0),
-      );
+      const matches = allMatches.filter((m) => m.status !== "live" && isPlayedMatch(m));
       const statRows = statsRes.error ? [] : ((statsRes.data ?? []) as PlayerStatRow[]);
 
-      const standings = buildStandings(players, matches);
-      const trendNames = sortStandings(standings)
-        .slice(0, 5)
-        .map((s) => s.name);
+      // Peringkat Juara Umum: satu aturan yang sama dengan halaman Klasemen (klasemen-ranking.ts).
+      const { ordered, minGames } = rankChampions(computeStats(players, matches));
+      const trendNames = ordered.slice(0, 5).map((p) => p.name);
       const partnerships = buildPartnerStats(matches);
 
       const lastMatchAt = allMatches.length
@@ -464,7 +435,8 @@ function DetailPemain() {
         : null;
 
       return {
-        standings,
+        ordered,
+        minGames,
         actions: buildActionSummary(statRows),
         hasActionData: !statsRes.error && statRows.length > 0,
         roundTrend: buildRoundTrend(matches, trendNames),
@@ -482,37 +454,34 @@ function DetailPemain() {
 
   const data = query.data;
 
-  // Peringkat memakai aturan yang sama dengan halaman klasemen (src/lib/ranking.ts):
-  // poin terbanyak, lalu selisih poin. Jumlah main tidak mengubah urutan juara.
-  const rankedStandingsRaw = data ? rankStandings(data.standings) : [];
-  const maxGamesPlayed = data ? Math.max(0, ...data.standings.map((s) => s.games)) : 0;
-  const minGamesToRank = Math.max(3, Math.ceil(maxGamesPlayed / 2));
-  const podium = rankedStandingsRaw.filter((s) => s.games > 0 && s.rank <= 3).slice(0, 3);
-  const maxPodiumPoints = podium.length ? Math.max(...podium.map((p) => p.points), 1) : 1;
+  // Peringkat Juara Umum, sama persis dengan halaman Klasemen: Top 3 = tiga teratas yang berperingkat
+  // (pemain Provisional belum ikut diperingkat).
+  const ordered = data?.ordered ?? [];
+  const podium = topThree(ordered);
+  const provisionalNames = ordered.filter((p) => p.provisional && p.games > 0).map((p) => p.name);
+  const explanation = data ? explainRanking(data.ordered, data.minGames) : null;
+  const maxGamesPlayed = ordered.reduce((max, p) => Math.max(max, p.games), 0);
 
-  const topPoin = data
-    ? [...data.standings].sort((a, b) => b.points - a.points).slice(0, 5).map((s) => ({ name: s.name, value: s.points }))
-    : [];
-  const topWinRate = data
-    ? [...data.standings]
-        .filter((s) => s.games >= minGamesToRank)
-        .map((s) => ({ name: s.name, value: s.games > 0 ? Math.round((s.wins / s.games) * 100) : 0 }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 5)
-    : [];
+  const topPoin = [...ordered]
+    .sort((a, b) => b.pointsFor - a.pointsFor)
+    .slice(0, 5)
+    .map((p) => ({ name: p.name, value: p.pointsFor }));
+  const topWinRate = ordered
+    .filter((p) => p.rank !== null)
+    .map((p) => ({ name: p.name, value: Math.round(p.winRate) }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
   const topLowestErrors = data
     ? [...data.actions]
         .map((a) => ({ name: a.name, value: a.outCount + a.foulCount }))
         .sort((a, b) => a.value - b.value)
         .slice(0, 5)
     : [];
-  const topAvgPointsPerGame = data
-    ? [...data.standings]
-        .filter((s) => s.games > 0)
-        .map((s) => ({ name: s.name, value: Math.round((s.points / s.games) * 10) / 10 }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 5)
-    : [];
+  const topAvgPointsPerGame = ordered
+    .filter((p) => p.games > 0)
+    .map((p) => ({ name: p.name, value: Math.round(p.avgFor * 10) / 10 }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
   const rankedActions = data
     ? [...data.actions].sort((a, b) => b.efficiency - a.efficiency || b.total - a.total)
     : [];
@@ -592,28 +561,29 @@ function DetailPemain() {
             <section className="mt-10">
               <h2 className="text-arena-heading mb-1">Podium</h2>
               <p className="mb-4 text-xs text-arena-dim">
-                Top 3 pejuang lapangan berdasarkan total poin, lalu selisih poin. Urutannya sama
-                dengan halaman Klasemen.
+                Top 3 Juara Umum: siapa paling sering menang (win rate), lalu % poin, selisih poin
+                per laga, dan jumlah menang. Total poin hanya informasi. Urutannya sama dengan
+                halaman Klasemen.
               </p>
               {podium.length === 0 ? (
                 <p className="text-sm text-arena-dim">
-                  {rankedStandingsRaw.length === 0
+                  {ordered.length === 0
                     ? "Belum ada data."
                     : "Belum ada pertandingan yang selesai — main dulu beberapa ronde lagi buat lihat podium."}
                 </p>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-3">
                   {podium.map((p) => {
-                    const rank = p.rank;
+                    const rank = p.rank ?? 0;
                     const meta =
                       rank === 1
                         ? { badge: "🥇", label: "GOLD BADGE", color: SPORT_AMBER }
                         : rank === 2
                           ? { badge: "🥈", label: "SILVER BADGE", color: SPORT_BLUE }
                           : { badge: "🥉", label: "BRONZE BADGE", color: SPORT_PINK };
-                    const winRate = p.games > 0 ? Math.round((p.wins / p.games) * 100) : 0;
-                    const losses = p.games - p.wins;
-                    const pointsPct = Math.min(100, Math.round((p.points / maxPodiumPoints) * 100));
+                    const winRate = Math.min(100, Math.round(p.winRate));
+                    const pointPct = Math.min(100, Math.round(p.pointPct));
+                    const diffPerGame = Math.round(p.diffPerGame * 10) / 10;
 
                     return (
                       <div
@@ -639,26 +609,33 @@ function DetailPemain() {
 
                         <div className="mt-3">
                           <div className="flex items-center justify-between text-xs text-arena-dim">
-                            <span>Total Poin</span>
-                            <span className="font-display font-bold text-arena-ink">{p.points} pts</span>
-                          </div>
-                          <div className="mt-1 h-2 overflow-hidden rounded-full bg-arena-ink/10">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${pointsPct}%`, background: meta.color }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-2">
-                          <div className="flex items-center justify-between text-xs text-arena-dim">
                             <span>Win Rate</span>
-                            <span className="font-display font-bold text-arena-ink">{winRate}%</span>
+                            <span className="font-display font-bold text-arena-ink">
+                              {winRate}%
+                            </span>
                           </div>
                           <div className="mt-1 h-2 overflow-hidden rounded-full bg-arena-ink/10">
                             <div
                               className="h-full rounded-full"
                               style={{ width: `${winRate}%`, background: meta.color }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[11px] text-arena-dim">
+                            {winRateBreakdown(p, maxGamesPlayed)}
+                          </p>
+                        </div>
+
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs text-arena-dim">
+                            <span>% Poin</span>
+                            <span className="font-display font-bold text-arena-ink">
+                              {pointPct}%
+                            </span>
+                          </div>
+                          <div className="mt-1 h-2 overflow-hidden rounded-full bg-arena-ink/10">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ width: `${pointPct}%`, background: meta.color }}
                             />
                           </div>
                         </div>
@@ -671,16 +648,42 @@ function DetailPemain() {
                             {p.wins} Menang
                           </span>
                           <span className="rounded-full px-2 py-1" style={{ background: `${SPORT_PINK}22`, color: SPORT_PINK }}>
-                            {losses} Kalah
+                            {p.losses} Kalah
                           </span>
                           <span className="rounded-full bg-arena-ink/5 px-2 py-1 text-arena-dim">
-                            {p.pointDiff > 0 ? `+${p.pointDiff}` : p.pointDiff} selisih
+                            {diffPerGame > 0 ? `+${diffPerGame}` : diffPerGame} selisih/laga
+                          </span>
+                          <span className="rounded-full bg-arena-ink/5 px-2 py-1 text-arena-dim">
+                            {p.pointsFor} poin
                           </span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
+              )}
+              {provisionalNames.length > 0 && data && (
+                <p className="mt-3 text-xs text-arena-dim">
+                  Belum diperingkat (kurang dari {data.minGames} laga):{" "}
+                  {provisionalNames.join(", ")}
+                </p>
+              )}
+              {explanation && (
+                <details className="mt-3 rounded-lg border border-arena-ink/10 bg-card/85 px-4 py-3 text-xs leading-relaxed text-arena-dim">
+                  <summary className="cursor-pointer font-bold text-arena-ink">
+                    Lihat cara menghitung peringkat
+                  </summary>
+                  <ol className="mt-2 list-decimal space-y-2 pl-5">
+                    {explanation.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+                  {explanation.example && (
+                    <p className="mt-3 rounded-md bg-arena-ink/5 px-3 py-2 font-semibold text-arena-ink">
+                      {explanation.example}
+                    </p>
+                  )}
+                </details>
               )}
             </section>
 

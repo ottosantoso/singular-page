@@ -159,6 +159,12 @@ export function rankChampions(stats: readonly PlayerStats[]): { ordered: RankedP
   return { ordered: [...ranked, ...provisional], minGames };
 }
 
+// Top 3 Juara Umum: tiga teratas yang berperingkat (Provisional tidak ikut). Dipakai bersama oleh
+// halaman Klasemen dan Detail Pemain supaya podiumnya selalu sama.
+export function topThree(ordered: readonly RankedPlayer[]): RankedPlayer[] {
+  return ordered.filter((p) => p.rank !== null).slice(0, 3);
+}
+
 // Mode urutan tabel. "juara" = urutan resmi; "poin" = aturan lama (poin, lalu selisih poin).
 export function sortPlayers(ordered: readonly RankedPlayer[], mode: SortMode): RankedPlayer[] {
   if (mode === "juara") return [...ordered];
