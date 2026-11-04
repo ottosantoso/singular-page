@@ -1133,10 +1133,41 @@
     showScreen('arena');
   }
 
+  // state, arenaCode, arenaPin, polling dan daftar pemain adalah variabel GLOBAL halaman ini, sedangkan
+  // kode arena tersimpan per olahraga. Tanpa ini, kembali ke Beranda lalu memilih olahraga lain membawa
+  // sesi olahraga sebelumnya (mis. turnamen Padel tampil di Badminton / Tenis / Tenis Meja).
+  // Yang dilepas hanya tampilan di memori; data cabang sebelumnya (cloud & localStorage) tidak disentuh.
+  function detachSessionForSportSwitch(){
+    clearInterval(pollTimer);
+    clearTimeout(saveTimer);
+    arenaCode = null; arenaPin = null; lastSyncedAt = null; isApplyingRemote = false;
+    state = null;
+    registeredPlayers = [];
+    renderRegisteredPlayers();
+    hydrateUIFromState();            // state null => form kosong, semua input aktif lagi
+    setSetupMode('individual');
+    formatSelect.value = 'americano';
+    roundDurationInput.value = '';
+    sessionDurationInput.value = '';
+    statusMsg.textContent = '';
+    syncStatus.textContent = '';
+    arenaCodeInput.value = '';
+    arenaPinInput.value = '';
+    copyInfoBtn.style.display = 'none';
+    historyCard.style.display = 'none';
+    finalArea.style.display = 'none';
+  }
+
   document.querySelectorAll('.menu-card[data-sport]').forEach(btn => {
     btn.addEventListener('click', () => {
+      const previousSport = selectedSport;
       selectedSport = btn.dataset.sport;
       applyArenaSportTheme();
+      // Olahraga berbeda, atau turnamen yang tadi sudah selesai: mulai dari kondisi bersih milik cabang ini.
+      // (Olahraga sama + turnamen masih berjalan = kembali ke permainan itu, tidak dilepas.)
+      if (previousSport !== selectedSport || (state && state.finished)){
+        if (state || arenaCode || registeredPlayers.length) detachSessionForSportSwitch();
+      }
       if (typeof loadRoomCodeForCurrentSport === 'function' && !arenaCode) {
         loadRoomCodeForCurrentSport();
       }
@@ -2063,7 +2094,11 @@
       rotationSelect.value = state.rotationChoice || (state.rotation ? state.rotation : 'independent');
       if (!state.pairs) state.pairs = [];
       if (!state.pairMembers) state.pairMembers = {};
-      if (!state.matchHistory) state.matchHistory = [];
+      if (!Array.isArray(state.matchHistory)) state.matchHistory = [];
+      // Buang entri riwayat ronde yang rusak (mis. matches: null) supaya layar hasil tidak error.
+      state.matchHistory = state.matchHistory.filter(entry => entry && Array.isArray(entry.matches));
+      if (!state.leaderboard || typeof state.leaderboard !== 'object') state.leaderboard = {};
+      if (!Array.isArray(state.players)) state.players = [];
       state.players = (state.players || []).map(player => typeof player === 'string'
         ? { id: playerId(), name: player, gender: 'male' }
         : (player.tier && !tierByKey(player.tier) ? Object.assign({}, player, { tier: '' }) : player));
@@ -2156,6 +2191,22 @@
       ]);
       if (stateRes.error) throw stateRes.error;
       isApplyingRemote = true;
+      if (stateRes.data && stateRes.data.sport && stateRes.data.sport !== selectedSport && !linkedEventId && !linkedPublicCode){
+        // Kode+PIN ini ternyata dipakai turnamen olahraga lain. Jangan ditampilkan di cabang ini dan jangan
+        // sampai tertimpa: lepas kode ini dari cabang ini, lalu siapkan kode baru.
+        const other = (sportMeta[stateRes.data.sport] && sportMeta[stateRes.data.sport].label) || stateRes.data.sport;
+        isApplyingRemote = false;
+        clearInterval(pollTimer);
+        try {
+          localStorage.removeItem(roomKey('ArenaCode', selectedSport));
+          localStorage.removeItem(roomKey('ArenaPin', selectedSport));
+        } catch (e) {}
+        arenaCode = null; arenaPin = null; lastSyncedAt = null;
+        arenaCodeInput.value = ''; arenaPinInput.value = '';
+        if (typeof loadRoomCodeForCurrentSport === 'function') loadRoomCodeForCurrentSport();
+        syncStatus.textContent = 'Kode arena tadi dipakai turnamen ' + other + ', jadi tidak dimuat di sini. Kode baru disiapkan.';
+        return;
+      }
       if (stateRes.data && stateRes.data.finished && !state && (stateRes.data.archived === true || isArchivedFlag(arenaCode))){
         // Turnamen di arena ini sudah selesai & terarsip (hasilnya ada di Riwayat). Jangan dimuat ulang:
         // mulai dari form kosong. Kalau sedang melihat layar hasil (state ada), tidak masuk cabang ini.
@@ -3214,6 +3265,7 @@
   }
 
   function commitScores(matches){
+    if (!Array.isArray(matches)) return; // tidak ada pertandingan yang bisa disimpan (mis. state.current kosong)
     if (!state.matchHistory) state.matchHistory = [];
     const existingIdx = state.matchHistory.findIndex(e => e.round === state.round);
     const snapshot = { round: state.round, matches: JSON.parse(JSON.stringify(matches)) };
@@ -4034,7 +4086,7 @@
     leaderboardEl.innerHTML = html;
   }
 
-  function renderFinal(){
+  function renderFinalInner(){
     roundArea.style.display = 'none';
     finalArea.style.display = 'block';
     roundBadge.innerHTML = '<span class="live-dot" style="display:none;"></span>Turnamen selesai';
@@ -4100,7 +4152,7 @@
               <button class="btn-secondary btn-edit-round" data-round="${entry.round}" style="padding:6px 12px;font-size:12px;">Edit</button>
             </div>
             <div class="round-view" data-round-view="${entry.round}" style="margin-top:6px;font-size:12px;color:var(--line-dim);">
-              ${entry.matches.map(m => `${(m.teamA || []).join(' & ')} <b>${m.scoreA}</b> : <b>${m.scoreB}</b> ${(m.teamB || []).join(' & ')}`).join('<br>')}
+              ${(entry.matches || []).map(m => `${(m.teamA || []).join(' & ')} <b>${m.scoreA}</b> : <b>${m.scoreB}</b> ${(m.teamB || []).join(' & ')}`).join('<br>')}
             </div>
             <div class="round-edit-form" data-round-form="${entry.round}" style="display:none;margin-top:8px;"></div>
           </div>
@@ -4119,6 +4171,28 @@
     });
 
     renderLeaderboard();
+  }
+
+  // Layar hasil. Kalau data turnamen ada yang rusak dan penyusunan hasil gagal, panel jangan dibiarkan
+  // kosong (dulu tombol "Mulai Turnamen Baru" ikut hilang sehingga sesi tidak bisa direset).
+  function renderFinal(){
+    try {
+      renderFinalInner();
+    } catch (err){
+      console.error('renderFinal gagal:', err);
+      roundArea.style.display = 'none';
+      finalArea.style.display = 'block';
+      finalArea.innerHTML = `
+        <div class="final-header">
+          <span class="trophy">🏆</span>
+          <h2>Turnamen Kelar!</h2>
+          <p>Hasil lengkap tidak dapat ditampilkan karena ada data yang tidak lengkap. Hasil yang sudah diarsipkan tetap tersimpan di Riwayat.</p>
+        </div>
+        <button class="btn-primary" id="restartBtn" style="margin-top:14px;">Mulai Turnamen Baru</button>`;
+      const restart = document.getElementById('restartBtn');
+      if (restart) restart.addEventListener('click', resetSession);
+      try { renderLeaderboard(); } catch (e2){}
+    }
   }
 
   function openRoundEditor(round){
