@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -634,10 +634,10 @@
             <div class="mode-toggle choice-grid">
               <button type="button" class="mode-btn choice-card active" id="modeIndividualBtn" data-mode="individual"><span class="choice-name">Individu</span><span class="choice-desc">Partner diacak ulang tiap ronde.</span><span class="choice-tag">Disarankan untuk pemula</span></button>
               <button type="button" class="mode-btn choice-card" id="modePairsBtn" data-mode="pairs"><span class="choice-name">Pasangan Tetap</span><span class="choice-desc">Pasangan tidak berubah sepanjang main, dipasangkan berurutan dari daftar.</span></button>
-              <button type="button" class="mode-btn choice-card" id="modeCustomBtn" data-mode="custom"><span class="choice-name">Custom</span><span class="choice-desc">Kamu atur sendiri siapa lawan siapa di tiap lapangan.</span></button>
+              <button type="button" class="mode-btn choice-card" id="modeCustomBtn" data-mode="custom"><span class="choice-name">Custom</span><span class="choice-desc">Kamu pilih sendiri pemain di tiap lapangan, di setiap ronde sampai selesai.</span></button>
             </div>
             <div class="hint" id="modeHint">Tiap ronde partner diacak ulang (rotasi individu).</div>
-            <div class="hint" id="customHint" style="display:none;color:var(--line-dim, #64748b);margin-top:6px;">Kamu atur manual siapa lawan siapa tiap ronde lewat dropdown, atau klik "Next Player" buat auto-generate ala Americano kapan saja mau.</div>
+            <div class="hint" id="customHint" style="display:none;color:var(--line-dim, #64748b);margin-top:6px;">Kamu atur manual siapa lawan siapa di setiap ronde lewat dropdown sampai permainan selesai.</div>
           </div>
           <div class="field" id="formatField">
             <label for="formatSelect">Format permainan</label>
@@ -1166,7 +1166,7 @@
       modeHint.textContent = 'Partner tetap sama sepanjang turnamen — pemain dipasangkan berurutan dari daftar.';
     } else if (mode === 'custom'){
       playersLabel.textContent = 'Daftar Pemain Terdaftar';
-      modeHint.textContent = 'Ronde pertama kamu atur manual siapa lawan siapa lewat dropdown di tiap lapangan.';
+      modeHint.textContent = 'Kamu pilih sendiri siapa lawan siapa lewat dropdown di tiap lapangan, di setiap ronde sampai permainan selesai (tidak ada pengocokan otomatis).';
     } else {
       playersLabel.textContent = 'Daftar Pemain Terdaftar';
       modeHint.textContent = 'Tiap ronde partner diacak ulang (rotasi individu).';
@@ -1573,8 +1573,8 @@
     if (setupMode === 'custom'){
       // Mode Custom: ronde pertama TIDAK diacak otomatis — host isi manual lewat dropdown
       // ("papan kosong"). Match ditandai manualPending: true sampai host submit lewat
-      // submitManualMatch(idx, teamA, teamB), atau host bisa klik "Next Player" buat
-      // auto-generate ala Americano lewat nextPlayerAuto(idx) (reuse logic Langkah 14).
+      // submitManualMatch(idx, teamA, teamB). Setelah tiap pertandingan disimpan, lapangan kembali
+      // ke papan kosong — host isi manual lagi sampai permainan selesai (tidak ada kocok otomatis).
       state.current = Array.from({ length: courts }, (_, i) => buildManualPendingMatch(i + 1));
       state.currentSitOut = [];
       state.next = null;
@@ -3270,7 +3270,13 @@
   }
   // Lapangan jalan sendiri-sendiri (jalur Langkah 14): hanya kalau >1 lapangan dan rotasinya Mandiri.
   // Selain itu (1 lapangan, Mexicano, atau Serentak) memakai alur ronde serentak: nextBtn / advanceRound.
-  function isIndependentCourts(){ return !!state && state.current.length > 1 && rotationOf() === 'independent'; }
+  function isIndependentCourts(){
+    if (!state || !state.current) return false;
+    // Custom: SELALU alur per-lapangan (juga untuk 1 lapangan) supaya ronde berikutnya tidak pernah
+    // dikocok sistem lewat advanceRound/generateSingleRound — host mengisi pemain manual sampai selesai.
+    if (state.mode === 'custom') return true;
+    return state.current.length > 1 && rotationOf() === 'independent';
+  }
   // Super Mexicano: poin yang didapat di Lapangan 1 dikali 2.
   function pointMultiplier(m){ return (formatOf() === 'super' && state.mode === 'individual' && m.court === 1) ? 2 : 1; }
 
@@ -3385,7 +3391,7 @@
     }
 
     if (state.mode === 'custom'){
-      // Mode Custom: "Simpan & Lanjutkan" biasa (tanpa klik "Next Player") balik ke papan
+      // Mode Custom: "Simpan & Lanjutkan" biasa balik ke papan
       // kosong — host isi manual lagi lewat dropdown untuk ronde berikutnya di lapangan ini.
       state.current[idx] = buildManualPendingMatch(m.court, (m.round || 1) + 1);
       render();
@@ -3469,7 +3475,7 @@
   // belum selesai sekaligus lalu langsung ke layar final. Logika per-lapangan (finishCourt /
   // advanceCourt) tidak diubah; lapangan yang SUDAH selesai sebelumnya tidak dihitung ulang.
   async function finishAllCourts(){
-    if (!state || state.finished || !state.current || state.current.length < 2) return;
+    if (!state || state.finished || !state.current || (state.current.length < 2 && state.mode !== 'custom')) return;
     const pending = state.current.filter(m => !m.finished);
     if (!pending.length) return;
 
@@ -3549,29 +3555,8 @@
     return { ok: true };
   }
 
-  // Tombol "Next Player" — auto-generate ala Americano buat 1 lapangan, reuse fungsi
-  // fairness Langkah 14 apa adanya (games-count paling sedikit duluan, minim ulang partner/lawan,
-  // dan gender-mix bonus dari Langkah 16 otomatis ikut kepakai karena lewat modul pairing).
-  function nextPlayerAuto(idx){
-    const m = state.current[idx];
-    const round = m.round || 1;
-    const filled = autoFillCourt(idx, m.court, round, { manualPending: false });
-    if (!filled){
-      const available = getAvailablePoolForCourt(idx).length;
-      state.current[idx] = buildManualPendingMatch(m.court, round);
-      state.current[idx].waitingForPlayers = true;
-      render(); saveSessionToCloud();
-      return { ok: false, error: 'Belum cukup pemain available (' + available + ' dari 4 dibutuhkan) — isi manual dulu.' };
-    }
-    state.current[idx] = filled;
-    render();
-    saveSessionToCloud();
-    return { ok: true };
-  }
-
-  // Dipakai advanceCourt/finishCourt Langkah 14 supaya di mode Custom, lapangan yang lanjut
-  // balik lagi ke "papan kosong" (bukan auto ter-generate) KECUALI host baru saja pakai
-  // "Next Player" (nextPlayerAuto sudah langsung isi match-nya, tidak lewat advanceCourt lagi).
+  // Di mode Custom, lapangan yang lanjut selalu balik ke "papan kosong" (tidak pernah auto-generate):
+  // pemain selalu dipilih host lewat dropdown.
   function isCustomMode(){ return state && state.mode === 'custom'; }
 
   // ===== akhir logic Langkah 15 =====
@@ -3687,6 +3672,7 @@
           </div>
         </div>
         <button type="button" class="btn-primary manual-board-submit" data-manual-submit="${idx}"${manualSlots.some(value => !value) ? ' disabled' : ''}>Mulai Ronde Ini</button>
+        <button type="button" class="btn-secondary" data-court-finish="${idx}">Selesai (tutup lapangan ini)</button>
         <div class="manual-board-error" data-manual-error role="status">${escHtml(manualPickErrors[idx] || '')}</div>
       </div>` : `
       <div class="mode-switch court-controls" style="display:flex;gap:8px;margin:8px 0 10px;">
@@ -3747,9 +3733,8 @@
         </div>` : ''}
       </div>` : ''}`}
       ${isMultiCourt && !isManualPending ? `
-      <div class="court-actions${state.mode === 'custom' ? ' custom-actions' : ''}">
+      <div class="court-actions">
         <button type="button" class="btn-primary" data-court-save="${idx}">${sessionStops(idx) ? 'Simpan &amp; Selesai' : 'Simpan &amp; Lanjutkan'}</button>
-        ${state.mode === 'custom' ? `<button type="button" class="btn-secondary" data-next-player="${idx}">Next Player</button>` : ''}
         <button type="button" class="btn-secondary" data-court-finish="${idx}">Selesai</button>
       </div>` : ''}
       ${canCloseCourtSync() && !isFinished ? `
@@ -3795,17 +3780,6 @@
 
     const courtCloseBtn = card.querySelector('[data-court-close]');
     if (courtCloseBtn) courtCloseBtn.addEventListener('click', () => { void closeCourtSync(idx); });
-
-    const nextPlayerBtn = card.querySelector('[data-next-player]');
-    if (nextPlayerBtn) nextPlayerBtn.addEventListener('click', () => {
-      const result = nextPlayerAuto(idx);
-      if (!result.ok){
-        manualPickErrors[idx] = result.error;
-        rerenderCourtCard(idx);
-      } else {
-        manualPickErrors[idx] = '';
-      }
-    });
 
     card.querySelectorAll('[data-plus]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -3976,6 +3950,7 @@
       });
     }
 
+    skipBtn.style.display = state.mode === 'custom' ? 'none' : '';
     const stopping = sessionStops(0);
     nextBtn.textContent = stopping ? 'Simpan Skor & Selesaikan Sesi' : 'Simpan Skor & Lanjut';
     if (stopping){
@@ -4266,8 +4241,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
