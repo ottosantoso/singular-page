@@ -1538,6 +1538,7 @@
       matchHistory: []
     };
     state = freshState;
+    { const c = (arenaCodeInput.value || '').trim().toUpperCase(); if (c) clearArchivedFlag(c); }
 
     await connectArena({ silent: true });
     // Kalau kode+PIN yang diisi ternyata sudah pernah dipakai turnamen lain sebelumnya,
@@ -1992,7 +1993,15 @@
   // Penyimpanan akhir turnamen: state final (menutup event) lalu arsip. Dua hal yang dulu hilang diam-diam:
   // (1) supabase-js TIDAK melempar saat gagal, melainkan mengembalikan { error }, jadi harus dicek eksplisit;
   // (2) kalau gagal, panitia harus diberi tahu dan boleh mencoba lagi, bukan dibiarkan melihat "TURNAMEN KELAR!".
+  // Penanda "turnamen ini sudah selesai & diarsipkan" supaya saat halaman dibuka lagi sesi lama tidak
+  // dimuat ulang (daftar pemain terkunci, status Turnamen selesai, masih tersambung ke arena lama).
+  function archivedFlagKey(code){ return 'kocokArchived_' + code; }
+  function setArchivedFlag(code){ try { localStorage.setItem(archivedFlagKey(code), '1'); } catch (e) {} }
+  function clearArchivedFlag(code){ try { localStorage.removeItem(archivedFlagKey(code)); } catch (e) {} }
+  function isArchivedFlag(code){ try { return localStorage.getItem(archivedFlagKey(code)) === '1'; } catch (e) { return false; } }
+
   async function finalizeToCloud(){
+    if (arenaCode) clearArchivedFlag(arenaCode); // hasil baru belum tentu terarsip; jangan pakai penanda lama
     if (!isConnected()){
       const msg = 'Arena belum tersambung ke cloud (Kode/PIN belum disambungkan), jadi hasil hanya ada di perangkat ini.';
       syncStatus.textContent = 'Hasil BELUM tersimpan: ' + msg;
@@ -2011,6 +2020,10 @@
           const { error } = await sb.rpc('kocok_archive_tournament', { p_code: arenaCode, p_pin: arenaPin, p_summary: state });
           if (error) throw error;
           syncStatus.textContent = 'Hasil & arsip turnamen tersimpan ✓ ' + new Date().toLocaleTimeString('id-ID');
+          // Arsip sukses: tandai (di perangkat ini dan di state cloud) supaya buka ulang halaman = mulai bersih.
+          setArchivedFlag(arenaCode);
+          state.archived = true;
+          try { await flushStateToCloud({ quiet: true }); } catch (err){}
           try { await loadHistory({ silent: true }); } catch (err){}
           return true;
         } catch (e){
@@ -2143,6 +2156,19 @@
       ]);
       if (stateRes.error) throw stateRes.error;
       isApplyingRemote = true;
+      if (stateRes.data && stateRes.data.finished && !state && (stateRes.data.archived === true || isArchivedFlag(arenaCode))){
+        // Turnamen di arena ini sudah selesai & terarsip (hasilnya ada di Riwayat). Jangan dimuat ulang:
+        // mulai dari form kosong. Kalau sedang melihat layar hasil (state ada), tidak masuk cabang ini.
+        isApplyingRemote = false;
+        clearInterval(pollTimer);
+        resetSession();
+        if (linkedEventPlayers.length){
+          registeredPlayers = linkedEventPlayers.map(player => ({ ...player }));
+          renderRegisteredPlayers();
+        }
+        syncStatus.textContent = 'Turnamen sebelumnya sudah selesai & tersimpan di Riwayat. Silakan mulai turnamen baru.';
+        return;
+      }
       if (stateRes.data){
         state = stateRes.data;
         if (linkedEventPlayers.length){
