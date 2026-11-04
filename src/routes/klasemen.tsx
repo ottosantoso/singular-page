@@ -49,6 +49,7 @@ import {
   isPlayedMatch,
   rankChampions,
   rankMovement,
+  topThree,
 } from "@/lib/klasemen-ranking";
 import { buildAwards } from "@/lib/klasemen-awards";
 import { Avatar } from "@/components/klasemen/avatar";
@@ -458,8 +459,7 @@ function Klasemen() {
       ? `conic-gradient(#1d4ed8 0 ${winPct}%, #94a3b8 ${winPct}% ${winPct + drawPct}%, #e11d2e ${winPct + drawPct}% 100%)`
       : "conic-gradient(#e5eaf3 0 100%)";
 
-  const rankedPlayers = view ? view.ordered.filter((p) => p.rank !== null) : [];
-  const podium = rankedPlayers.slice(0, 3);
+  const podium = view ? topThree(view.ordered) : [];
   const podiumOrder = [1, 0, 2];
   const latestRounds = view
     ? [...new Set(view.allMatches.map((m) => m.round))].sort((a, b) => b - a).slice(0, 4)
