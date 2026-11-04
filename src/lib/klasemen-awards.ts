@@ -18,8 +18,8 @@ export type Award = {
 function top<T>(items: readonly T[], cmp: (a: T, b: T) => number): { best: T | null; ties: number } {
   // sort stabil: urutan masuk (urutan peringkat) memenangkan seri
   const sorted = [...items].sort(cmp);
-  const best = sorted[0];
-  if (best === undefined) return { best: null, ties: 0 };
+  if (sorted.length === 0) return { best: null, ties: 0 };
+  const best = sorted[0] as T;
   const ties = sorted.filter((item) => cmp(best, item) === 0).length - 1;
   return { best, ties };
 }
