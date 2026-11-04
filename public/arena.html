@@ -606,7 +606,7 @@
             <div class="status" id="playerEntryStatus"></div>
           </div>
           <div class="field">
-            <label id="playersLabel">Daftar Pemain Terdaftar</label>
+            <label id="playersLabel">Daftar Pemain Terdaftar = 0 orang</label>
             <div id="registeredPlayersList" class="player-manage-list"><div class="empty-lb">Belum ada pemain.</div></div>
           </div>
           <div class="wizard-actions">
@@ -1162,13 +1162,13 @@
     formatField.style.display = mode === 'individual' ? 'block' : 'none';
     updateFormatHint();
     if (mode === 'pairs'){
-      playersLabel.textContent = 'Daftar Pemain Terdaftar';
+      updatePlayersLabel();
       modeHint.textContent = 'Partner tetap sama sepanjang turnamen — pemain dipasangkan berurutan dari daftar.';
     } else if (mode === 'custom'){
-      playersLabel.textContent = 'Daftar Pemain Terdaftar';
+      updatePlayersLabel();
       modeHint.textContent = 'Kamu pilih sendiri siapa lawan siapa lewat dropdown di tiap lapangan, di setiap ronde sampai permainan selesai (tidak ada pengocokan otomatis).';
     } else {
-      playersLabel.textContent = 'Daftar Pemain Terdaftar';
+      updatePlayersLabel();
       modeHint.textContent = 'Tiap ronde partner diacak ulang (rotasi individu).';
     }
     updatePlayerSuggestion();
@@ -1355,7 +1355,14 @@
   });
   document.addEventListener('click', event => { if (!tierField.contains(event.target)) closeTierMenu(); });
 
+  // Judul daftar: "Daftar Pemain Terdaftar = x orang". Dipanggil dari renderRegisteredPlayers (semua
+  // tambah/hapus/muat/reset pemain lewat sana) dan dari setSetupMode.
+  function updatePlayersLabel(){
+    playersLabel.textContent = 'Daftar Pemain Terdaftar = ' + registeredPlayers.length + ' orang';
+  }
+
   function renderRegisteredPlayers(){
+    updatePlayersLabel();
     registeredPlayersList.innerHTML = '';
     if (!registeredPlayers.length){
       registeredPlayersList.innerHTML = '<div class="empty-lb">Belum ada pemain.</div>';
