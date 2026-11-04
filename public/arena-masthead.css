@@ -159,3 +159,22 @@
   :is(#arenaScreen, #historyScreen) header.arena-top { margin-bottom: 14px; gap: 10px; }
   :is(#arenaScreen, #historyScreen) .masthead-tagline { display: none; }
 }
+
+/* ===== Tombol aksi lapangan: mode Custom & rotasi Mandiri =====
+   Di mode Custom (dan Mandiri dengan >1 lapangan) tiap lapangan punya tombol sendiri.
+   Tombol "Simpan Skor & Lanjut" (#nextBtn) di bawah itu milik alur ronde serentak: ia memanggil
+   advanceRound() yang mengocok pemain otomatis, jadi di Custom tidak boleh tampil.
+   Aturan asalnya ada di arena.html (.action-stack.multi-court #nextBtn { display:none }), tetapi
+   tertimpa display:inline-flex dari .btn-primary di arena-sport-themes.css (spesifisitas sama, dimuat
+   belakangan). Di sini dikembalikan dengan !important. */
+#arenaScreen .action-stack.multi-court #nextBtn,
+#arenaScreen .action-stack.multi-court #finishBtn {
+  display: none !important;
+}
+
+/* "Simpan & Lanjutkan" per lapangan selebar tombol "Selesai" di bawahnya (satu kolom penuh). */
+#arenaScreen .court-actions [data-court-save] {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 48px;
+}
