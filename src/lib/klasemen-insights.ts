@@ -129,21 +129,23 @@ export function bestDuo(matches: readonly InsightMatch[]): Duo | null {
 export function closestMatch<T extends InsightMatch>(matches: readonly T[]): T | null {
   const played = matches.filter(isPlayed);
   if (played.length === 0) return null;
-  const [closest] = [...played].sort(
-    (a, b) =>
-      Math.abs(a.score_a - a.score_b) - Math.abs(b.score_a - b.score_b) ||
-      b.score_a + b.score_b - (a.score_a + a.score_b),
+  return (
+    [...played].sort(
+      (a, b) =>
+        Math.abs(a.score_a - a.score_b) - Math.abs(b.score_a - b.score_b) ||
+        b.score_a + b.score_b - (a.score_a + a.score_b),
+    )[0] ?? null
   );
-  return closest ?? null;
 }
 
 export function biggestWin<T extends InsightMatch>(matches: readonly T[]): T | null {
   const decisive = matches.filter((m) => m.score_a !== m.score_b);
   if (decisive.length === 0) return null;
-  const [biggest] = [...decisive].sort(
-    (a, b) => Math.abs(b.score_a - b.score_b) - Math.abs(a.score_a - a.score_b),
+  return (
+    [...decisive].sort(
+      (a, b) => Math.abs(b.score_a - b.score_b) - Math.abs(a.score_a - a.score_b),
+    )[0] ?? null
   );
-  return biggest ?? null;
 }
 
 export function teamLabel(team: string[]): string {
@@ -296,11 +298,11 @@ export function summarizeMatches(matches: readonly InsightMatch[]): MatchSummary
 
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0];
-  const last = parts[parts.length - 1];
-  if (!first || !last) return "?";
-  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
-  return (first.charAt(0) + last.charAt(0)).toUpperCase();
+  const firstPart = parts[0];
+  const lastPart = parts[parts.length - 1];
+  if (!firstPart || !lastPart) return "?";
+  if (parts.length === 1) return firstPart.slice(0, 2).toUpperCase();
+  return ((firstPart[0] ?? "") + (lastPart[0] ?? "")).toUpperCase();
 }
 
 const AVATAR_TONES = [
