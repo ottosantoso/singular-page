@@ -1,6 +1,7 @@
-// Satu-satunya sumber aturan peringkat klasemen (Rencana v2, aturan kerja 12).
-// Aturan: poin terbanyak, lalu selisih poin; yang seri berbagi peringkat padat
-// (1, 2, 2, 3). Nama hanya dipakai untuk urutan tampil, bukan untuk peringkat.
+// USANG (6 Nov 2026): aturan di berkas ini (poin terbanyak, lalu selisih; peringkat padat 1, 2, 2, 3)
+// tidak dipakai lagi. Peringkat resmi ada di src/lib/klasemen-ranking.ts (Juara Umum: win rate, % poin,
+// selisih per laga, lalu jumlah menang). Berkas ini dibiarkan dulu karena masih ada tesnya
+// (tests/ranking.test.mjs). Hapus setelah tes dipindah ke klasemen-ranking.test.mjs.
 
 export type RankableStanding = {
   name: string;
