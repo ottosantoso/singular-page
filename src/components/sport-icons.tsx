@@ -1,6 +1,6 @@
 import { Trophy } from "lucide-react";
 
-/** Kunci olahraga yang dipakai di database (events.sport / state permainan). */
+/** Kunci olahraga yang dipakai di database (events.sport / courts.sport / state permainan). */
 export type SportKey = "padel" | "badminton" | "tennis" | "tenismeja";
 
 export interface SportTheme {
@@ -66,6 +66,14 @@ export const DEFAULT_THEME: SportTheme = {
   panel: null,
 };
 
+/** Pilihan olahraga untuk form (event dan court memakai daftar yang sama). */
+export const SPORT_OPTIONS: ReadonlyArray<{ value: SportKey; label: string }> = [
+  { value: "padel", label: SPORT_THEMES.padel.label },
+  { value: "badminton", label: SPORT_THEMES.badminton.label },
+  { value: "tennis", label: SPORT_THEMES.tennis.label },
+  { value: "tenismeja", label: SPORT_THEMES.tenismeja.label },
+];
+
 export function normalizeSport(value: string | null | undefined): SportKey | null {
   const key = (value ?? "").toLowerCase().replace(/[^a-z]/g, "");
   if (key === "padel") return "padel";
@@ -73,6 +81,12 @@ export function normalizeSport(value: string | null | undefined): SportKey | nul
   if (key === "tennis" || key === "tenis") return "tennis";
   if (key === "tenismeja" || key === "tabletennis" || key === "pingpong") return "tenismeja";
   return null;
+}
+
+/** Nama olahraga untuk tampilan; nilai lama seperti "pingpong" terbaca sebagai Tenis Meja. */
+export function sportLabel(value: string | null | undefined): string {
+  const key = normalizeSport(value);
+  return key ? SPORT_THEMES[key].label : value || "-";
 }
 
 export function sportTheme(value: string | null | undefined): SportTheme {
