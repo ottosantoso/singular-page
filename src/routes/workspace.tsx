@@ -1400,6 +1400,8 @@ function CreateEventDialog({
             >
               <option value="americano">Americano</option>
               <option value="mexicano">Mexicano</option>
+              <option value="super">Super Mexicano</option>
+              <option value="yingyang">Ying Yang</option>
               <option value="custom">Custom</option>
             </select>
           </Field>
