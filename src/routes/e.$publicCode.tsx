@@ -30,6 +30,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SportIcon, sportTheme } from "@/components/sport-icons";
+import { computeStats, rankChampions, type MatchLike } from "@/lib/klasemen-ranking";
 import equipment from "@/assets/sport-equipment.jpg";
 
 export const Route = createFileRoute("/e/$publicCode")({
@@ -88,46 +89,22 @@ type PublicMatch = {
   played_at?: string;
 };
 
-type PublicStanding = { name: string; points: number; games: number; wins: number; pointDiff: number };
-
-function buildPublicStandings(players: PublicPlayer[], matches: PublicMatch[]) {
-  const table = new Map<string, PublicStanding>();
-  const ensure = (name: string) => {
-    if (!table.has(name)) table.set(name, { name, points: 0, games: 0, wins: 0, pointDiff: 0 });
-    return table.get(name)!;
-  };
-  players.forEach((player) => ensure(player.display_name));
-  matches
+// Klasemen halaman ini memakai modul Juara Umum yang sama dengan /klasemen (src/lib/klasemen-ranking.ts).
+// Aturan tidak ditulis ulang di sini (Rencana v2, aturan kerja 12): laga 0-0 dibuang, batas Provisional,
+// win rate, lalu % poin, selisih per laga, dan jumlah menang. Total poin tidak menentukan peringkat.
+function buildOfficialStandings(players: PublicPlayer[], matches: PublicMatch[]) {
+  const laga: MatchLike[] = matches
     .filter((match) => match.status !== "live" && match.score_a != null && match.score_b != null)
-    .forEach((match) => {
-      const scoreA = Number(match.score_a ?? 0);
-      const scoreB = Number(match.score_b ?? 0);
-      const aWon = scoreA > scoreB;
-      const bWon = scoreB > scoreA;
-      (match.team_a ?? []).forEach((name) => {
-        const row = ensure(name);
-        row.points += scoreA;
-        row.pointDiff += scoreA - scoreB;
-        row.games += 1;
-        if (aWon) row.wins += 1;
-      });
-      (match.team_b ?? []).forEach((name) => {
-        const row = ensure(name);
-        row.points += scoreB;
-        row.pointDiff += scoreB - scoreA;
-        row.games += 1;
-        if (bWon) row.wins += 1;
-      });
-    });
-  return [...table.values()].sort((a, b) => b.points - a.points || b.wins - a.wins || b.pointDiff - a.pointDiff || a.name.localeCompare(b.name));
-}
-
-function competitionRank(rows: PublicStanding[], index: number): number {
-  if (index === 0) return 1;
-  const current = rows[index];
-  const previous = rows[index - 1];
-  const tied = !!current && !!previous && current.points === previous.points && current.wins === previous.wins && current.pointDiff === previous.pointDiff;
-  return tied ? competitionRank(rows, index - 1) : competitionRank(rows, index - 1) + 1;
+    .map((match) => ({
+      round: Number(match.round ?? 0),
+      team_a: match.team_a ?? [],
+      team_b: match.team_b ?? [],
+      score_a: Number(match.score_a ?? 0),
+      score_b: Number(match.score_b ?? 0),
+    }));
+  const namaDariLaga = laga.flatMap((match) => [...match.team_a, ...match.team_b]);
+  const semuaNama = [...new Set([...players.map((player) => player.display_name), ...namaDariLaga])];
+  return rankChampions(computeStats(semuaNama, laga));
 }
 
 function publicMatchWon(match: PublicMatch, name: string) {
@@ -423,7 +400,8 @@ function PublicEventPage() {
   const finalMatches = matchRows.filter(
     (match) => match.status !== "live" && match.score_a != null && match.score_b != null,
   );
-  const standings = buildPublicStandings(payload.players, matchRows);
+  const ranking = buildOfficialStandings(payload.players, matchRows);
+  const standings = ranking.ordered;
   const meName = payload.me?.display_name ?? "";
   const myMatches = finalMatches.filter(
     (match) => (match.team_a ?? []).includes(meName) || (match.team_b ?? []).includes(meName),
@@ -454,7 +432,7 @@ function PublicEventPage() {
   });
   const favoritePartner = [...myPartners.entries()].sort((a, b) => b[1].games - a[1].games)[0];
   const strongestRival = [...myRivals.entries()].sort((a, b) => b[1].games - a[1].games)[0];
-  const myStandingIndex = standings.findIndex((standing) => standing.name === meName);
+  const myRank = standings.find((standing) => standing.name === meName)?.rank ?? null;
   const fill = ev.max_players ? Math.min(100, Math.round((displayedPlayerCount / ev.max_players) * 100)) : null;
   const capacityLabel = registrationOpen
     ? ev.max_players
@@ -882,7 +860,7 @@ function PublicEventPage() {
               </span>
               <div>
                 <h2 className="font-display text-xl font-bold">Klasemen pejuang</h2>
-                <p className="mt-0.5 text-xs text-arena-dim">Sama seperti laporan Arena: poin, jumlah main, dan kemenangan.</p>
+                <p className="mt-0.5 text-xs text-arena-dim">Peringkat resmi Juara Umum, sama dengan halaman /klasemen. Total poin tidak menentukan peringkat.</p>
               </div>
             </div>
             {finalMatches.length > 0 && (
@@ -891,39 +869,50 @@ function PublicEventPage() {
               </span>
             )}
           </div>
-          {standings.length === 0 ? (
+          {!standings.some((standing) => standing.games > 0) ? (
             <p className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-arena-dim">Klasemen akan muncul setelah skor pertama disimpan.</p>
           ) : (
-            <div className="mt-5 overflow-x-auto">
-              <table className="w-full min-w-[520px] text-left text-sm">
-                <thead className="text-[10px] font-bold uppercase tracking-wider text-arena-dim">
-                  <tr className="border-b border-slate-100">
-                    <th className="px-3 py-3">#</th>
-                    <th className="px-3 py-3">Pejuang</th>
-                    <th className="px-3 py-3">Main</th>
-                    <th className="px-3 py-3">Menang</th>
-                    <th className="px-3 py-3">Win rate</th>
-                    <th className="px-3 py-3">Selisih</th>
-                    <th className="px-3 py-3">Poin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {standings.map((standing, index) => (
-                    <tr key={standing.name} className={`border-b border-slate-50 ${standing.name === meName ? "bg-lime-50/70" : ""}`}>
-                      <td className="px-3 py-3 font-display font-bold text-arena-dim">{String(competitionRank(standings, index)).padStart(2, "0")}</td>
-                      <td className="px-3 py-3 font-semibold text-arena-ink">
-                        {standing.name}{standing.name === meName && <span className="ml-2 rounded-full bg-lime-100 px-2 py-1 text-[10px] text-lime-800">Kamu</span>}
-                      </td>
-                      <td className="px-3 py-3 text-arena-dim">{standing.games}</td>
-                      <td className="px-3 py-3 text-arena-dim">{standing.wins}</td>
-                      <td className="px-3 py-3 text-arena-dim">{standing.games ? `${Math.round((standing.wins / standing.games) * 100)}%` : "-"}</td>
-                      <td className="px-3 py-3 font-display font-bold text-arena-ink">{standing.pointDiff > 0 ? `+${standing.pointDiff}` : standing.pointDiff}</td>
-                      <td className="px-3 py-3 font-display font-bold text-arena-ink">{standing.points}</td>
+            <>
+              <div className="mt-5 overflow-x-auto">
+                <table className="w-full min-w-[520px] text-left text-sm">
+                  <thead className="text-[10px] font-bold uppercase tracking-wider text-arena-dim">
+                    <tr className="border-b border-slate-100">
+                      <th className="px-3 py-3">#</th>
+                      <th className="px-3 py-3">Pejuang</th>
+                      <th className="px-3 py-3">Main</th>
+                      <th className="px-3 py-3">Menang</th>
+                      <th className="px-3 py-3">Win rate</th>
+                      <th className="px-3 py-3">Selisih</th>
+                      <th className="px-3 py-3">Poin</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {standings.map((standing) => (
+                      <tr key={standing.name} className={`border-b border-slate-50 ${standing.name === meName ? "bg-lime-50/70" : ""}`}>
+                        <td className="px-3 py-3 font-display font-bold text-arena-dim">
+                          {standing.rank !== null ? String(standing.rank).padStart(2, "0") : "–"}
+                        </td>
+                        <td className="px-3 py-3 font-semibold text-arena-ink">
+                          {standing.name}
+                          {standing.name === meName && <span className="ml-2 rounded-full bg-lime-100 px-2 py-1 text-[10px] text-lime-800">Kamu</span>}
+                          {standing.provisional && <span className="ml-2 rounded-full bg-slate-100 px-2 py-1 text-[10px] text-arena-dim">Provisional</span>}
+                        </td>
+                        <td className="px-3 py-3 text-arena-dim">{standing.games}</td>
+                        <td className="px-3 py-3 text-arena-dim">{standing.wins}</td>
+                        <td className="px-3 py-3 text-arena-dim">{standing.games ? `${Math.round(standing.winRate)}%` : "-"}</td>
+                        <td className="px-3 py-3 font-display font-bold text-arena-ink">{standing.pointDiff > 0 ? `+${standing.pointDiff}` : standing.pointDiff}</td>
+                        <td className="px-3 py-3 font-display font-bold text-arena-ink">{standing.pointsFor}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {standings.some((standing) => standing.provisional) && (
+                <p className="mt-3 text-[11px] text-arena-dim">
+                  Provisional: laga belum mencapai {ranking.minGames} laga (separuh dari main terbanyak). Belum mendapat nomor peringkat.
+                </p>
+              )}
+            </>
           )}
         </section>
 
@@ -941,7 +930,7 @@ function PublicEventPage() {
             ) : (
               <>
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <ReportStat label="Peringkat" value={myStandingIndex >= 0 ? `#${myStandingIndex + 1}` : "-"} />
+                  <ReportStat label="Peringkat" value={myRank !== null ? `#${myRank}` : "-"} />
                   <ReportStat label="Main" value={String(myMatches.length)} />
                   <ReportStat label="Menang" value={`${myWins} (${Math.round((myWins / myMatches.length) * 100)}%)`} />
                   <ReportStat label="Poin" value={String(myPoints)} />
