@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowRight, Eye, EyeOff, Loader2, LogIn, UserPlus, UserRound, Trophy, Table2, CircleDot, Goal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -219,7 +219,7 @@ function LoginPage() {
             <Field label="Password">
               <div className="login-page__input-wrap"><span className="login-page__input-icon"><Goal /></span><input required type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Masukkan password" autoComplete={mode === "login" ? "current-password" : "new-password"} className="auth-input" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label="Tampilkan password" className="login-page__eye">{showPassword ? <EyeOff /> : <Eye />}</button></div>
             </Field>
-            {mode === "login" && <div className="login-page__options"><label><input type="checkbox" defaultChecked /> <span>Ingat saya</span></label><button type="button" onClick={() => setMessage("Gunakan link reset password dari Supabase untuk mengganti password.")}>Lupa password?</button></div>}
+            {mode === "login" && <div className="login-page__options"><button type="button" onClick={() => setMessage("Reset password belum tersedia di aplikasi ini. Hubungi admin untuk mengganti password.")}>Lupa password?</button></div>}
             {message && <p className="login-page__message is-success">{message}</p>}
             {verificationEmail && <div className="login-page__resend">
               <span>Belum menerima email verifikasi?</span>
@@ -251,9 +251,3 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     </label>
   );
 }
-
-
-
-
-
-
