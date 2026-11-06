@@ -149,7 +149,7 @@ function PlayerHomePage() {
           <h1 className="mt-3 max-w-2xl font-display text-3xl font-bold leading-tight text-arena-ink sm:text-5xl">Semua pertandinganmu, ada di sini.</h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-arena-dim">Buka event yang kamu ikuti, lihat jadwal dan hasil pertandingan, atau bergabung ke event publik tanpa perlu mengelola club.</p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/" className="inline-flex items-center gap-2 rounded-full bg-arena-ink px-5 py-3 font-display text-xs font-bold uppercase tracking-wider text-white transition hover:bg-arena-lime hover:text-arena-ink"><Trophy className="size-4" /> Cari event publik</Link>
+            <Link to="/" className="inline-flex items-center gap-2 rounded-full bg-arena-ink px-5 py-3 font-display text-xs font-bold uppercase tracking-wider text-white transition hover:bg-arena-lime hover:text-arena-ink"><Trophy className="size-4" /> Kembali ke beranda</Link>
             <a href="/workspace?create=1" className="inline-flex items-center gap-2 rounded-full border border-arena-ink/15 bg-white/80 px-5 py-3 font-display text-xs font-bold uppercase tracking-wider text-arena-ink transition hover:border-arena-lime"><Plus className="size-4" /> Kelola club / venue</a>
           </div>
         </section>
