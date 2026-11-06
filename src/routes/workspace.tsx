@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import QRCode from "qrcode";
 import {
@@ -19,6 +19,7 @@ import {
   Pencil,
   Plus,
   QrCode,
+  RotateCw,
   ShieldCheck,
   Share2,
   Sparkles,
@@ -32,6 +33,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { loginIdToEmail, useAuth } from "@/lib/auth";
 import { canOrganizationRole } from "@/lib/permissions";
 import { WorkspaceBilling } from "@/components/workspace-billing";
+import { SPORT_OPTIONS, normalizeSport, sportLabel } from "@/components/sport-icons";
+import {
+  hashInviteToken,
+  inviteExpiry,
+  inviteStatus,
+  validateEventTimes,
+} from "@/lib/workspace-helpers";
 
 export const Route = createFileRoute("/workspace")({ component: WorkspacePage });
 
@@ -54,10 +62,24 @@ type EventRow = {
   format: string;
   status: string;
   starts_at: string | null;
+  ends_at: string | null;
+  venue_id: string | null;
+  public_results: boolean;
   public_code: string;
   max_players: number | null;
 };
+// Kolom event yang dibaca semua panel, supaya form edit selalu menerima venue, selesai, dan toggle publik.
+const EVENT_COLUMNS =
+  "id, name, sport, format, status, starts_at, ends_at, venue_id, public_results, public_code, max_players";
 type MemberRow = { user_id: string; role_code: string; status: string; name: string };
+type InviteRow = {
+  id: string;
+  email: string | null;
+  role_code: string;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+};
 type VenueRow = { id: string; name: string; address: string | null; timezone: string; is_active: boolean };
 type CourtRow = { id: string; venue_id: string; name: string; sport: string; is_active: boolean };
 type StaffRow = { event_id: string; user_id: string; role_code: string; event_name: string; user_name: string };
@@ -94,6 +116,10 @@ function getPublicAppUrl() {
   const configuredUrl = import.meta.env["VITE_PUBLIC_APP_URL"]?.trim();
   if (configuredUrl) return configuredUrl.replace(/\/$/, "");
   return typeof window !== "undefined" ? window.location.origin : "";
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -375,7 +401,7 @@ function ReportsPanel({ organization }: { organization: Organization }) {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("events").select("id, name, sport, format, status, starts_at, public_code, max_players").eq("organization_id", organization.id).order("starts_at", { ascending: false }),
+      supabase.from("events").select(EVENT_COLUMNS).eq("organization_id", organization.id).order("starts_at", { ascending: false }),
       supabase.from("venues").select("id, name, address, timezone, is_active").eq("organization_id", organization.id).order("name"),
     ]).then(([eventResult, venueResult]) => {
       setEvents((eventResult.data ?? []) as EventRow[]);
@@ -417,7 +443,7 @@ function ReportsPanel({ organization }: { organization: Organization }) {
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <select value={eventId} onChange={(e) => setEventId(e.target.value)} className="arena-input"><option value="">Semua event</option>{events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}</select>
           <select value={venueId} onChange={(e) => setVenueId(e.target.value)} className="arena-input"><option value="">Semua venue</option>{venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select>
-          <select value={sport} onChange={(e) => setSport(e.target.value)} className="arena-input"><option value="">Semua olahraga</option>{sports.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+          <select value={sport} onChange={(e) => setSport(e.target.value)} className="arena-input"><option value="">Semua olahraga</option>{sports.map((item) => <option key={item} value={item}>{sportLabel(item)}</option>)}</select>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="arena-input" aria-label="Dari tanggal" />
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="arena-input" aria-label="Sampai tanggal" />
         </div>
@@ -431,7 +457,7 @@ function ReportsPanel({ organization }: { organization: Organization }) {
         <div className="grid gap-5 lg:grid-cols-2">
           <ReportTable title="Per event" headers={["Event", "Peserta", "Check-in", "Match"]} rows={report.by_event.map((row) => [row.name, row.participants, row.checked_in, row.matches])} />
           <ReportTable title="Per venue" headers={["Venue", "Event", "Match"]} rows={report.by_venue.map((row) => [row.name, row.events, row.matches])} />
-          <ReportTable title="Per olahraga" headers={["Olahraga", "Event", "Match"]} rows={report.by_sport.map((row) => [row.sport, row.events, row.matches])} />
+          <ReportTable title="Per olahraga" headers={["Olahraga", "Event", "Match"]} rows={report.by_sport.map((row) => [sportLabel(row.sport), row.events, row.matches])} />
           <ReportTable title="Utilisasi court" headers={["Venue / Court", "Match"]} rows={report.by_court.map((row) => [`${row.venue_name} / ${row.name}`, row.matches])} />
         </div>
       </>}
@@ -454,7 +480,7 @@ function Overview({
   useEffect(() => {
     supabase
       .from("events")
-      .select("id, name, sport, format, status, starts_at, public_code, max_players")
+      .select(EVENT_COLUMNS)
       .eq("organization_id", organization.id)
       .order("starts_at", { ascending: true })
       .limit(5)
@@ -533,7 +559,7 @@ function EventsPanel({
   async function load() {
     const { data } = await supabase
       .from("events")
-      .select("id, name, sport, format, status, starts_at, public_code, max_players")
+      .select(EVENT_COLUMNS)
       .eq("organization_id", organization.id)
       .order("starts_at", { ascending: true });
     setEvents((data ?? []) as EventRow[]);
@@ -654,12 +680,15 @@ function EventCard({
             <span className="rounded-full bg-arena-lime/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-arena-ink">
               {event.status}
             </span>
+            {!event.public_results && (
+              <span className="ml-2 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                Halaman publik mati
+              </span>
+            )}
             <h3 className="mt-3 font-display text-xl font-bold">{event.name}</h3>
             <p className="mt-1 text-sm text-arena-dim">
-              {event.sport} · {event.format}
-              {event.starts_at
-                ? ` · ${new Date(event.starts_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}`
-                : ""}
+              {sportLabel(event.sport)} · {event.format}
+              {event.starts_at ? ` · ${formatDateTime(event.starts_at)}` : ""}
             </p>
           </div>
           <CalendarDays className="size-6 text-arena-lime" />
@@ -724,6 +753,11 @@ function EventCard({
                 <p className="text-xs font-bold uppercase tracking-wider text-arena-dim">Link publik</p>
                 <p className="mt-2 break-all rounded-xl bg-slate-50 p-3 text-sm font-semibold text-arena-ink">{fullPublicUrl}</p>
                 <p className="mt-3 text-xs leading-5 text-arena-dim">Teman bisa daftar tanpa membuat akun. Link yang sama dipakai untuk melihat hasil pertandingan.</p>
+                {!event.public_results && (
+                  <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+                    Halaman publik event ini sedang dimatikan, jadi link di atas belum bisa dibuka. Nyalakan lewat Edit event.
+                  </p>
+                )}
               </div>
             </div>
             <div className="mt-6 grid gap-2 sm:grid-cols-3">
@@ -773,10 +807,15 @@ type EventPlayerRow = {
   checked_in_at: string | null;
 };
 
+// Kunci baris event_players adalah (event_id, display_name): tabel ini belum punya kolom id.
+// Kunci itu unik per event, jadi dua peserta tidak bisa berbagi nama dan filter di bawah selalu
+// mengenai tepat satu baris. Kalau tabel nanti diberi id (skema baru), ganti filter ke id baris.
 function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () => void }) {
   const [players, setPlayers] = useState<EventPlayerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busyName, setBusyName] = useState("");
 
   async function load() {
     setLoading(true);
@@ -795,37 +834,54 @@ function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () =
     void load();
   }, [event.id]);
 
-  async function withdraw(displayName: string) {
-    if (!window.confirm(`Keluarkan ${displayName} dari event? Data tetap disimpan sebagai riwayat.`)) return;
-    const result = await supabase
+  // Update satu peserta. Kalau tidak ada baris yang berubah (status sudah lain atau tidak punya izin),
+  // tampilkan galat, bukan diam saja.
+  async function updatePlayer(
+    displayName: string,
+    values: { status: string; checked_in_at?: string },
+    requiredStatus?: string,
+  ) {
+    setBusyName(displayName);
+    setError("");
+    setNotice("");
+    const base = supabase
       .from("event_players")
-      .update({ status: "withdrawn" })
+      .update(values)
       .eq("event_id", event.id)
       .eq("display_name", displayName);
+    const result = await (requiredStatus ? base.eq("status", requiredStatus) : base).select("display_name");
     if (result.error) setError(result.error.message);
+    else if (!result.data?.length)
+      setError("Tidak ada data yang berubah. Status peserta mungkin sudah berubah atau kamu tidak punya izin.");
     else await load();
+    setBusyName("");
+  }
+
+  async function withdraw(displayName: string) {
+    if (!window.confirm(`Keluarkan ${displayName} dari event? Data tetap disimpan sebagai riwayat.`)) return;
+    await updatePlayer(displayName, { status: "withdrawn" });
   }
 
   async function checkIn(displayName: string) {
-    const result = await supabase
-      .from("event_players")
-      .update({ status: "checked_in", checked_in_at: new Date().toISOString() })
-      .eq("event_id", event.id)
-      .eq("display_name", displayName)
-      .eq("status", "registered");
-    if (result.error) setError(result.error.message);
-    else await load();
+    await updatePlayer(displayName, { status: "checked_in", checked_in_at: new Date().toISOString() }, "registered");
   }
 
   async function promoteWaitlist() {
+    setError("");
+    setNotice("");
     const result = await supabase.rpc("promote_event_waitlist", { p_event_id: event.id, p_limit: 1 });
-    if (result.error) setError(result.error.message);
-    else await load();
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    setNotice(result.data ? "Satu peserta waitlist dipromosikan." : "Belum ada slot kosong, tidak ada yang dipromosikan.");
+    await load();
   }
 
   return (
     <DialogFrame title={`Peserta · ${event.name}`} onClose={onClose}>
       {error && <p className="mb-4 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {notice && <p className="mb-4 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}
       {loading ? (
         <p className="text-sm text-arena-dim">Memuat peserta...</p>
       ) : players.length ? (
@@ -840,11 +896,11 @@ function ParticipantsDialog({ event, onClose }: { event: EventRow; onClose: () =
               </div>
               <div className="flex shrink-0 flex-wrap justify-end gap-2">
                 {player.status === "registered" && (
-                  <button type="button" onClick={() => void checkIn(player.display_name)} className="rounded-full bg-arena-ink px-3 py-2 text-xs font-bold uppercase tracking-wider text-white">
+                  <button type="button" disabled={busyName === player.display_name} onClick={() => void checkIn(player.display_name)} className="rounded-full bg-arena-ink px-3 py-2 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50">
                     Check-in
                   </button>
                 )}
-                <button type="button" onClick={() => void withdraw(player.display_name)} className="inline-flex items-center gap-2 rounded-full border border-red-200 px-3 py-2 text-xs font-bold uppercase tracking-wider text-red-700">
+                <button type="button" disabled={busyName === player.display_name} onClick={() => void withdraw(player.display_name)} className="inline-flex items-center gap-2 rounded-full border border-red-200 px-3 py-2 text-xs font-bold uppercase tracking-wider text-red-700 disabled:opacity-50">
                   <Trash2 className="size-4" /> Keluarkan
                 </button>
               </div>
@@ -964,8 +1020,8 @@ function OperationsPanel({
           </div>
           <div className="rounded-2xl bg-slate-50 p-4">
             <p className="font-display font-bold">Court / lapangan</p>
-            <div className="mt-3 grid gap-2">{courts.map((court) => <div key={court.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-3 text-sm"><span><b>{court.name}</b><small className="block text-arena-dim">{venues.find((venue) => venue.id === court.venue_id)?.name || "Venue"} · {court.sport}</small></span>{canManage && <button type="button" onClick={() => void toggleCourt(court)} className="text-xs font-bold uppercase text-arena-dim">{court.is_active ? "Nonaktifkan" : "Aktifkan"}</button>}</div>)}{!courts.length && <p className="text-sm text-arena-dim">Belum ada court.</p>}</div>
-            {canManage && <form onSubmit={addCourt} className="mt-4 grid gap-2"><select required value={courtVenue} onChange={(event) => setCourtVenue(event.target.value)} className="auth-input"><option value="">Pilih venue</option>{venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select><div className="grid gap-2 sm:grid-cols-2"><input required value={courtName} onChange={(event) => setCourtName(event.target.value)} placeholder="Court 1" className="auth-input" /><select value={courtSport} onChange={(event) => setCourtSport(event.target.value)} className="auth-input"><option value="badminton">Badminton</option><option value="padel">Padel</option><option value="tennis">Tenis</option><option value="pingpong">Tenis meja</option></select></div><button className="btn-arena"><Plus className="size-4" /> Tambah court</button></form>}
+            <div className="mt-3 grid gap-2">{courts.map((court) => <div key={court.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-3 text-sm"><span><b>{court.name}</b><small className="block text-arena-dim">{venues.find((venue) => venue.id === court.venue_id)?.name || "Venue"} · {sportLabel(court.sport)}</small></span>{canManage && <button type="button" onClick={() => void toggleCourt(court)} className="text-xs font-bold uppercase text-arena-dim">{court.is_active ? "Nonaktifkan" : "Aktifkan"}</button>}</div>)}{!courts.length && <p className="text-sm text-arena-dim">Belum ada court.</p>}</div>
+            {canManage && <form onSubmit={addCourt} className="mt-4 grid gap-2"><select required value={courtVenue} onChange={(event) => setCourtVenue(event.target.value)} className="auth-input"><option value="">Pilih venue</option>{venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select><div className="grid gap-2 sm:grid-cols-2"><input required value={courtName} onChange={(event) => setCourtName(event.target.value)} placeholder="Court 1" className="auth-input" /><select value={courtSport} onChange={(event) => setCourtSport(event.target.value)} className="auth-input">{SPORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div><button className="btn-arena"><Plus className="size-4" /> Tambah court</button></form>}
           </div>
         </div>
       </div>
@@ -986,10 +1042,12 @@ function MembersPanel({
   canManage: boolean;
 }) {
   const [members, setMembers] = useState<MemberRow[]>([]);
+  const [invites, setInvites] = useState<InviteRow[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("player");
   const [inviteLink, setInviteLink] = useState("");
   const [inviteCopyMessage, setInviteCopyMessage] = useState("");
+  const [busyInvite, setBusyInvite] = useState("");
   const [message, setMessage] = useState("");
   async function load() {
     const { data } = await supabase
@@ -1015,9 +1073,25 @@ function MembersPanel({
       })) as MemberRow[],
     );
   }
+  // Undangan yang belum diterima: yang masih berlaku dan yang sudah kedaluwarsa.
+  async function loadInvites() {
+    if (!canManage) {
+      setInvites([]);
+      return;
+    }
+    const result = await supabase
+      .from("organization_invites")
+      .select("id, email, role_code, expires_at, accepted_at, created_at")
+      .eq("organization_id", organization.id)
+      .is("accepted_at", null)
+      .order("created_at", { ascending: false });
+    if (result.error) setMessage(result.error.message);
+    else setInvites((result.data ?? []) as InviteRow[]);
+  }
   useEffect(() => {
     void load();
-  }, [organization.id]);
+    void loadInvites();
+  }, [organization.id, canManage]);
   async function updateRole(userId: string, roleCode: string) {
     const { error } = await supabase
       .from("organization_members")
@@ -1030,14 +1104,13 @@ function MembersPanel({
       void load();
     }
   }
+  function inviteUrl(token: string) {
+    return `${getPublicAppUrl()}/invite?token=${encodeURIComponent(token)}`;
+  }
   async function createInvite(event: FormEvent) {
     event.preventDefault();
     const token = crypto.randomUUID();
-    const tokenBytes = new TextEncoder().encode(token);
-    const digest = await crypto.subtle.digest("SHA-256", tokenBytes);
-    const tokenHash = Array.from(new Uint8Array(digest), (byte) =>
-      byte.toString(16).padStart(2, "0"),
-    ).join("");
+    const tokenHash = await hashInviteToken(token);
     const invitedBy = (await supabase.auth.getUser()).data.user?.id;
     if (!invitedBy) {
       setMessage("Sesi login tidak ditemukan. Masuk ulang lalu coba lagi.");
@@ -1049,15 +1122,54 @@ function MembersPanel({
       role_code: inviteRole,
       token_hash: tokenHash,
       invited_by: invitedBy,
-      expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+      expires_at: inviteExpiry(),
     });
     if (result.error) setMessage(result.error.message);
     else {
-      const link = `${getPublicAppUrl()}/invite?token=${encodeURIComponent(token)}`;
-      setInviteLink(link);
+      setInviteLink(inviteUrl(token));
       setMessage("Undangan dibuat. Kirim link ini ke member.");
       setInviteEmail("");
+      await loadInvites();
     }
+  }
+  // Kirim ulang = token baru + masa berlaku baru pada baris yang sama. Token lama otomatis tidak berlaku
+  // karena yang disimpan hanya hash-nya. Link baru hanya tampil sekali, jadi salin sebelum menutup halaman.
+  async function resendInvite(invite: InviteRow) {
+    setBusyInvite(invite.id);
+    const token = crypto.randomUUID();
+    const result = await supabase
+      .from("organization_invites")
+      .update({ token_hash: await hashInviteToken(token), expires_at: inviteExpiry() })
+      .eq("id", invite.id)
+      .eq("organization_id", organization.id)
+      .is("accepted_at", null)
+      .select("id");
+    if (result.error) setMessage(result.error.message);
+    else if (!result.data?.length) setMessage("Undangan tidak ditemukan atau sudah diterima.");
+    else {
+      setInviteLink(inviteUrl(token));
+      setMessage("Link baru dibuat dan berlaku 7 hari. Link lama tidak berlaku lagi.");
+      await loadInvites();
+    }
+    setBusyInvite("");
+  }
+  async function revokeInvite(invite: InviteRow) {
+    if (!window.confirm(`Cabut undangan ${invite.email || "tanpa email"}? Link-nya tidak bisa dipakai lagi.`)) return;
+    setBusyInvite(invite.id);
+    const result = await supabase
+      .from("organization_invites")
+      .delete()
+      .eq("id", invite.id)
+      .eq("organization_id", organization.id)
+      .is("accepted_at", null)
+      .select("id");
+    if (result.error) setMessage(result.error.message);
+    else if (!result.data?.length) setMessage("Undangan tidak ditemukan atau sudah diterima.");
+    else {
+      setMessage("Undangan dicabut.");
+      await loadInvites();
+    }
+    setBusyInvite("");
   }
   async function copyInviteLink() {
     const copied = await copyToClipboard(inviteLink);
@@ -1120,11 +1232,56 @@ function MembersPanel({
         </table>
       </div>
       {canManage && (
-        <form onSubmit={createInvite} className="mt-7 rounded-2xl bg-slate-50 p-4">
+        <div className="mt-7 rounded-2xl bg-slate-50 p-4">
+          <p className="font-display font-bold">Undangan tertunda</p>
+          {invites.length ? (
+            <div className="mt-3 grid gap-2">
+              {invites.map((invite) => {
+                const expired = inviteStatus(invite) === "expired";
+                return (
+                  <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-3 py-3 text-sm">
+                    <span>
+                      <b>{invite.email || "Siapa saja yang punya link"}</b>
+                      <small className="block text-arena-dim">
+                        {ROLE_LABELS[invite.role_code] || invite.role_code} · {expired ? "kedaluwarsa" : "berlaku sampai"} {formatDateTime(invite.expires_at)}
+                      </small>
+                    </span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <b className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-wider ${expired ? "bg-red-100 text-red-700" : "bg-arena-lime/20 text-arena-ink"}`}>
+                        {expired ? "Kedaluwarsa" : "Menunggu"}
+                      </b>
+                      <button
+                        type="button"
+                        disabled={busyInvite === invite.id}
+                        onClick={() => void resendInvite(invite)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-arena-ink/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-arena-ink disabled:opacity-50"
+                      >
+                        <RotateCw className="size-3.5" /> Kirim ulang
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyInvite === invite.id}
+                        onClick={() => void revokeInvite(invite)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-700 disabled:opacity-50"
+                      >
+                        <Trash2 className="size-3.5" /> Cabut
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-arena-dim">Tidak ada undangan yang menunggu.</p>
+          )}
+        </div>
+      )}
+      {canManage && (
+        <form onSubmit={createInvite} className="mt-4 rounded-2xl bg-slate-50 p-4">
           <p className="font-display font-bold">Undang member</p>
           {inviteLink && (
             <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-              <p className="text-xs font-semibold text-emerald-800">Link undangan berlaku 7 hari</p>
+              <p className="text-xs font-semibold text-emerald-800">Link undangan berlaku 7 hari. Salin sekarang, link ini tidak ditampilkan lagi.</p>
               <div className="mt-2 flex gap-2">
                 <input
                   readOnly
@@ -1337,16 +1494,54 @@ function CreateEventDialog({
   onCreated: () => void;
 }) {
   const [name, setName] = useState(editingEvent?.name ?? "");
-  const [sport, setSport] = useState(editingEvent?.sport ?? "padel");
+  // Nilai lama (mis. "pingpong") dibaca sebagai kode yang sama dengan daftar pilihan.
+  const [sport, setSport] = useState(
+    editingEvent ? (normalizeSport(editingEvent.sport) ?? editingEvent.sport) : "padel",
+  );
   const [format, setFormat] = useState(editingEvent?.format ?? "americano");
   const [startsAt, setStartsAt] = useState(
     editingEvent?.starts_at ? toDateTimeLocal(editingEvent.starts_at) : "",
   );
+  const [endsAt, setEndsAt] = useState(
+    editingEvent?.ends_at ? toDateTimeLocal(editingEvent.ends_at) : "",
+  );
+  const [venueId, setVenueId] = useState(editingEvent?.venue_id ?? "");
+  const [publicResults, setPublicResults] = useState(editingEvent?.public_results ?? true);
+  const [venues, setVenues] = useState<VenueRow[]>([]);
+  const [venuesLoaded, setVenuesLoaded] = useState(false);
   const [status, setStatus] = useState(editingEvent?.status ?? "registration");
   const [maxPlayers, setMaxPlayers] = useState(editingEvent?.max_players?.toString() ?? "24");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void supabase
+      .from("venues")
+      .select("id, name, address, timezone, is_active")
+      .eq("organization_id", organizationId)
+      .order("name")
+      .then(({ data }) => {
+        if (cancelled) return;
+        setVenues((data ?? []) as VenueRow[]);
+        setVenuesLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId]);
+
+  const selectableVenues = venues.filter((venue) => venue.is_active || venue.id === venueId);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
+    const timeError = validateEventTimes(startsAt, endsAt);
+    if (timeError) {
+      setError(timeError);
+      return;
+    }
+    setError("");
+    setSaving(true);
     const values = {
       name: name.trim(),
       sport,
@@ -1354,6 +1549,9 @@ function CreateEventDialog({
       status,
       max_players: maxPlayers ? Number(maxPlayers) : null,
       starts_at: startsAt ? new Date(startsAt).toISOString() : null,
+      ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+      venue_id: venueId || null,
+      public_results: publicResults,
     };
     const result = editingEvent
       ? await supabase.from("events").update(values).eq("id", editingEvent.id)
@@ -1364,6 +1562,7 @@ function CreateEventDialog({
         created_by: userId,
           ...values,
         });
+    setSaving(false);
     if (result.error) setError(result.error.message);
     else onCreated();
   }
@@ -1386,10 +1585,14 @@ function CreateEventDialog({
               onChange={(event) => setSport(event.target.value)}
               className="auth-input"
             >
-              <option value="padel">Padel</option>
-              <option value="badminton">Badminton</option>
-              <option value="tennis">Tenis</option>
-              <option value="tenismeja">Tenis Meja</option>
+              {SPORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+              {!SPORT_OPTIONS.some((option) => option.value === sport) && (
+                <option value={sport}>{sportLabel(sport)}</option>
+              )}
             </select>
           </Field>
           <Field label="Format">
@@ -1410,7 +1613,26 @@ function CreateEventDialog({
           <select value={status} onChange={(event) => setStatus(event.target.value)} className="auth-input">
             <option value="registration">Registration - siap dibagikan</option>
             <option value="draft">Draft - belum dipublikasikan</option>
+            {!["registration", "draft"].includes(status) && (
+              <option value={status}>{status} - diatur oleh Arena</option>
+            )}
           </select>
+        </Field>
+        <Field label="Venue (opsional)">
+          <select value={venueId} onChange={(event) => setVenueId(event.target.value)} className="auth-input">
+            <option value="">Belum ditentukan</option>
+            {selectableVenues.map((venue) => (
+              <option key={venue.id} value={venue.id}>
+                {venue.name}
+                {venue.is_active ? "" : " (nonaktif)"}
+              </option>
+            ))}
+          </select>
+          {venuesLoaded && !venues.length && (
+            <span className="mt-1.5 block text-xs text-arena-dim">
+              Belum ada venue. Tambahkan dulu di tab Operations, nama venue akan tampil di halaman publik event.
+            </span>
+          )}
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Maksimal pemain">
@@ -1425,8 +1647,33 @@ function CreateEventDialog({
             />
           </Field>
         </div>
+        <Field label="Selesai (opsional)">
+          <input
+            type="datetime-local"
+            value={endsAt}
+            min={startsAt || undefined}
+            onChange={(event) => setEndsAt(event.target.value)}
+            className="auth-input"
+          />
+        </Field>
+        <label className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
+          <input
+            type="checkbox"
+            checked={publicResults}
+            onChange={(event) => setPublicResults(event.target.checked)}
+            className="mt-1 size-4"
+          />
+          <span className="text-sm">
+            <b className="block text-arena-ink">Tampilkan halaman publik event</b>
+            <span className="mt-0.5 block text-xs leading-5 text-arena-dim">
+              Dipakai untuk pendaftaran, daftar peserta, dan hasil. Kalau dimatikan, link event tidak bisa dibuka siapa pun, termasuk untuk mendaftar.
+            </span>
+          </span>
+        </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <button className="btn-arena w-full">{editingEvent ? "Simpan perubahan" : "Buat event"}</button>
+        <button disabled={saving} className="btn-arena w-full disabled:opacity-60">
+          {saving ? "Menyimpan..." : editingEvent ? "Simpan perubahan" : "Buat event"}
+        </button>
       </form>
     </DialogFrame>
   );
@@ -1486,7 +1733,7 @@ function EventLine({ event, organizationId }: { event: EventRow; organizationId:
       <div>
         <p className="font-semibold">{event.name}</p>
         <p className="mt-1 text-xs text-arena-dim">
-          {event.sport} · {event.format}
+          {sportLabel(event.sport)} · {event.format}
         </p>
       </div>
       <div className="flex items-center gap-2">
